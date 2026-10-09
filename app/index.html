@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Biblioteca Bíblica</title><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="plan-styles.css">
+  <script defer src="bible-data.js"></script><script defer src="core.js"></script><script defer src="vendor/jszip.min.js"></script><script defer src="plan-core.js"></script><script defer src="plan-documents.js"></script><script defer src="app.js"></script><script defer src="updates.js"></script>
+</head>
+<body>
+  <aside class="rail">
+    <div class="brand-mark">✦</div><div class="brand">Biblioteca<br><em>Bíblica</em></div>
+    <p class="rail-caption">UN LUGAR PARA EL ALMA</p>
+    <nav aria-label="Secciones">
+      <button data-view="read" class="nav active"><span>▤</span> Mi Biblia</button>
+      <button data-view="dev" class="nav"><span>❧</span> Devocionales</button>
+      <button data-view="plan" class="nav"><span>◷</span> Plan de lectura</button>
+    </nav>
+    <div class="shelf-label">EN TU BIBLIOTECA</div>
+    <button id="cover" class="book-cover" aria-label="Abrir el índice de la Biblia"><span class="cover-cross">✝</span><span>SANTA<br>BIBLIA</span><small>REINA-VALERA 1909</small></button>
+    <div class="shelf-line"></div>
+    <p class="rail-quote">«Lámpara es á mis pies<br>tu palabra»<small>SALMOS 119:105 · RVR 1909</small></p>
+    <button id="backup" class="quiet rail-backup">↓ Guardar copia de mis notas</button>
+    <button id="restore" class="quiet rail-backup">↑ Recuperar una copia</button>
+    <button id="check-updates" class="quiet rail-backup" hidden>↻ Buscar actualizaciones</button>
+    <input id="restore-file" type="file" accept=".json" hidden>
+    <span class="local-label">● Tu espacio personal · sin conexión</span>
+  </aside>
+  <main>
+    <header class="topbar"><span>LECTURA, ESTUDIO Y REFLEXIÓN</span><div><button id="night" class="quiet" aria-label="Cambiar tema">◐ Luz cálida</button><button id="focus" class="outline">✦ Modo intimidad</button></div></header>
+    <section id="read-view" class="view">
+      <div class="intro"><p class="eyebrow">HAZ UNA PAUSA. ESTÁS EN CASA.</p><h1>Vuelve a lo esencial.</h1><p>Abre la Palabra. Deja espacio para escuchar.</p></div>
+      <div id="plan-reading-session" class="plan-reading-session" hidden><div><small id="plan-reading-title"></small><p id="plan-reading-reference"></p></div><div><button id="complete-plan-day" class="outline">Marcar día como leído</button><button id="back-to-plan" class="quiet">← Volver al plan</button></div></div>
+      <div class="reading-toolbar"><div class="passage-picker"><select id="book" aria-label="Libro de la Biblia"></select><select id="chapter" aria-label="Capítulo"></select><span class="edition">RVR 1909</span></div><div class="reading-actions"><button id="search-open" class="quiet">⌕ Buscar</button><button id="smaller" class="quiet" aria-label="Disminuir letra">A−</button><button id="larger" class="quiet" aria-label="Aumentar letra">A+</button></div></div>
+      <div class="reading-layout">
+        <div class="reading-space"><article class="open-book"><div class="ribbon"></div><div class="page-heading"><span>LA SANTA BIBLIA</span><span id="book-label"></span></div><h2 id="passage-heading"></h2><div id="verses" class="verses"></div><div class="page-footer"><span>REINA-VALERA · 1909</span><span id="chapter-footer"></span></div></article><div class="page-controls"><button id="previous" class="quiet">← Anterior</button><span>Selecciona un versículo para subrayar o escribir.</span><button id="next" class="quiet">Siguiente →</button></div></div>
+        <aside class="study-panel"><p class="eyebrow">AL MARGEN DE TU BIBLIA</p><h3>Tu espacio de estudio</h3><p id="selected-ref" class="selected-ref"></p><div class="ink-colors"><button data-ink="gold" class="ink gold" aria-label="Subrayado dorado"></button><button data-ink="sage" class="ink sage" aria-label="Subrayado verde"></button><button data-ink="rose" class="ink rose" aria-label="Subrayado rosa"></button><button data-ink="none" class="quiet">Quitar</button></div><label for="note">Mis notas y oraciones</label><textarea id="note" placeholder="¿Qué te dice este pasaje? Escribe aquí…" rows="8"></textarea><small id="save-status" role="status">Las notas se guardan en este equipo.</small><div class="study-guide"><p class="eyebrow">LEE CON ATENCIÓN</p><p><b>Observa</b> ¿Quién habla y a quién?</p><p><b>Comprende</b> Lee el contexto del capítulo.</p><p><b>Responde</b> ¿Cómo puedes vivirlo hoy?</p><small>Preguntas de estudio propias; no son comentarios de la traducción.</small></div></aside>
+      </div>
+    </section>
+    <section id="dev-view" class="view" hidden>
+      <div class="intro"><p class="eyebrow">UNA CITA CONTIGO Y CON DIOS</p><h1>Tu tiempo de devoción.</h1><p>Trae tus lecturas o prepara un recorrido a tu medida.</p></div>
+      <div class="workspace-grid"><section class="card"><h3>Crear un devocional</h3><p class="muted">Una guía de lectura, reflexión y oración que tú completas.</p><form id="dev-form"><label>Tema<select name="topic"><option value="paz">Paz</option><option value="fe">Fe y confianza</option><option value="gratitud">Gratitud</option><option value="esperanza">Esperanza</option></select></label><div class="form-row"><label>Minutos al día<input name="minutes" type="number" min="5" max="60" value="15" required></label><label>Número de días<input name="days" type="number" min="1" max="90" value="7" required></label></div><label>Intención personal<textarea name="purpose" maxlength="500" rows="3" placeholder="Quiero aprender a descansar en Dios…"></textarea></label><button class="primary" type="submit">Preparar mi devocional →</button></form><p class="fine-print">Creador guiado con plantillas locales. No usa IA. El tiempo es orientativo.</p></section><section class="card"><div class="section-heading"><h3>Mis devocionales</h3><button id="import-dev" class="outline">↑ Cargar archivo</button></div><p class="muted">TXT, MD o JSON · hasta 2 MB. Tus textos permanecen en este equipo.</p><input id="dev-file" type="file" accept=".txt,.md,.json" hidden><div id="dev-list"></div></section></div>
+      <article id="dev-detail" class="card dev-detail" hidden></article>
+    </section>
+    <section id="plan-view" class="view" hidden>
+      <div class="intro"><p class="eyebrow">PASO A PASO, CADA DÍA</p><h1>Un camino en la Palabra.</h1><p>Un ritmo posible, sin presión. Retoma donde te quedaste.</p></div>
+      <section class="card plan-import"><div class="section-heading"><div><h3>Trae tu plan personal</h3><p class="muted">Conserva tus lecturas, fechas y días completados. Revisa la importación antes de guardarla.</p></div><button id="import-plan" class="primary">↑ Subir mi plan</button></div><p class="fine-print">Word DOCX, TXT, MD, CSV o JSON · lectura local. Los tachados y casillas marcadas se detectan; tú decides si los resaltados cuentan como avance.</p><input id="plan-file" type="file" accept=".docx,.txt,.md,.csv,.json" hidden><p id="plan-import-status" role="status" class="muted"></p></section>
+      <section id="plan-review" class="card" hidden><div class="section-heading"><h3>Revisa tu plan</h3><button id="cancel-plan-import" class="quiet">Cancelar</button></div><div class="form-row"><label>Nombre del plan<input id="import-plan-title" maxlength="200"></label><label>Guardar como<select id="plan-import-target"><option value="new">Plan nuevo</option></select></label></div><p id="plan-import-description" class="muted source-description"></p><label id="highlight-option" class="checkbox-label" hidden><input id="highlight-completed" type="checkbox">Las lecturas resaltadas del documento ya están completadas.</label><p id="plan-review-summary" class="muted" role="status"></p><p id="plan-review-notice" class="fine-print"></p><div id="plan-review-days"></div><div class="review-navigation"><button id="review-prev" class="outline">← Anteriores</button><span id="review-page" class="muted"></span><button id="review-next" class="outline">Siguientes →</button></div><div class="review-save"><p class="muted">Corrige los textos o las marcas que necesites. El archivo original se conserva.</p><button id="save-import-plan" class="primary">Guardar mi plan revisado</button></div></section>
+      <details class="card"><summary>O crear un nuevo plan desde la app</summary><div class="plan-create"><form id="plan-form"><label>Quiero leer<select name="scope"><option value="nt">Nuevo Testamento</option><option value="all">Toda la Biblia</option><option value="salmos">Salmos</option></select></label><label>En cuántos días<input name="days" type="number" min="1" max="1189" value="90" required></label><button type="submit" class="primary">Crear plan</button></form><p class="fine-print">Los capítulos se distribuyen en orden. Puedes mantener varios planes.</p></div></details><div id="plan-list"></div>
+    </section>
+    <footer class="app-footer">BIBLIOTECA BÍBLICA <span>Lectura sin prisa. Fe en lo cotidiano.</span><span>Versión · 0.2</span></footer>
+  </main>
+  <dialog id="search-dialog"><div class="section-heading"><h3>Encuentra un pasaje</h3><button id="search-close" class="quiet" aria-label="Cerrar búsqueda">✕</button></div><label for="search-input">Palabra o frase</label><input id="search-input" type="search" placeholder="Paz, esperanza, pastor…"><p id="search-count" class="muted">Busca en toda la Biblia.</p><div id="search-results"></div></dialog>
+  <dialog id="books-dialog"><div class="section-heading"><h3>Los libros de tu Biblia</h3><button id="books-close" class="quiet" aria-label="Cerrar índice">✕</button></div><div id="books-grid" class="books-grid"></div></dialog>
+  <dialog id="update-dialog"><div class="section-heading"><h3 id="update-title">Actualizaciones de tu biblioteca</h3><button id="update-close" class="quiet" aria-label="Cerrar actualizaciones">✕</button></div><p id="update-current" class="muted"></p><p id="update-version"></p><p id="update-message" class="muted"></p><progress id="update-progress" max="100" value="0" hidden></progress><div class="update-actions"><button id="update-download" class="primary" hidden>Descargar nueva versión</button><button id="update-install" class="primary" hidden>Instalar y reiniciar</button><button id="update-retry" class="outline">Comprobar de nuevo</button><p class="fine-print">Tus notas y tu avance se conservan. Puedes seguir leyendo mientras se descarga.</p></div></dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>

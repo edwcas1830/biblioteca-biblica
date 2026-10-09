@@ -1,0 +1,54 @@
+{
+  "name": "biblioteca-biblica",
+  "version": "0.2.1",
+  "description": "Una biblioteca íntima para leer, estudiar y vivir la Biblia.",
+  "author": "Edward",
+  "private": true,
+  "main": "desktop.cjs",
+  "scripts": {
+    "start": "electron .",
+    "preview": "node scripts/preview.cjs",
+    "bible": "node scripts/download-bible.cjs",
+    "test": "node --test tests/*.test.cjs",
+    "build:win": "electron-builder --win nsis --x64 --publish never",
+    "build:portable": "electron-builder --win portable --x64 --publish never",
+    "prepare:assets": "node scripts/prepare-assets.cjs"
+  },
+  "build": {
+    "appId": "com.edward.bibliotecabiblica",
+    "productName": "Biblioteca Bíblica",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "desktop.cjs",
+      "preload.cjs",
+      "update-service.cjs",
+      "app/**/*",
+      "package.json"
+    ],
+    "extraResources": [{ "from":"update-channel.json", "to":"update-channel.json" }],
+    "publish": [{"provider":"github","owner":"edwcas1830","repo":"biblioteca-biblica","releaseType":"release"}],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "app/icon.ico",
+      "signExecutable": false
+    },
+    "nsis": {
+      "artifactName": "biblioteca-biblica-setup-${version}.${ext}",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    }
+  },
+  "devDependencies": {
+    "electron": "44.7.0",
+    "electron-builder": "26.15.3",
+    "jszip": "3.10.1"
+  },
+  "dependencies": {
+    "electron-updater": "6.8.9"
+  }
+}

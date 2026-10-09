@@ -1,0 +1,10 @@
+node_modules/
+dist/
+*.log
+app/bible-data.js
+app/vendor/
+FUENTE-BIBLIA.json
+vista-previa.png
+plan-importado.png
+publication/
+.github/
