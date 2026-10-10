@@ -99,7 +99,16 @@ jobs:
           arch: x86_64
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: node mobile/scripts/probar-en-emulador.cjs mobile/android/app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/fixture-traspaso/traspaso" prueba-emulador
+          script: |
+            echo "== prueba en emulador: inicio =="
+            node mobile/scripts/probar-en-emulador.cjs mobile/android/app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/fixture-traspaso/traspaso" "$GITHUB_WORKSPACE/prueba-emulador"
+            ls -la "$GITHUB_WORKSPACE/prueba-emulador"
+
+      - name: Comprobar el informe del emulador (sin informe completo no hay APK)
+        run: |
+          test -f prueba-emulador/informe.txt
+          cat prueba-emulador/informe.txt
+          grep -q "^OK  interfaz de teléfono" prueba-emulador/informe.txt
 
       - name: Resultados de la prueba en el emulador
         if: always()

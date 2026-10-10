@@ -11,6 +11,7 @@ const fs = require('node:fs'), path = require('node:path');
 const [apk, traspaso, salida] = process.argv.slice(2);
 const PKG = 'com.edward.bibliotecabiblica';
 fs.mkdirSync(salida, { recursive: true });
+console.log('prueba en emulador · apk:', apk, '· traspaso:', traspaso, '· resultados:', salida);
 const adb = (...a) => execFileSync('adb', a, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
 const espera = ms => new Promise(r => setTimeout(r, ms));
 const informe = [];
