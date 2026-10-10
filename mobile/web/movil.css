@@ -204,8 +204,16 @@
 :root[data-telefono="true"] #back-to-top { bottom: calc(var(--pie) + var(--hoja-alto) + 12px); right: 12px; }
 
 /* ---------- Otras vistas (plan, devocional, oración) ---------- */
-:root[data-telefono="true"] main > section.view:not(#read-view) { padding: 8px 14px 24px; }
-:root[data-telefono="true"] main { overflow-x: hidden; }
+:root[data-telefono="true"] main { overflow-x: hidden; padding-inline: 0 !important; }
+:root[data-telefono="true"] main > section.view:not(#read-view) { padding: 12px 12px 24px; }
+/* Tarjetas, formularios y filas: nada más ancho que el teléfono. */
+:root[data-telefono="true"] main > section.view :is(.card, section[id$="-create"], .workspace-grid > section) { padding: 18px 16px; border-radius: 14px; }
+:root[data-telefono="true"] main > section.view :is(.workspace-grid, .cards, .grid) { grid-template-columns: minmax(0, 1fr) !important; }
+:root[data-telefono="true"] main > section.view form { grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.5rem), 1fr)) !important; }
+:root[data-telefono="true"] main > section.view :is(label, select, input, textarea) { min-width: 0; max-width: 100%; }
+:root[data-telefono="true"] main > section.view form :is(select, input, textarea) { width: 100%; box-sizing: border-box; }
+:root[data-telefono="true"] main > section.view :is(.form-row, .series-actions, .section-heading, .actions, .row) { flex-wrap: wrap; gap: 8px; }
+:root[data-telefono="true"] main > section.view h1 { font-size: clamp(1.6rem, 7vw, 2.2rem); overflow-wrap: anywhere; }
 
 /* En el teléfono la hoja es el estudio: el interruptor «Solo lectura» de escritorio sobra. */
 :root[data-telefono="true"] #study-open { display: none !important; }

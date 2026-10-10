@@ -81,14 +81,14 @@
     for (const label of $$('.topbar-actions label.appearance-control')) ajustes.append(label);
     const lista = crear('div', { class: 'movil-mas-lista' });
     const extras = [
-      ['Música de YouTube', () => $('#music-quick')?.click()],
       ['Estudio con IA', () => botonPorTexto('.reading-actions button', 'ia')?.click()]
     ];
     for (const [texto, fn] of extras) lista.append(crear('button', { type: 'button', class: 'quiet', texto, onclick: () => { cerrarMas(); fn(); } }));
     for (const b of $$('.library-menu-items button')) {
       const t = b.textContent.trim();
       if (/oración y testimonios/i.test(t)) continue; // ya está en la barra inferior
-      lista.append(crear('button', { type: 'button', class: 'quiet', texto: t, onclick: () => { cerrarMas(); b.click(); } }));
+      if (lista.querySelector(`[data-original="${CSS.escape(t)}"]`)) continue;
+      lista.append(crear('button', { type: 'button', class: 'quiet', 'data-original': t, texto: t, onclick: () => { cerrarMas(); b.click(); } }));
     }
     hojaMas.append(
       crear('div', { class: 'movil-mas-cabecera' }, [
