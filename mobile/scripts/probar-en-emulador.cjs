@@ -179,6 +179,21 @@ async function esperarLista(app, etiqueta) {
   const ui = await app.evaluar(`return {telefono:document.documentElement.dataset.telefono,nav:!!document.querySelector('#movil-nav'),hoja:!!document.querySelector('#movil-hoja-cabecera'),versiculos:document.querySelectorAll('#verses .verse').length};`);
   captura('4-interfaz');
   anotar(ui.nav && ui.hoja && ui.versiculos > 0, 'interfaz de teléfono', JSON.stringify(ui));
+  // 7. Actualizar encima (como hará Edward con cada versión nueva): misma firma → los datos se quedan.
+  try { app.cerrar(); } catch { /* ya cerrada */ }
+  adb('install', '-r', apk);
+  adb('shell', 'am', 'start', '-n', PKG + '/.MainActivity');
+  app = await conectar();
+  app = await esperarLista(app, '5-tras-actualizar');
+  let actualizado = null;
+  for (let i = 0; i < 60; i++) {
+    try {
+      actualizado = await app.evaluar(`return {lista:typeof storageReady!=='undefined'&&storageReady,hechos:(state.plans[0]?.completed||[]).length,devocionales:state.devotionals.length,modulos:catalogData?.modules?.length||0};`, 5000);
+      if (actualizado.lista && actualizado.modulos >= 5) break;
+    } catch { /* abriendo */ }
+    await espera(1000);
+  }
+  anotar(actualizado && actualizado.lista && actualizado.hechos === 329 && actualizado.devocionales === 2 && actualizado.modulos >= 5, 'actualizar encima conserva los datos', JSON.stringify(actualizado));
   fs.writeFileSync(path.join(salida, 'consola.txt'), app.consola.join('\n'));
   app.cerrar();
 })().catch(e => {

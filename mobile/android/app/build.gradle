@@ -7,8 +7,9 @@ android {
         applicationId "com.edward.bibliotecabiblica"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        // En GitHub: número de corrida, siempre creciente, para que cada APK se instale como actualización.
+        versionCode((System.getenv('BIBLIOTECA_VERSION_CODE') ?: '1') as Integer)
+        versionName(System.getenv('BIBLIOTECA_VERSION_NAME') ?: '0.7.0-dev')
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,7 +17,24 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // Firma fija (llave de Edward guardada como secreto de GitHub): con la misma firma, cada APK nuevo
+    // se instala ENCIMA del anterior y conserva los datos. Sin la llave (p. ej. en otra PC) se usa la de depuración.
+    def llave = System.getenv('ANDROID_KEYSTORE_PATH')
+    signingConfigs {
+        if (llave) {
+            fija {
+                storeFile file(llave)
+                storeType 'pkcs12'
+                storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('ANDROID_KEY_ALIAS')
+                keyPassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+            }
+        }
+    }
     buildTypes {
+        debug {
+            if (llave) signingConfig signingConfigs.fija
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
