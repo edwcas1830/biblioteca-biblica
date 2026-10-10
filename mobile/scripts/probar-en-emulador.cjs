@@ -56,17 +56,32 @@ async function conectar() {
   return { evaluar, enviar, consola, cerrar: () => ws.close() };
 }
 
+// Espera «lista» consultando cada 2 s. Si la página se recarga o se reemplaza (al arrancar, Android puede
+// cargarla dos veces), la sesión de depuración vieja deja de responder: se reconecta a la página actual.
 async function esperarLista(app, etiqueta) {
-  const r = await app.evaluar(`for(let i=0;i<180;i++){const e=document.documentElement.dataset.preparacion;if(e==='lista'||e==='fallo')return {estado:e,texto:document.querySelector('#preparacion-biblioteca .preparacion-texto')?.textContent||''};await new Promise(r=>setTimeout(r,500));}return {estado:'tiempo'};`, 120000);
+  const limite = Date.now() + 150000; let reconexiones = 0, r = null;
+  while (Date.now() < limite) {
+    try {
+      r = await app.evaluar("const e=document.documentElement.dataset.preparacion;return {estado:e||'',texto:document.querySelector('#preparacion-biblioteca .preparacion-texto')?.textContent||'',url:location.href};", 5000);
+      if (r && (r.estado === 'lista' || r.estado === 'fallo')) break;
+    } catch {
+      try { app.cerrar(); } catch { /* ya cerrada */ }
+      reconexiones++;
+      try { app = await conectar(); } catch { /* reintenta */ }
+    }
+    await espera(2000);
+  }
   captura(etiqueta);
-  anotar(r.estado === 'lista', 'arranque ' + etiqueta, r.estado === 'lista' ? '' : `${r.estado} — ${r.texto}`);
+  const estado = r ? r.estado : 'sin respuesta';
+  anotar(estado === 'lista', 'arranque ' + etiqueta, (estado === 'lista' ? '' : estado + ' — ' + (r ? r.texto : '')) + (reconexiones ? ' (reconexiones: ' + reconexiones + ')' : ''));
+  return app;
 }
 
 (async () => {
   adb('install', '-r', apk);
   adb('shell', 'am', 'start', '-n', PKG + '/.MainActivity');
   let app = await conectar();
-  await esperarLista(app, '1-primer-arranque');
+  app = await esperarLista(app, '1-primer-arranque');
   const caps = await app.evaluar(`const c=await window.libraryDesktop.getCapabilities();return {storage:c.storage,plataforma:c.platform,faltan:['bootstrap','savePersonal','catalog','chapter','transferScan','transferInstall','voiceOptions','shareText','aiStatus'].filter(n=>!c.operations[n]?.available)};`);
   anotar(caps.plataforma === 'android' && caps.storage === 'sqlite', 'base nativa', JSON.stringify(caps));
   anotar(caps.faltan.length === 0, 'operaciones disponibles', caps.faltan.join(', ') || 'todas');
@@ -81,7 +96,7 @@ async function esperarLista(app, etiqueta) {
   anotar(guardado === 'ok', 'guardar nota');
   await app.enviar('Page.reload', { ignoreCache: true });
   await espera(3000);
-  await esperarLista(app, '2-tras-recargar');
+  app = await esperarLista(app, '2-tras-recargar');
   const nota = await app.evaluar(`const b=await window.libraryDesktop.bootstrap({initial:{version:1,position:{book:42,chapter:3,verse:16},notes:{},highlights:{},plans:[],devotionals:[],prayers:[],prayerDrafts:{},guideResponses:{},aiStudies:[],devResponses:{},planNotes:{},appearance:{design:'a'},font:20},legacy:null,legacyValid:true});return b.state.notes['42:3:16']||'';`);
   anotar(nota === 'Nota de prueba en el emulador', 'nota persistida tras recargar', nota);
   // 5. Traspaso sintético: se colocan los archivos donde los deja el selector (files/traspaso-entrante)
@@ -99,7 +114,7 @@ async function esperarLista(app, etiqueta) {
   anotar(inst === true, 'instalación del traspaso');
   await app.enviar('Page.reload', { ignoreCache: true });
   await espera(3000);
-  await esperarLista(app, '3-tras-traspaso');
+  app = await esperarLista(app, '3-tras-traspaso');
   const fin = await app.evaluar(`await (window.BibliaPreparacion?.modulos||Promise.resolve());const b=await window.libraryDesktop.bootstrap({initial:{version:1,position:{book:18,chapter:23,verse:1},notes:{},highlights:{},plans:[],devotionals:[],prayers:[],prayerDrafts:{},guideResponses:{},aiStudies:[],devResponses:{},planNotes:{},appearance:{design:'a'},font:20},legacy:null,legacyValid:true});const p=b.state.plans[0]||{};const cat=await window.libraryDesktop.catalog();let verso='';try{const c=await window.libraryDesktop.chapter({book:18,chapter:23,module:'texto-sintetico'});verso=(c.verses[0]||{}).text||'';}catch(e){verso='ERROR '+e.message;}return {dias:(p.entries||[]).length||p.days,hechos:(p.completed||[]).length,devocionales:b.state.devotionals.length,nota:b.state.notes['18:23:1']||'',modulo:cat.modules.some(m=>m.id==='texto-sintetico'),verso};`, 300000);
   anotar(fin.dias === 1189 && fin.hechos === 329 && fin.devocionales === 2, 'datos traídos de la PC', JSON.stringify({ dias: fin.dias, hechos: fin.hechos, devocionales: fin.devocionales }));
   anotar(fin.modulo && /Texto inventado/.test(fin.verso), 'módulo e-Sword traído y legible', fin.verso.slice(0, 60));
