@@ -43,6 +43,31 @@
       } catch { return { completed: false }; } // el lector cerró el selector
     };
   }
+  // Música: el reproductor (app/music/player.html) se sirve desde el mismo origen de la app;
+  // no hace falta el servidor local de escritorio. «Abrir fuera» usa el navegador del sistema.
+  const Browser = nativo && cap.registerPlugin ? cap.registerPlugin('Browser') : null;
+  const abrirFuera = async url => {
+    const u = new URL(url);
+    if (u.protocol !== 'https:') throw new Error('Solo se abren enlaces seguros.');
+    if (Browser) await Browser.open({ url: u.href }); else window.open(u.href, '_blank', 'noopener');
+  };
+  {
+    integraciones.musicPlayer = async input => {
+      const media = window.MusicCore.parse(input);
+      const src = new URL('music/player.html', location.href);
+      if (media.video) src.searchParams.set('video', media.video);
+      if (media.list) src.searchParams.set('list', media.list);
+      src.searchParams.set('padre', location.origin);
+      return { src: src.href, origin: location.origin, media };
+    };
+    integraciones.musicExternal = async input => { const m = window.MusicCore.parse(input); await abrirFuera(m.url); };
+    // Igual que escritorio: abre la búsqueda en YouTube (nunca una URL arbitraria).
+    integraciones.youtubeExternal = async (consulta = '') => {
+      if (typeof consulta !== 'string' || consulta.length > 150) throw new Error('Búsqueda no válida.');
+      await abrirFuera('https://www.youtube.com/results?search_query=' + encodeURIComponent(consulta.trim() || 'música cristiana adoración'));
+    };
+    integraciones.youtubeCloud = async () => { await abrirFuera('https://console.cloud.google.com/apis/library/youtube.googleapis.com'); };
+  }
   if (Object.keys(integraciones).length) adaptador.register(integraciones);
 
   // Ciclo de vida → evento del contrato (la música se pausa al salir de la app).

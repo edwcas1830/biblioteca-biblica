@@ -54,7 +54,7 @@ html = html.replace(/<meta http-equiv="Content-Security-Policy" content="[^"]*">
   '<meta http-equiv="Content-Security-Policy" content="default-src \'self\'; script-src \'self\'; style-src \'self\'; ' +
   'img-src \'self\' data: blob: https://i.ytimg.com; media-src \'self\' blob:; worker-src \'self\' blob:; ' +
   'connect-src \'self\' https://openrouter.ai https://generativelanguage.googleapis.com https://www.googleapis.com; ' +
-  'frame-src https://www.youtube-nocookie.com https://www.youtube.com; object-src \'none\'; base-uri \'none\'; form-action \'none\'">');
+  'frame-src \'self\' https://www.youtube-nocookie.com https://www.youtube.com; object-src \'none\'; base-uri \'none\'; form-action \'none\'">');
 html = html.replace('<html', '<html data-plataforma="movil"');
 fs.writeFileSync(indexPath, html);
 
