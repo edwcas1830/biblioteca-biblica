@@ -4,12 +4,13 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp
 const books = window.BIBLE?.books;
 const core = window.BibleCore;
 const planCore = window.PlanCore;
+const appearanceCore=window.AppearanceCore;
 const STORE = 'biblioteca-biblica-v1';
-const initial = () => ({ version:1, position:{book:18,chapter:23,verse:1}, notes:{}, highlights:{}, devResponses:{}, devotionals:[], plans:[], font:20, night:false });
+const initial = () => ({ version:1, position:{book:18,chapter:23,verse:1}, notes:{}, highlights:{}, devResponses:{}, devotionals:[], plans:[], font:20, night:false, appearance:appearanceCore.normalize() });
 let state = initial(), activeView='read', activeDev=null, activeDay=0, toastTimer, searchTimer;
 const desktop=window.libraryDesktop;
 let storageReady=false, saveQueue=Promise.resolve(), selectedVersion='rv1909', catalogData=null, readingGeneration=0, searchGeneration=0, studyGeneration=0, chapterData=null, savePending=0, saveFailed=false;
-let pendingPlan=null, reviewPage=0, activePlanDay=null, readerRange=null;
+let pendingPlan=null, reviewPage=0, activePlanDay=null, readerRange=null, studySelection='chapter', dictionaryGeneration=0, dictionaryEntries=[];
 const planPages=new Map(), planFilters=new Map();
 const PLAN_PAGE=30, REVIEW_PAGE=25;
 function toast(text) { $('#toast').textContent=text; $('#toast').hidden=false; clearTimeout(toastTimer); toastTimer=setTimeout(()=>$('#toast').hidden=true,5500); }
@@ -49,6 +50,7 @@ function validateState(candidate) {
   });
   result.font=Number.isInteger(candidate.font)?Math.max(16,Math.min(28,candidate.font)):20;
   result.night=candidate.night===true;
+  result.appearance=appearanceCore.normalize(candidate.appearance);
   result.selectedVersion=typeof candidate.selectedVersion==='string'?candidate.selectedVersion:'rv1960';
   return result;
 }
@@ -65,15 +67,23 @@ function save() {
 function key(verse=state.position.verse) { const p=state.position; return `${selectedVersion==='rv1909'?'':selectedVersion+'@'}${p.book}:${p.chapter}:${verse}`; }
 function reference(p=state.position) { return `${books[p.book].name} ${p.chapter}:${p.verse}`; }
 function settings() {
-  document.body.classList.toggle('night',state.night);
-  document.documentElement.style.setProperty('--verse-size',state.font+'px');
+  state.appearance=appearanceCore.normalize(state.appearance);
+  const root=document.documentElement,theme=appearanceCore.themeAt(state.appearance.theme);
+  root.dataset.design=state.appearance.design;root.dataset.theme=theme;
+  const link=$('#design-css'),href='designs/design-'+state.appearance.design+'.css';
+  if(link.getAttribute('href')!==href)link.setAttribute('href',href);
+  state.night=theme==='noche';document.body.classList.toggle('night',state.night);
+  root.style.setProperty('--verse-size',state.font+'px');
+  $('#design-select').value=state.appearance.design;$('#theme-select').value=state.appearance.theme;
+  for(const [pane,size] of Object.entries(state.appearance.panes||{biblia:42,comentario:30,diccionario:28}))root.style.setProperty('--pane-'+pane,size+'fr');
   $('#night').textContent=state.night?'◐ Luz de día':'◐ Luz cálida';
 }
+
 function showView(view) {
   activeView=view;
   document.querySelectorAll('.view').forEach(el=>el.hidden=el.id!==view+'-view');
   document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));
-  if(view!=='read') { document.body.classList.remove('focus'); $('#focus').textContent='✦ Modo intimidad'; }
+  if(view!=='read') { document.body.classList.remove('focus');updateReadingMode(); }
   if(view==='dev') renderDevList();
   if(view==='plan') renderPlans();
 }
@@ -86,6 +96,7 @@ async function renderReader() {
   $('#passage-heading').textContent=`${book.name} ${p.chapter}`;
   $('#chapter-footer').textContent=`CAPÍTULO ${p.chapter}`;
   chapterData=null;$('#verses').innerHTML=chapter.map((text,i)=>`<button class="verse ${i+1===p.verse?'selected':''} ${readerRange&&readerRange.book===p.book&&readerRange.chapter===p.chapter&&i+1>=readerRange.start&&i+1<=readerRange.end?'planned-range':''} ${state.highlights[key(i+1)]?'highlight-'+state.highlights[key(i+1)]:''}" data-verse="${i+1}" aria-pressed="${i+1===p.verse}" aria-label="${esc(book.name)} ${p.chapter}:${i+1}"><sup>${i+1}</sup>${esc(text)}</button>`).join('');
+  decorateReading();
   $('#previous').disabled=p.book===0 && p.chapter===1;
   $('#next').disabled=p.book===65 && p.chapter===book.chapters.length;
   renderNote();
@@ -93,15 +104,16 @@ async function renderReader() {
     const generation=++readingGeneration;
     try{const result=await desktop.chapter({module:selectedVersion,book:p.book,chapter:p.chapter,strong:$('#show-strong').checked});if(generation!==readingGeneration)return;chapterData=result;
       $('#verses').innerHTML=result.verses.map(row=>`<button class="verse ${row.verse===state.position.verse?'selected':''} ${readerRange&&row.verse>=readerRange.start&&row.verse<=readerRange.end?'planned-range':''} ${state.highlights[key(row.verse)]?'highlight-'+state.highlights[key(row.verse)]:''}" data-verse="${row.verse}" aria-pressed="${row.verse===state.position.verse}"><sup>${row.verse}</sup>${row.html}</button>`).join('');
-      $('#edition-footer').textContent=result.title;$('#cover-edition').textContent=result.title;
+      decorateReading();$('#edition-footer').textContent=result.title;$('#cover-edition').textContent=result.title;
       if(result.verses.some(row=>!row.alignment))$('#module-status').textContent='En algunos versículos los números Strong se muestran al final porque el texto de apoyo difiere.';
       else $('#module-status').textContent='';
+      if(state.position.verse===1)$('#verses').scrollTop=0;
       if(state.position.verse!==1)$('#verses').querySelector(`[data-verse="${state.position.verse}"]`)?.scrollIntoView({block:'nearest'});
     }catch(error){if(generation===readingGeneration){chapterData=null;$('#verses').textContent=error.message;toast(error.message);}}
   }
 }
 function renderNote() {
-  $('#selected-ref').textContent=reference();
+  const p=state.position;document.documentElement.dataset.studyScope=studySelection;$('#selected-ref').textContent=studySelection==='chapter'?`${books[p.book].name} ${p.chapter}`:studySelection==='range'&&readerRange?`${books[p.book].name} ${p.chapter}:${readerRange.start}–${readerRange.end}`:reference();$('#bible-ref').textContent=$('#selected-ref').textContent;syncDictionaryRef();$('#note-reference').textContent=reference()+' · '+($('#version-select option:checked')?.textContent||selectedVersion);
   $('#note').value=state.notes[key()] || '';
   $('#save-status').textContent=saveFailed?'No se pudo guardar. Exporta una copia.':selectedVersion!=='rv1909'&&Object.keys(state.notes).some(k=>!k.includes('@'))?'Notas de esta versión. Tus notas anteriores siguen en RV1909.':'Las notas se guardan en este equipo, vinculadas a esta versión.';
   renderComment();
@@ -109,7 +121,7 @@ function renderNote() {
 function go(book,chapter,verse=1,endVerse) {
   if(!validPosition({book,chapter,verse})) { toast('No se encontró ese pasaje.'); return; }
   readerRange=endVerse?{book,chapter,start:verse,end:endVerse}:null;
-  state.position={book,chapter,verse}; renderReader(); save(); showView('read');
+  studySelection=endVerse?'range':verse!==1?'verse':'chapter';state.position={book,chapter,verse}; renderReader(); save(); showView('read');
   if(verse!==1) $('#verses').querySelector(`[data-verse="${verse}"]`)?.scrollIntoView({block:'center'});
 }
 function changeChapter(direction) {
@@ -251,9 +263,11 @@ function bind() {
   $('#chapter').addEventListener('change',()=>go(state.position.book,Number($('#chapter').value)));
   $('#verses').addEventListener('click',event=>{
     const verse=event.target.closest('[data-verse]'); if(!verse)return;
-    state.position.verse=Number(verse.dataset.verse);
+    studySelection='verse';state.position.verse=Number(verse.dataset.verse);
     $('#verses').querySelectorAll('.verse').forEach(el=>{el.classList.toggle('selected',el===verse);el.setAttribute('aria-pressed',String(el===verse));});
     renderNote(); save();
+    const strong=event.target.closest('[data-strong]'),word=event.target.closest('[data-word]');
+    if(strong)queryFromReading(strong.dataset.strong,true);else if(word)queryFromReading(word.dataset.word);
   });
   $('#note').addEventListener('input',()=>{ if($('#note').value) state.notes[key()]=$('#note').value; else delete state.notes[key()]; save(); });
   document.querySelectorAll('[data-ink]').forEach(button=>button.addEventListener('click',()=>{
@@ -263,8 +277,8 @@ function bind() {
   $('#previous').addEventListener('click',()=>changeChapter(-1)); $('#next').addEventListener('click',()=>changeChapter(1));
   $('#larger').addEventListener('click',()=>{state.font=Math.min(28,state.font+1);settings();save();});
   $('#smaller').addEventListener('click',()=>{state.font=Math.max(16,state.font-1);settings();save();});
-  $('#night').addEventListener('click',()=>{state.night=!state.night;settings();save();});
-  $('#focus').addEventListener('click',()=>{showView('read');document.body.classList.toggle('focus');$('#focus').textContent=document.body.classList.contains('focus')?'✦ Volver a mi biblioteca':'✦ Modo intimidad';});
+  $('#night').addEventListener('click',()=>{state.appearance.theme=document.documentElement.dataset.theme==='noche'?'marfil':'noche';settings();save();});
+  $('#focus').addEventListener('click',()=>{showView('read');document.body.classList.toggle('focus');updateReadingMode();});
   $('#cover').addEventListener('click',()=>$('#books-dialog').showModal()); $('#books-close').addEventListener('click',()=>$('#books-dialog').close());
   $('#books-grid').addEventListener('click',event=>{const button=event.target.closest('[data-book]');if(button){$('#books-dialog').close();go(Number(button.dataset.book),1);}});
   $('#search-open').addEventListener('click',()=>{$('#search-dialog').showModal();$('#search-input').focus();});
@@ -317,12 +331,136 @@ async function start() {
   $('#books-grid').innerHTML=books.map((book,i)=>`<button data-book="${i}">${esc(book.name)}</button>`).join('');
   $('#note').maxLength=100000;
   settings();renderReader();renderDevList();renderPlans();bind();bindPlanImport();
-  bindLibrary();
+  bindLibrary();bindAppearance();
 }
-async function loadCatalog(){catalogData=await desktop.catalog();const versions=catalogData.modules.filter(m=>m.tipo==='biblia'&&m.rol==='version');selectedVersion=versions.some(m=>m.id===state.selectedVersion)?state.selectedVersion:versions.some(m=>m.id==='rv1960')?'rv1960':'rv1909';$('#version-select').innerHTML=versions.map(m=>`<option value="${esc(m.id)}">${esc(m.abreviatura||m.titulo)}</option>`).join('');$('#version-select').value=selectedVersion;const comments=catalogData.modules.filter(m=>m.rol==='comentario');$('#comment-select').innerHTML='<option value="">Elegir comentario</option>'+comments.map(m=>`<option value="${esc(m.id)}">${esc(m.titulo)}</option>`).join('');const options=[['strong-es','Strong español'],['vine','Vine · AT y NT'],['vila-escuain','Vila-Escuain']].filter(([id])=>id==='vine'?catalogData.modules.some(m=>m.id==='vine-at'||m.id==='vine-nt'):catalogData.modules.some(m=>m.id===id));$('#dictionary-select').innerHTML=options.map(([id,title])=>`<option value="${id}">${title}</option>`).join('');$('#show-strong').disabled=selectedVersion!=='rv1960'||!catalogData.modules.some(m=>m.id==='rv1960-strong');if($('#show-strong').disabled)$('#show-strong').checked=false;$('#library-study').hidden=!comments.length&&!options.length;renderSources();}
+async function loadCatalog(){catalogData=await desktop.catalog();const versions=catalogData.modules.filter(m=>m.tipo==='biblia'&&m.rol==='version');selectedVersion=versions.some(m=>m.id===state.selectedVersion)?state.selectedVersion:versions.some(m=>m.id==='rv1960')?'rv1960':'rv1909';$('#version-select').innerHTML=versions.map(m=>`<option value="${esc(m.id)}">${esc(m.abreviatura||m.titulo)}</option>`).join('');$('#version-select').value=selectedVersion;const comments=catalogData.modules.filter(m=>m.rol==='comentario');$('#comment-select').innerHTML='<option value="">Elegir comentario</option>'+comments.map(m=>`<option value="${esc(m.id)}">${esc(m.titulo)}</option>`).join('');const options=[['strong-es','Strong español'],['vine','Vine · AT y NT'],['drae','RAE · Diccionario español']].filter(([id])=>id==='vine'?catalogData.modules.some(m=>m.id==='vine-at'||m.id==='vine-nt'):id==='drae'?catalogData.modules.some(m=>/^drae-[123]$/.test(m.id)):catalogData.modules.some(m=>m.id===id));$('#dictionary-select').innerHTML=options.map(([id,title])=>`<option value="${id}">${title}</option>`).join('');$('#show-strong').disabled=selectedVersion!=='rv1960'||!catalogData.modules.some(m=>m.id==='rv1960-strong');if($('#show-strong').disabled)$('#show-strong').checked=false;$('#comment-select').disabled=!comments.length;if(comments.length)$('#comment-select').value=comments.some(m=>m.id==='mundo-hispano')?'mundo-hispano':comments[0].id;for(const id of ['dictionary-select','dictionary-query','dictionary-submit'])$('#'+id).disabled=!options.length;renderSources();}
 function renderSources(){if(!catalogData)return;$('#sources-list').innerHTML=catalogData.modules.map(m=>`<section class="source-card"><h4>${esc(m.titulo)}</h4><p>${esc(m.origen)} · ${esc(m.rol)}</p><p>${esc(m.licencia)}</p><p class="fine-print">${esc(m.versificacion)} · Revisión ${esc(m.sha256.slice(0,16))}</p>${m.sourceNotice?`<details><summary>Aviso incluido en la fuente</summary><p class="source-notice">${esc(m.sourceNotice)}</p></details>`:''}</section>`).join('');$('#sources-warning').textContent=catalogData.warnings.join('\n');}
-async function renderComment(){if(!desktop?.comments||!$('#comment-select')?.value)return;const generation=++studyGeneration;if(selectedVersion==='rv1909'){$('#comment-content').textContent='Elige RV1960, NVI o LBLA para consultar estos comentarios: la numeración de la fuente anterior puede diferir.';return;}$('#comment-content').textContent='Leyendo comentario…';try{const result=await desktop.comments({module:$('#comment-select').value,...state.position});if(generation!==studyGeneration)return;$('#comment-content').innerHTML=result.entries.length?result.entries.map(e=>`<details><summary>${esc(e.label)}</summary><div>${e.html}</div></details>`).join(''):'Esta fuente no tiene una nota para este pasaje.';}catch(error){if(generation===studyGeneration)$('#comment-content').textContent=error.message;}}
-function bindLibrary(){if(!desktop?.catalog){$('#library-controls').hidden=true;return;}$('#version-select').addEventListener('change',()=>{selectedVersion=$('#version-select').value;state.selectedVersion=selectedVersion;$('#show-strong').disabled=selectedVersion!=='rv1960';if($('#show-strong').disabled)$('#show-strong').checked=false;stopVoice();renderReader();save();});$('#show-strong').addEventListener('change',renderReader);$('#comment-select').addEventListener('change',()=>{if(!$('#comment-select').value){studyGeneration++;$('#comment-content').textContent='';}else renderComment();});$('#dictionary-form').addEventListener('submit',async event=>{event.preventDefault();$('#dictionary-content').textContent='Buscando…';try{const result=await desktop.dictionary({group:$('#dictionary-select').value,query:$('#dictionary-query').value});$('#dictionary-content').innerHTML=result.entries.length?result.entries.map(e=>`<details><summary>${esc(e.title)}</summary><div>${e.html}</div></details>`).join(''):'Sin entradas para esta búsqueda.';}catch(error){$('#dictionary-content').textContent=error.message;}});$('#sources-open').addEventListener('click',()=>$('#sources-dialog').showModal());$('#sources-close').addEventListener('click',()=>$('#sources-dialog').close());$('#sources-refresh').addEventListener('click',async()=>{try{await loadCatalog();await renderReader();toast('Fuentes y revisiones comprobadas.');}catch(error){toast(error.message);}});$('#search-mode').addEventListener('change',search);$('#voice-play').addEventListener('click',playVoice);$('#voice-pause').addEventListener('click',()=>{if(speechSynthesis.paused)speechSynthesis.resume();else speechSynthesis.pause();});$('#voice-stop').addEventListener('click',stopVoice);window.speechSynthesis?.addEventListener('voiceschanged',loadVoices);loadVoices();window.addEventListener('beforeunload',event=>{stopVoice();if(saveFailed){if(!window.confirm('Hay cambios sin guardar. Puedes cancelar y exportar una copia. ¿Cerrar y descartarlos?')){event.preventDefault();event.returnValue='';}return;}if(savePending){event.preventDefault();event.returnValue='';saveQueue.then(()=>{if(!saveFailed)window.close();});}});}
+async function renderComment(){
+  const generation=++studyGeneration,content=$('#comment-content');
+  $('#panes').dataset.sourcesReady=String(Boolean($('#comment-select').value&&$('#dictionary-select').value));
+  $('#comment-scope').textContent=studySelection==='chapter'?'Comentario del capítulo':studySelection==='range'?'Comentario del rango seleccionado':'Comentario del versículo seleccionado';
+  if(!desktop?.comments||!$('#comment-select').value){content.innerHTML='<p class="empty-slot">Elige una fuente para leer su comentario.</p>';content.setAttribute('aria-busy','false');return;}
+  if(selectedVersion==='rv1909'){content.textContent='Elige RV1960, NVI o LBLA para consultar estos comentarios: la numeración de la fuente anterior puede diferir.';content.setAttribute('aria-busy','false');return;}
+  content.setAttribute('aria-busy','true');content.textContent='Leyendo comentario…';
+  try{
+    const p=state.position,start=studySelection==='chapter'?1:studySelection==='range'?readerRange.start:p.verse,end=studySelection==='chapter'?books[p.book].chapters[p.chapter-1].length:studySelection==='range'?readerRange.end:start;
+    const result=await desktop.comments({module:$('#comment-select').value,...p,verse:start,endVerse:end});if(generation!==studyGeneration)return;
+    const chapter=result.entries.filter(e=>e.label==='Comentario del capítulo'),ranges=result.entries.filter(e=>!['Introducción al libro','Comentario del capítulo'].includes(e.label));
+    const entries=studySelection==='chapter'&&chapter.length?chapter:ranges.length?ranges:chapter;
+    content.innerHTML=(entries.length?entries.map(e=>`<section class="comment-entry"><h4>${esc(e.label)}</h4><div>${e.html}</div></section>`).join(''):'<p class="empty-slot">Esta fuente no tiene una nota para este pasaje.</p>')+result.entries.filter(e=>e.label==='Introducción al libro').map(e=>`<details class="comment-introduction"><summary>${esc(e.label)}</summary><div>${e.html}</div></details>`).join('');
+    content.scrollTop=0;
+  }catch(error){if(generation===studyGeneration)content.textContent=error.message;}
+  finally{if(generation===studyGeneration)content.setAttribute('aria-busy','false');}
+}
+function showDictionaryEntry(index){
+  const entry=dictionaryEntries[index];if(!entry)return;
+  $('#dictionary-content').innerHTML=`<ul class="dictionary-results" aria-label="Resultados de diccionario">${dictionaryEntries.map((e,i)=>`<li><button class="dictionary-result" data-dictionary-entry="${i}" aria-pressed="${i===index}">${esc(e.title)}</button></li>`).join('')}</ul><article class="dictionary-entry"><h4>${esc(entry.title)}</h4><p class="source-caption">${esc(catalogData?.modules.find(m=>m.id===entry.module)?.titulo||entry.module)}</p><div>${entry.html}</div></article>`;
+  $('#dictionary-content').scrollTop=0;
+}
+async function consultDictionary(){
+  const generation=++dictionaryGeneration,content=$('#dictionary-content');syncDictionaryRef();content.setAttribute('aria-busy','true');content.textContent='Buscando…';
+  try{const result=await desktop.dictionary({group:$('#dictionary-select').value,query:$('#dictionary-query').value});if(generation!==dictionaryGeneration)return;dictionaryEntries=result.entries;if(dictionaryEntries.length)showDictionaryEntry(0);else content.innerHTML='<p class="empty-slot">No hay entradas para esta consulta. Prueba otra palabra.</p>';$('#dictionary-status').textContent=`${dictionaryEntries.length} resultados${$('#dictionary-select').value==='drae'?' · palabra exacta primero, después prefijos':''}.`;}
+  catch(error){if(generation===dictionaryGeneration){content.textContent=error.message;$('#dictionary-status').textContent='No se pudo consultar esta fuente.';}}
+  finally{if(generation===dictionaryGeneration)content.setAttribute('aria-busy','false');}
+}
+// Presentation hooks shared by all three CSS designs; module text is never rewritten on disk.
+function decorateReading(){
+  for(const verse of $('#verses').children){
+    const walker=document.createTreeWalker(verse,NodeFilter.SHOW_TEXT),nodes=[];
+    while(walker.nextNode())nodes.push(walker.currentNode);
+    for(const node of nodes){
+      if(node.parentElement.closest('.module-heading')||node.parentElement===verse.querySelector('sup'))continue;
+      const strong=Boolean(node.parentElement.closest('.strong-number'));
+      const expression=strong?/([HG]\d{1,5})/g:/([\p{L}\p{M}]+(?:[’'-][\p{L}\p{M}]+)*)/gu;
+      const fragment=document.createDocumentFragment();let last=0;
+      for(const match of node.textContent.matchAll(expression)){
+        fragment.append(node.textContent.slice(last,match.index));const span=document.createElement('span');
+        span.textContent=match[0];span.className=strong?'strong-code':'reading-word';span.dataset[strong?'strong':'word']=match[0];
+        fragment.append(span);last=match.index+match[0].length;
+      }
+      if(last){fragment.append(node.textContent.slice(last));node.replaceWith(fragment);}
+    }
+  }
+}
+function syncDictionaryRef(){
+  const query=$('#dictionary-query').value.trim();
+  $('#dictionary-ref').textContent=query?`${query} · ${reference()}`:'Toca una palabra o consulta aquí.';
+}
+function queryFromReading(query,strong=false){
+  if(!desktop?.dictionary||$('#dictionary-select').disabled)return;
+  const select=$('#dictionary-select'),groups=[...select.options].map(o=>o.value);
+  if(strong&&groups.includes('strong-es'))select.value='strong-es';
+  else if(!strong&&select.value==='strong-es')select.value=groups.includes('drae')?'drae':groups.includes('vine')?'vine':select.value;
+  $('#dictionary-query').value=query;syncDictionaryRef();consultDictionary();
+}
+function updateReadingMode(){
+  const solo=document.body.classList.contains('focus')||document.body.classList.contains('reading-only');
+  $('#panes').dataset.active=String(!solo);$('#study-open').textContent=solo?'Abrir estudio':'Solo lectura';
+  $('#study-open').setAttribute('aria-pressed',String(!solo));
+  $('#focus').textContent=document.body.classList.contains('focus')?'✦ Volver a mi biblioteca':'✦ Modo intimidad';
+}
+function bindReaderSync(){
+  const body=$('#verses');let intentUntil=0,timer;
+  for(const name of ['wheel','pointerdown','keydown'])body.addEventListener(name,()=>{intentUntil=Date.now()+2500;},{passive:true});
+  body.addEventListener('scroll',()=>{clearTimeout(timer);if(Date.now()>intentUntil)return;timer=setTimeout(()=>{
+    if(activeView!=='read'||!storageReady||document.activeElement===$('#note'))return;
+    const top=body.getBoundingClientRect().top+12;
+    const verse=[...body.children].find(el=>el.getBoundingClientRect().bottom>top);
+    if(!verse||Number(verse.dataset.verse)===state.position.verse)return;
+    studySelection='verse';state.position.verse=Number(verse.dataset.verse);
+    for(const el of body.children){el.classList.toggle('selected',el===verse);el.setAttribute('aria-pressed',String(el===verse));}
+    renderNote();save();
+  },250);},{passive:true});
+}
+function bindPaneResizers(){
+  const defaults={biblia:42,comentario:30,diccionario:28};
+  const apply=values=>{state.appearance.panes=values;for(const [id,size] of Object.entries(values))document.documentElement.style.setProperty('--pane-'+id,size+'fr');};
+  for(const separator of document.querySelectorAll('.pane-resizer')){
+    const [first,second]=separator.dataset.between.split(','),a=$(`[data-pane="${first}"]`),b=$(`[data-pane="${second}"]`);
+    let drag=null;
+    const axis=()=>getComputedStyle(separator).getPropertyValue('--resize-axis').trim()==='y'?'y':'x';
+    const updateAria=()=>{const rectA=a.getBoundingClientRect(),rectB=b.getBoundingClientRect(),horizontal=axis()==='x',size=horizontal?'width':'height';separator.setAttribute('aria-orientation',horizontal?'vertical':'horizontal');separator.setAttribute('aria-valuenow',Math.round(100*rectA[size]/(rectA[size]+rectB[size]))||50);};
+    const resize=(ratio,values,span)=>{
+      const total=values[first]+values[second],minimum=Math.max(20,1000/total,Math.min(45,100*(axis()==='x'?220:140)/span));
+      ratio=Math.max(minimum,Math.min(100-minimum,ratio));
+      const next={...values,[first]:total*ratio/100,[second]:total*(1-ratio/100)};apply(next);updateAria();
+    };
+    separator.addEventListener('pointerdown',event=>{
+      if(event.button!==0)return;event.preventDefault();
+      const horizontal=axis()==='x',rectA=a.getBoundingClientRect(),rectB=b.getBoundingClientRect(),size=horizontal?'width':'height';
+      drag={pointer:event.pointerId,start:horizontal?event.clientX:event.clientY,pixels:rectA[size],span:rectA[size]+rectB[size],values:{...(state.appearance.panes||defaults)}};
+      separator.setPointerCapture(event.pointerId);document.body.classList.add('resizing');
+    });
+    separator.addEventListener('pointermove',event=>{if(!drag||event.pointerId!==drag.pointer)return;const delta=(axis()==='x'?event.clientX:event.clientY)-drag.start;resize(100*(drag.pixels+delta)/drag.span,drag.values,drag.span);});
+    const finish=cancel=>{if(!drag)return;if(cancel)apply(drag.values);drag=null;document.body.classList.remove('resizing');if(!cancel)save();};
+    separator.addEventListener('pointerup',()=>finish(false));separator.addEventListener('pointercancel',()=>finish(true));separator.addEventListener('lostpointercapture',()=>finish(false));
+    separator.addEventListener('keydown',event=>{
+      if(event.key==='Escape'&&drag){finish(true);return;}
+      if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(event.key))return;
+      event.preventDefault();const rectA=a.getBoundingClientRect(),rectB=b.getBoundingClientRect(),size=axis()==='x'?'width':'height',span=rectA[size]+rectB[size];
+      const ratio=100*rectA[size]/span,desired=event.key==='Home'?20:event.key==='End'?80:ratio+(['ArrowRight','ArrowDown'].includes(event.key)?5:-5);
+      resize(desired,{...(state.appearance.panes||defaults)},span);save();
+    });
+    separator.addEventListener('dblclick',()=>{apply({...defaults});updateAria();save();});
+    new ResizeObserver(updateAria).observe(separator);
+  }
+}
+function bindAppearance(){
+  $('#design-select').addEventListener('change',()=>{state.appearance.design=$('#design-select').value;settings();save();});
+  $('#theme-select').addEventListener('change',()=>{state.appearance.theme=$('#theme-select').value;settings();save();});
+  setInterval(()=>{if(state.appearance.theme==='auto')settings();},60000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&state.appearance.theme==='auto')settings();});
+  const scrollAreas=()=>[document.scrollingElement,$('#main-content'),$('#verses')];
+  const updateTop=()=>{const visible=window.scrollY>600||scrollAreas().some(el=>el&&el.scrollTop>600);const button=$('#back-to-top');button.classList.toggle('is-visible',visible);button.setAttribute('aria-hidden',String(!visible));button.tabIndex=visible?0:-1;};
+  document.addEventListener('scroll',updateTop,true);window.addEventListener('resize',updateTop);updateTop();
+  $('#back-to-top').addEventListener('click',()=>{const behavior=matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth';window.scrollTo({top:0,behavior});for(const el of scrollAreas())el?.scrollTo({top:0,behavior});$('#book').focus({preventScroll:true});});
+  $('#study-open').addEventListener('click',()=>{const solo=document.body.classList.contains('focus')||document.body.classList.contains('reading-only');document.body.classList.remove('focus');document.body.classList.toggle('reading-only',!solo);updateReadingMode();});
+  $('#dictionary-from-selection').addEventListener('click',()=>{const word=window.getSelection()?.toString().trim();if(!word||word.length>100){toast('Selecciona una palabra de la Biblia y pulsa Consultar selección.');return;}queryFromReading(word,/^[HG]\d{1,5}$/i.test(word));});
+  bindPaneResizers();bindReaderSync();
+  document.querySelectorAll('[data-action]').forEach(button=>button.addEventListener('click',()=>{const menu=button.closest('details');if(menu)menu.open=false;document.getElementById(button.dataset.action)?.click();}));
+}
+
+function bindLibrary(){if(!desktop?.catalog){$('#library-controls').hidden=true;return;}$('#version-select').addEventListener('change',()=>{selectedVersion=$('#version-select').value;state.selectedVersion=selectedVersion;$('#show-strong').disabled=selectedVersion!=='rv1960'||!catalogData.modules.some(m=>m.id==='rv1960-strong');if($('#show-strong').disabled)$('#show-strong').checked=false;stopVoice();renderReader();save();});$('#show-strong').addEventListener('change',renderReader);$('#comment-select').addEventListener('change',renderComment);$('#dictionary-form').addEventListener('submit',event=>{event.preventDefault();consultDictionary();});$('#dictionary-select').addEventListener('change',()=>{dictionaryGeneration++;dictionaryEntries=[];$('#dictionary-content').setAttribute('aria-busy','false');$('#dictionary-content').innerHTML='<p class="empty-slot">Consulta una palabra en esta fuente.</p>';$('#dictionary-query').placeholder=$('#dictionary-select').value==='drae'?'Palabra en español…':'Padre, G25, H7225…';$('#panes').dataset.sourcesReady=String(Boolean($('#comment-select').value&&$('#dictionary-select').value));});$('#dictionary-content').addEventListener('click',event=>{const button=event.target.closest('[data-dictionary-entry]');if(button){const index=Number(button.dataset.dictionaryEntry);showDictionaryEntry(index);$('#dictionary-content').querySelector(`[data-dictionary-entry="${index}"]`)?.focus({preventScroll:true});}});$('#sources-open').addEventListener('click',()=>$('#sources-dialog').showModal());$('#sources-close').addEventListener('click',()=>$('#sources-dialog').close());$('#sources-refresh').addEventListener('click',async()=>{try{await loadCatalog();await renderReader();toast('Fuentes y revisiones comprobadas.');}catch(error){toast(error.message);}});$('#search-mode').addEventListener('change',search);$('#voice-play').addEventListener('click',playVoice);$('#voice-pause').addEventListener('click',()=>{if(speechSynthesis.paused)speechSynthesis.resume();else speechSynthesis.pause();});$('#voice-stop').addEventListener('click',stopVoice);window.speechSynthesis?.addEventListener('voiceschanged',loadVoices);loadVoices();window.addEventListener('beforeunload',event=>{stopVoice();if(saveFailed){if(!window.confirm('Hay cambios sin guardar. Puedes cancelar y exportar una copia. ¿Cerrar y descartarlos?')){event.preventDefault();event.returnValue='';}return;}if(savePending){event.preventDefault();event.returnValue='';saveQueue.then(()=>{if(!saveFailed)window.close();});}});}
 function loadVoices(){const voices=window.speechSynthesis?.getVoices().filter(v=>v.localService&&/^es/i.test(v.lang))||[];$('#voice-select').innerHTML=voices.map((v,i)=>`<option value="${i}">${esc(v.name)}</option>`).join('');$('#voice-play').disabled=!voices.length;$('#voice-status').textContent=voices.length?'Voz de Windows · sin conexión':'No hay una voz local en español. Añádela en Configuración de Windows → Idioma.';}
 function stopVoice(){window.speechSynthesis?.cancel();}
 function playVoice(){const voices=speechSynthesis.getVoices().filter(v=>v.localService&&/^es/i.test(v.lang));const voice=voices[Number($('#voice-select').value)];if(!voice||!chapterData){toast('Espera a que se cargue el capítulo y elige una voz local.');return;}stopVoice();const utterance=new SpeechSynthesisUtterance(chapterData.verses.map(v=>v.text).join('\n'));utterance.voice=voice;utterance.lang=voice.lang;utterance.onend=()=>$('#voice-status').textContent='Lectura terminada.';utterance.onerror=()=>$('#voice-status').textContent='La voz no pudo leer. Prueba otra voz de Windows.';$('#voice-status').textContent='Leyendo…';speechSynthesis.speak(utterance);}

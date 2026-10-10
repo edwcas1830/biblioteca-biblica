@@ -32,6 +32,7 @@ app.whenReady().then(() => {
   const updates=createUpdateService({app,updater:autoUpdater,enabled:channel.enabled===true,testing:hiddenTest||!!testProfile,notify:state=>{if(!win.isDestroyed())win.webContents.send('library:update-state-event',state);}});
   const trusted=event=>event.sender===win.webContents&&event.senderFrame===win.webContents.mainFrame;
   if(hiddenTest&&testProfile)ipcMain.handle('library:test-capture',async event=>{if(!trusted(event))throw new Error('Origen no autorizado');return (await win.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true})).toPNG().toString('base64');});
+  if(hiddenTest&&testProfile)ipcMain.handle('library:test-resize',(event,{width,height})=>{if(!trusted(event)||!Number.isInteger(width)||!Number.isInteger(height)||width<960||width>1920||height<650||height>1080)throw new Error('Tamaño de prueba inválido');win.setContentSize(width,height);return {width,height};});
   for(const action of ['bootstrap','save','catalog','metadata','chapter','search','comments','dictionary'])ipcMain.handle('library:data-'+action,(event,data)=>{if(!trusted(event))throw new Error('Origen no autorizado.');if(JSON.stringify(data??null).length>12_000_000)throw new Error('Datos demasiado grandes.');return request(action,data);});
   app.on('will-quit',()=>worker.terminate());
   for(const [name,action] of [['state','getState'],['check','check'],['download','download'],['install','install']])ipcMain.handle('library:update-'+name,event=>{if(!trusted(event))throw new Error('Origen no autorizado.');return updates[action]();});

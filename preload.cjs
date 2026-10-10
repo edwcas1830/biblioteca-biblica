@@ -1,5 +1,5 @@
 const {contextBridge,ipcRenderer}=require('electron');
-if(process.argv.includes('--biblioteca-test'))contextBridge.exposeInMainWorld('libraryTest',{capture:()=>ipcRenderer.invoke('library:test-capture')});
+if(process.argv.includes('--biblioteca-test'))contextBridge.exposeInMainWorld('libraryTest',{capture:()=>ipcRenderer.invoke('library:test-capture'),resize:(width,height)=>ipcRenderer.invoke('library:test-resize',{width,height})});
 contextBridge.exposeInMainWorld('libraryDesktop',{
   bootstrap:data=>ipcRenderer.invoke('library:data-bootstrap',data),
   savePersonal:data=>ipcRenderer.invoke('library:data-save',data),

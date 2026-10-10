@@ -1,0 +1,155 @@
+{
+  "downloaded": "2026-10-09T18:51:02.746Z",
+  "files": [
+    {
+      "family": "Literata",
+      "file": "literata-italic.ttf",
+      "original": "Literata-Italic[opsz,wght].ttf",
+      "url": "https://raw.githubusercontent.com/google/fonts/51303ca9e8ac9dcea7b12d307ba568fd0e6fcfca/ofl/literata/Literata-Italic%5Bopsz%2Cwght%5D.ttf",
+      "commit": "51303ca9e8ac9dcea7b12d307ba568fd0e6fcfca",
+      "license": "SIL Open Font License 1.1",
+      "bytes": 902728,
+      "sha256": "d483dfaeba9cbf4ce71d32a52ee65df82f7e35b15fff8d1011cdb242d1fcd465"
+    },
+    {
+      "family": "Literata",
+      "file": "literata.ttf",
+      "original": "Literata[opsz,wght].ttf",
+      "url": "https://raw.githubusercontent.com/google/fonts/51303ca9e8ac9dcea7b12d307ba568fd0e6fcfca/ofl/literata/Literata%5Bopsz%2Cwght%5D.ttf",
+      "commit": "51303ca9e8ac9dcea7b12d307ba568fd0e6fcfca",
+      "license": "SIL Open Font License 1.1",
+      "bytes": 955132,
+      "sha256": "b41138c9373112f32abb589cc22e8674b06ed4048b0c513be922bdd26f274440"
+    },
+    {
+      "family": "Literata",
+      "file": "literata-OFL.txt",
+      "original": "OFL.txt",
+      "url": "https://raw.githubusercontent.com/google/fonts/51303ca9e8ac9dcea7b12d307ba568fd0e6fcfca/ofl/literata/OFL.txt",
+      "commit": "51303ca9e8ac9dcea7b12d307ba568fd0e6fcfca",
+      "license": "SIL Open Font License 1.1",
+      "bytes": 4389,
+      "sha256": "8742963604cd89dc81437811a850018fc03b2bfad686d7422c8235967c87614e"
+    },
+    {
+      "family": "Cormorant Garamond",
+      "file": "cormorantgaramond-italic.ttf",
+      "original": "CormorantGaramond-Italic[wght].ttf",
+      "url": "https://raw.githubusercontent.com/google/fonts/51303ca9e8ac9dcea7b12d307ba568fd0e6fcfca/ofl/cormorantgaramond/CormorantGaramond-Italic%5Bwght%5D.ttf",
+      "commit": "51303ca9e8ac9dcea7b12d307ba568fd0e6fcfca",
+      "license": "SIL Open Font License 1.1",
+      "bytes": 715644,
+      "sha256": "0f48ea6abb2084537854f7174c470991a463b13036309e3b50a81511611c530d"
+    },
+    {
+      "family": "Cormorant Garamond",
+      "file": "cormorantgaramond.ttf",
+      "original": "CormorantGaramond[wght].ttf",
+      "url": "https://raw.githubusercontent.com/google/fonts/51303ca9e8ac9dcea7b12d307ba568fd0e6fcfca/ofl/cormorantgaramond/CormorantGaramond%5Bwght%5D.ttf",
+      "commit": "51303ca9e8ac9dcea7b12d307ba568fd0e6fcfca",
+      "license": "SIL Open Font License 1.1",
+      "bytes": 1195560,
+      "sha256": "b20b7d9626dd956b2c5e558692ad328b1f19e3275e2782db4fa07670d83f35e0"
+    },
+    {
+      "family": "Cormorant Garamond",
+      "file": "cormorantgaramond-OFL.txt",
+      "original": "OFL.txt",
+      "url": "https://raw.githubusercontent.com/google/fonts/51303ca9e8ac9dcea7b12d307ba568fd0e6fcfca/ofl/cormorantgaramond/OFL.txt",
+      "commit": "51303ca9e8ac9dcea7b12d307ba568fd0e6fcfca",
+      "license": "SIL Open Font License 1.1",
+      "bytes": 4387,
+      "sha256": "60700d351cac4650c51f3f9db318d2a420f8b45052dba2715eb5fec41f0f6956"
+    },
+    {
+      "family": "Inter Tight",
+      "file": "intertight-italic.ttf",
+      "original": "InterTight-Italic[wght].ttf",
+      "url": "https://raw.githubusercontent.com/google/fonts/51303ca9e8ac9dcea7b12d307ba568fd0e6fcfca/ofl/intertight/InterTight-Italic%5Bwght%5D.ttf",
+      "commit": "51303ca9e8ac9dcea7b12d307ba568fd0e6fcfca",
+      "license": "SIL Open Font License 1.1",
+      "bytes": 593844,
+      "sha256": "15d3edf0c3d2560658529b8c4c7398d06c730a4695484c680b6c9ca9e4385be2"
+    },
+    {
+      "family": "Inter Tight",
+      "file": "intertight.ttf",
+      "original": "InterTight[wght].ttf",
+      "url": "https://raw.githubusercontent.com/google/fonts/51303ca9e8ac9dcea7b12d307ba568fd0e6fcfca/ofl/intertight/InterTight%5Bwght%5D.ttf",
+      "commit": "51303ca9e8ac9dcea7b12d307ba568fd0e6fcfca",
+      "license": "SIL Open Font License 1.1",
+      "bytes": 581588,
+      "sha256": "b81b73dcb64df3c230cabade7df6c5773bf863233f24c9ee51087519f1f88b6f"
+    },
+    {
+      "family": "Inter Tight",
+      "file": "intertight-OFL.txt",
+      "original": "OFL.txt",
+      "url": "https://raw.githubusercontent.com/google/fonts/51303ca9e8ac9dcea7b12d307ba568fd0e6fcfca/ofl/intertight/OFL.txt",
+      "commit": "51303ca9e8ac9dcea7b12d307ba568fd0e6fcfca",
+      "license": "SIL Open Font License 1.1",
+      "bytes": 4383,
+      "sha256": "50240ab035cf1b6b3307940235481d515c4b6de3ab1fa843dbe59e7892cb9d58"
+    },
+    {
+      "family": "Inter",
+      "file": "inter-italic.ttf",
+      "original": "Inter-Italic[opsz,wght].ttf",
+      "url": "https://raw.githubusercontent.com/google/fonts/51303ca9e8ac9dcea7b12d307ba568fd0e6fcfca/ofl/inter/Inter-Italic%5Bopsz%2Cwght%5D.ttf",
+      "commit": "51303ca9e8ac9dcea7b12d307ba568fd0e6fcfca",
+      "license": "SIL Open Font License 1.1",
+      "bytes": 906596,
+      "sha256": "acd98e64795781b2058f07b18475e0ecee2a0fe2b42a49e2f9e37d0d6bf66ce6"
+    },
+    {
+      "family": "Inter",
+      "file": "inter.ttf",
+      "original": "Inter[opsz,wght].ttf",
+      "url": "https://raw.githubusercontent.com/google/fonts/51303ca9e8ac9dcea7b12d307ba568fd0e6fcfca/ofl/inter/Inter%5Bopsz%2Cwght%5D.ttf",
+      "commit": "51303ca9e8ac9dcea7b12d307ba568fd0e6fcfca",
+      "license": "SIL Open Font License 1.1",
+      "bytes": 876576,
+      "sha256": "29160a80ff49ddcab2c97711247e08b1fab27a484a329ce8b813d820dc559031"
+    },
+    {
+      "family": "Inter",
+      "file": "inter-OFL.txt",
+      "original": "OFL.txt",
+      "url": "https://raw.githubusercontent.com/google/fonts/51303ca9e8ac9dcea7b12d307ba568fd0e6fcfca/ofl/inter/OFL.txt",
+      "commit": "51303ca9e8ac9dcea7b12d307ba568fd0e6fcfca",
+      "license": "SIL Open Font License 1.1",
+      "bytes": 4377,
+      "sha256": "5b9321a4298cfeb6b34354164a1c3afc3db114569984c502b9b35d988fd58c57"
+    },
+    {
+      "family": "Source Sans 3",
+      "file": "sourcesans3-OFL.txt",
+      "original": "OFL.txt",
+      "url": "https://raw.githubusercontent.com/google/fonts/51303ca9e8ac9dcea7b12d307ba568fd0e6fcfca/ofl/sourcesans3/OFL.txt",
+      "commit": "51303ca9e8ac9dcea7b12d307ba568fd0e6fcfca",
+      "license": "SIL Open Font License 1.1",
+      "bytes": 4579,
+      "sha256": "09746787287a289323b0ec3cff4d1a4a801331b82b7207c1e186f5d26619a392"
+    },
+    {
+      "family": "Source Sans 3",
+      "file": "sourcesans3-italic.ttf",
+      "original": "SourceSans3-Italic[wght].ttf",
+      "url": "https://raw.githubusercontent.com/google/fonts/51303ca9e8ac9dcea7b12d307ba568fd0e6fcfca/ofl/sourcesans3/SourceSans3-Italic%5Bwght%5D.ttf",
+      "commit": "51303ca9e8ac9dcea7b12d307ba568fd0e6fcfca",
+      "license": "SIL Open Font License 1.1",
+      "bytes": 395372,
+      "sha256": "39e3ab05ccd7cb94907c31005bb5bec1d5432f0b096a2b782976e217a540eb6c"
+    },
+    {
+      "family": "Source Sans 3",
+      "file": "sourcesans3.ttf",
+      "original": "SourceSans3[wght].ttf",
+      "url": "https://raw.githubusercontent.com/google/fonts/51303ca9e8ac9dcea7b12d307ba568fd0e6fcfca/ofl/sourcesans3/SourceSans3%5Bwght%5D.ttf",
+      "commit": "51303ca9e8ac9dcea7b12d307ba568fd0e6fcfca",
+      "license": "SIL Open Font License 1.1",
+      "bytes": 646340,
+      "sha256": "042fe2cc0b933e328410d7acbd0aa6a1873dca5aef81875f4bc214b08825c7b9"
+    }
+  ]
+}

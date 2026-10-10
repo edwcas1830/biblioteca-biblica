@@ -1,0 +1,10 @@
+'use strict';
+// Downloads font binaries and their original OFL licenses; no runtime network.
+const fs=require('node:fs/promises'),path=require('node:path'),crypto=require('node:crypto');
+const families=[['literata','Literata'],['cormorantgaramond','Cormorant Garamond'],['intertight','Inter Tight'],['inter','Inter'],['sourcesans3','Source Sans 3']];
+async function get(url){const response=await fetch(url,{headers:{'User-Agent':'Biblioteca-Biblica-fonts'}});if(!response.ok)throw new Error(`${response.status} ${url}`);return response;}
+(async()=>{const root=path.join(__dirname,'../app/fonts');await fs.mkdir(root,{recursive:true});const commit=(await(await get('https://api.github.com/repos/google/fonts/commits/main')).json()).sha;const ledger=[];
+for(const [directory,family] of families){const listing=await(await get(`https://api.github.com/repos/google/fonts/contents/ofl/${directory}?ref=${commit}`)).json();const candidates=listing.filter(f=>f.name.endsWith('.ttf')||f.name==='OFL.txt');if(!candidates.some(f=>f.name==='OFL.txt')||!candidates.some(f=>f.name.endsWith('.ttf')))throw new Error('Fuente sin licencia OFL o sin TTF: '+family);
+for(const f of candidates){const url=`https://raw.githubusercontent.com/google/fonts/${commit}/ofl/${directory}/${encodeURIComponent(f.name)}`;const data=Buffer.from(await(await get(url)).arrayBuffer());const filename=f.name==='OFL.txt'?`${directory}-OFL.txt`:`${directory}${/Italic/i.test(f.name)?'-italic':''}.ttf`;if(f.name==='OFL.txt'&&!data.toString('utf8').includes('SIL OPEN FONT LICENSE'))throw new Error('Licencia inesperada');if(f.name.endsWith('.ttf')&&data.readUInt32BE(0)!==0x00010000)throw new Error('Fuente TTF inválida');await fs.writeFile(path.join(root,filename),data);ledger.push({family,file:filename,original:f.name,url,commit,license:'SIL Open Font License 1.1',bytes:data.length,sha256:crypto.createHash('sha256').update(data).digest('hex')});}
+console.log('Preparada '+family);}
+await fs.writeFile(path.join(root,'FUENTES.json'),JSON.stringify({downloaded:new Date().toISOString(),files:ledger},null,2)+'\n');})().catch(e=>{console.error(e);process.exitCode=1;});

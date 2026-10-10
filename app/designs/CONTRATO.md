@@ -1,0 +1,88 @@
+# Contrato de diseño v0.4 — base común
+
+Rama `v0.4-diseno`, desde v0.3. **La aclaración final de Edward reemplaza el trío comentario/diccionario/notas:** son **Biblia · Comentario · Diccionario visibles simultáneamente**, cada uno con desplazamiento vertical independiente. Notas queda aparte. A y C son archivos provisionales hasta que sus autores los sustituyan; B lo hace Codex después de esta base.
+
+## Archivos y carga
+
+`index.html` → `styles.css`, `plan-styles.css`, `library-styles.css`, `fonts/fonts.css`, `designs/common.css`, finalmente `<link id="design-css">`. Cada autor edita **solo su `design-a.css`, `design-b.css` o `design-c.css`**. No copiar JS ni cambiar módulos/datos. Es conveniente delimitar selectores con `html[data-design="a|b|c"]`. El selector superior guarda la elección en SQLite; sin elección anterior, A.
+
+```text
+html[data-design=a|b|c][data-theme=marfil|sepia|noche][data-study-scope=chapter|verse|range]
+ body (.night derivada del tema; .reading-only; .focus; .resizing)
+  aside.rail: marca, nav [data-view=read|dev|plan], fuentes y copias
+  main#main-content
+   header.topbar > .topbar-actions
+    nav.compact-nav [data-view] (alternativa si se oculta rail)
+    details.library-menu > [data-action] (fuentes, copias, actualizaciones)
+    #design-select, #theme-select, #night, #focus
+   section#read-view.view
+    .intro (oculta en lector), #plan-reading-session[hidden]
+    .reading-toolbar: .reader-invitation, .reading-actions
+      #study-open, #dictionary-from-selection, #search-open, #smaller, #larger
+    #library-controls: #show-strong, .voice-controls, #voice-status
+    #module-status
+    section#panes.reading-layout[data-active=true|false][data-sources-ready=true|false]
+     article.pane.reading-space.open-book[data-pane=biblia]
+      header.pane-head: .pane-heading > #bible-title, #book-label
+       .passage-picker > #book, #chapter; #version-select; #bible-ref.pane-ref
+       #passage-heading[hidden] (compatibilidad)
+      div#verses.verses.pane-body[tabindex=0][role=region]
+       button.verse[data-verse][aria-pressed] > sup (número), texto saneado
+        .reading-word[data-word]; .strong-number > .strong-code[data-strong]
+        .jesus-words; .module-heading; .rtf-bold; .rtf-italic
+      footer.pane-foot > .page-controls: #previous, #next
+       #edition-footer[hidden], #chapter-footer[hidden] (compatibilidad)
+     .pane-resizer[data-between="biblia,comentario"][role=separator][tabindex=0]
+     article.pane[data-pane=comentario]
+      header.pane-head: #comment-title, #comment-scope; #comment-select
+       #selected-ref.pane-ref.study-ref[aria-live=polite]
+      div#comment-content.pane-body.module-content[tabindex=0][aria-busy]
+       .comment-entry > h4, div; details.comment-introduction opcional
+      footer.pane-foot
+     .pane-resizer[data-between="comentario,diccionario"]
+     article.pane[data-pane=diccionario]
+      header.pane-head: #dictionary-title; form#dictionary-form
+       #dictionary-select; .dictionary-query-row > #dictionary-query, #dictionary-submit
+       #dictionary-ref.pane-ref[aria-live=polite]
+      div#dictionary-content.pane-body.module-content[tabindex=0][aria-busy]
+       ul.dictionary-results > li > button.dictionary-result[data-dictionary-entry][aria-pressed]
+       article.dictionary-entry > h4, .source-caption, div
+      footer.pane-foot > #dictionary-status[role=status]
+    details.pane-notes (fuera de #panes)
+     summary: Mis notas, #note-reference
+     .notes-content: .ink-colors [data-ink], #note, details.study-guide, #save-status
+   #dev-view.view[hidden], #plan-view.view[hidden]; footer.app-footer
+  dialog: #search-dialog, #sources-dialog, #books-dialog, #update-dialog
+  button#back-to-top (.is-visible), #toast[hidden]
+```
+
+## Variables de cada diseño
+
+Definir para los tres temas: `--bg` fondo, `--paper` páginas, `--panel` superficies secundarias, `--ink` texto, `--muted` auxiliares, `--line` separación suave, `--control-border` borde identificable de controles, `--accent` acciones, `--accent-ink` texto sobre acción, `--red` palabras de Jesús, `--strong` códigos, `--highlight` dorado, `--focus` foco. También `--font-ui`, `--font-reader`, `--font-heading`. `--verse-size` pertenece al tamaño elegido por el usuario (16–28 px): **no fijarlo desde CSS**. Los colores deben contrastar también sobre los subrayados dorado/verde/rosa. `.night` es un alias antiguo; evitar que los selectores viejos anulen los tokens.
+
+Fuentes locales disponibles, normales e itálicas: Literata, Cormorant Garamond, Inter Tight, Inter, Source Sans 3. `app/fonts/FUENTES.json` registra URL oficial, commit y SHA256; cada familia tiene su OFL original. No CDN ni nuevas fuentes remotas. La política de seguridad permanece intacta.
+
+## Disposición y separadores
+
+La base presenta tres columnas con pesos `--pane-biblia:42fr`, `--pane-comentario:30fr`, `--pane-diccionario:28fr`. Las preferencias guardadas sustituyen esos valores; usar las variables en los tracks del grid y **no imponer anchos fijos a los paneles que impidan redimensionar**. Columnas base: Biblia / separador / comentario / separador / diccionario. No envolver ni reordenar el DOM: CSS grid y áreas permiten otra composición.
+
+Cada separador ajusta únicamente los dos paneles de `data-between`. Su CSS declara `--resize-axis:x` (columnas; `cursor:col-resize`) o `y` (filas; `cursor:row-resize`). Para una composición en dos filas, el separador correspondiente tiene que quedar entre los paneles que controla y sus pesos deben intervenir en esas filas. Los límites se calculan a partir de los tamaños visibles: objetivo mínimo 220 px de ancho o 140 px de alto. Flechas ajustan, Home/End van a extremos, doble clic restaura 42/30/28, Escape cancela arrastre activo. Guardado al terminar, no por movimiento. Respetar `aria-orientation`/valores gestionados por JS.
+
+`.pane-body` usa `min-height:0`, `overflow:auto`, `overscroll-behavior:contain`. **En Biblia usar `column-count:auto; column-width:auto`: count 1 con altura fija provoca columnas horizontales adicionales.** Ningún diseño puede esconder comentario/diccionario en modo estudio a 1366×768 o 1920×1080. No apilarlos fuera de la pantalla. La base reserva el alto disponible con flex; referencia y controles no se desplazan junto al texto.
+
+En `.reading-only` o `.focus`, ocultar los dos paneles auxiliares y separadores, conservar Biblia y el botón para abrir estudio. Intimidad además oculta rail/notas/pie; `.reading-only` conserva navegación. `#study-open` sirve para entrar y salir, incluso desde intimidad. No esconder ambos accesos de vuelta.
+
+## Comportamientos comunes
+
+- Cambiar capítulo muestra referencia de capítulo; tocar versículo o leer con desplazamiento manual sincroniza el comentario. Desplazamiento programático no decide el versículo por sí solo. Una selección del plan puede ser un rango; las notas conservan su anclaje a un versículo y edición, como v0.3.
+- Comentario inicial: Mundo Hispano si existe, o primera fuente. Rangos del módulo pueden abarcar todo un capítulo; no fingir comentarios individuales donde la fuente no los tiene.
+- Tocar palabra consulta el diccionario actual; si estaba Strong cambia a RAE (o Vine si RAE no existe). Tocar código Strong cambia a Strong español. **No inferir hebreo/griego a partir de una palabra española ni asociar números cuya alineación no exista.** Consultar selección y formulario son alternativas explícitas. Rojo NT y Strong siguen dependiendo de los módulos de v0.3.
+- RAE combina `drae-1/2/3`: exactas primero, luego prefijo; sin tildes ni sufijos de acepción. Resultados planos y definición dentro del panel. No consultar/cargar toda una base por render ni copiar módulos al repo.
+- `#back-to-top` aparece al superar 600 px en Biblia o ventana/main. Vuelve al principio y enfoca `#book`; no reinicia comentario/diccionario. Respeta movimiento reducido.
+- Tema automático: hora local 07:00–18:59 marfil; resto noche; se actualiza cada minuto y al regresar a la ventana. Sepia y temas manuales se respetan.
+
+## Accesibilidad y límites
+
+Texto principal de estudio mínimo 16 px a los dos tamaños objetivo; auxiliares mínimo 13 px. Biblia conserva el ajuste personal. Contraste AA: 4,5:1 texto normal; 3:1 texto grande y elementos de foco/controles. Foco visible, títulos/labels existentes, `.sr-only` accesible, regiones desplazables navegables con teclado. No sobrescribir `[hidden]`, `aria-*`, ni `prefers-reduced-motion`. No quitar advertencias de cobertura/fuentes. Si se oculta rail, mostrar `.compact-nav` **y** `.library-menu` para conservar planes, devocionales, copias y fuentes.
+
+No nuevas funciones de datos, IA, música, imágenes, oración, ni nueva migración. No tocar perfil real ni `biblioteca-biblica-prueba-v03`. Pruebas: `work/v04-design-profile` separado. Sin release/main. El código público contiene solamente fuentes tipográficas OFL y la base libre ya existente; los módulos personales siguen excluidos.
