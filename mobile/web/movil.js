@@ -216,11 +216,15 @@
     barra.append(
       tintas,
       accion('Nota', () => { const n = $('.pane-notes'); if (n) { n.open = true; html.dataset.notas = 'abiertas'; $('#note')?.focus(); } ocultarBarra(); }),
-      accion('Preguntar', () => { $('#ai-verse-ask')?.click(); ocultarBarra(); }, 'Preguntar a la IA sobre este versículo'),
+      crear('button', { type: 'button', class: 'quiet', id: 'movil-preguntar', texto: 'Preguntar', 'aria-label': 'Preguntar a la IA sobre este versículo', onclick: () => { $('#ai-verse-ask')?.click(); ocultarBarra(); } }),
       accion('↗', compartirVersiculo, 'Compartir versículo'),
       accion('⧉', copiarVersiculo, 'Copiar versículo')
     );
     document.body.append(barra);
+    const puente = window.libraryDesktop;
+    if (puente && typeof puente.getCapabilities === 'function') {
+      puente.getCapabilities().then(caps => { if (caps.operations.aiPrepare && !caps.operations.aiPrepare.available) $('#movil-preguntar').hidden = true; }).catch(() => {});
+    }
     const notas = $('.pane-notes');
     if (notas) {
       notas.addEventListener('toggle', () => { html.dataset.notas = notas.open ? 'abiertas' : 'cerradas'; });
@@ -316,7 +320,8 @@
     construirBarraVersiculo();
     construirControlesLectura();
     vigilarOriginal();
-    $('#verses')?.addEventListener('scroll', ocultarBarra, { passive: true });
+    // Se oculta cuando el lector desplaza el texto (no cuando la app centra el versículo elegido).
+    for (const ev of ['touchmove', 'wheel']) $('#verses')?.addEventListener(ev, ocultarBarra, { passive: true });
     asegurarPanelesVisibles();
     ponerAltura('plegada');
     elegirPestana('comentario', false);

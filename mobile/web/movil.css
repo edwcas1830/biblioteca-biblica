@@ -274,3 +274,5 @@
 }
 :root[data-telefono="true"] #library-controls .voice-controls { display: flex; flex-wrap: wrap; gap: 4px; width: 100%; }
 :root[data-telefono="true"] #library-controls #voice-select { flex: 1 1 100%; min-width: 0; }
+/* El «Preguntar» flotante de escritorio pasa a la barra del versículo. */
+:root[data-telefono="true"] #ai-verse-ask { display: none !important; }
