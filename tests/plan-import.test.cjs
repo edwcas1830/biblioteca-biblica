@@ -34,3 +34,9 @@ test('El JSON personal y la exportación conservan títulos, contenido y avance'
   const restored=p.importJson('Exportación.json',JSON.stringify(plan),books);assert.equal(restored.title,plan.title);assert.deepEqual(restored.completed,[0]);assert.equal(restored.entries[0].title,'Mi lunes');
   assert.throws(()=>p.importJson('Mal.json',JSON.stringify({title:'Mal',days:[{reading:'Juan 1',completed:'false'}]}),books));
 });
+test('Exportar y actualizar conservan identidad de plan/días aun cuando cambie el orden',()=>{
+  const old=p.importText('Plan.txt','Día 1 · Juan 1\nDía 2 · Juan 2',books);old.dayIds=['day-'+ 'a'.repeat(32),'day-'+ 'b'.repeat(32)];old.completed=[0];
+  const restored=p.importJson('Plan.json',JSON.stringify(old),books);assert.equal(restored.id,old.id);assert.deepEqual(restored.dayIds,old.dayIds);
+  const incoming=p.importText('Plan.txt','Día 2 · Juan 2\nDía 1 · Juan 1\nDía 3 · Juan 3',books),merged=p.mergePlan(old,incoming,books);assert.equal(merged.dayIds[1],old.dayIds[0]);assert.deepEqual(merged.completed,[1]);
+  assert.throws(()=>p.validateCustomPlan({...old,dayIds:[old.dayIds[0],old.dayIds[0]]},books),/Identificadores/);
+});

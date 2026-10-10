@@ -8,3 +8,12 @@ vista-previa.png
 plan-importado.png
 publication/
 .github/
+modulos/
+resources/modulos/personal/
+private-modules/
+build-personal/
+*.bblx
+*.cmtx
+*.dctx
+*.sqlite
+*.sqlite-*

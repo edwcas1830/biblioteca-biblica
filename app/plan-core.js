@@ -120,7 +120,8 @@
       return {title:entry.title,sourceText:entry.sourceText,readings:entry.readings.map(r=>checkRef(r,books)),warnings,highlightCandidate:entry.highlightCandidate===true,highlightColors:Array.isArray(entry.highlightColors)?entry.highlightColors.slice(0,10).map(c=>String(c).slice(0,30)):[],completionOrigin:typeof entry.completionOrigin==='string'?entry.completionOrigin.slice(0,200):''};
     });
     if(!Array.isArray(data.completed)||data.completed.some(i=>!Number.isInteger(i)||i<0||i>=entries.length))throw new Error('El avance del plan no es válido.');
-    return {id:uid(),scope:'custom',title:data.title.trim().slice(0,200),sourceName:String(data.sourceName||'').slice(0,200),description:String(data.description||'').slice(0,20000),days:entries.length,entries,completed:[...new Set(data.completed)],createdAt:typeof data.createdAt==='string'?data.createdAt:new Date().toISOString()};
+    if(data.dayIds!==undefined&&(!Array.isArray(data.dayIds)||data.dayIds.length!==entries.length||data.dayIds.some(id=>!/^day-[a-f0-9]{32}$/.test(id))||new Set(data.dayIds).size!==entries.length))throw new Error('Identificadores de días no válidos.');
+    return {id:/^plan-\d+(?:-[a-z0-9]+)?$/.test(data.id||'')?data.id:uid(),dayIds:data.dayIds,scope:'custom',title:data.title.trim().slice(0,200),sourceName:String(data.sourceName||'').slice(0,200),description:String(data.description||'').slice(0,20000),days:entries.length,entries,completed:[...new Set(data.completed)],createdAt:typeof data.createdAt==='string'?data.createdAt:new Date().toISOString()};
   }
   function importJson(filename,text,books){
     if(text.length>limit)throw new Error('El plan supera los 2 MB de texto.');
@@ -143,7 +144,9 @@
     for(const entry of old.entries)if(!keys.has(signature(entry)))throw new Error('Este archivo quitó días o cambió sus lecturas. Guárdalo como otro plan para conservar el anterior.');
     const done=new Set(next.completed);
     old.completed.forEach(i=>done.add(keys.get(signature(old.entries[i]))));
-    return {...next,id:old.id,completed:[...done].sort((a,b)=>a-b),createdAt:old.createdAt,updatedAt:new Date().toISOString()};
+    const oldKeys=new Map(old.entries.map((entry,i)=>[signature(entry),old.dayIds?.[i]]));
+    const dayIds=next.entries.map((entry,i)=>oldKeys.get(signature(entry))||next.dayIds?.[i]);
+    return {...next,id:old.id,dayIds:old.dayIds?dayIds:next.dayIds,completed:[...done].sort((a,b)=>a-b),createdAt:old.createdAt,updatedAt:new Date().toISOString()};
   }
   const api={clean,formatRef,parseReferences,plainRecord,parseRecords,importText,importJson,validateCustomPlan,mergePlan,signature};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.PlanCore=api;
