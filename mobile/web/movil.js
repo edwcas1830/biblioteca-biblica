@@ -353,12 +353,50 @@
     else acciones.before(crear('p', { class: 'movil-traspaso-aviso', texto: 'Tus archivos están bien. La instalación se activa cuando esta versión tenga su base de datos propia; vuelve a intentarlo después de actualizar.' }));
     acciones.append(crear('button', { type: 'button', class: 'quiet', texto: 'Cancelar', onclick: () => dialogoTraspaso.close() }));
   }
+  // Tras instalar, la página DEBE recargarse: la vista vieja sigue mostrando lo de antes (y no puede
+  // guardar). Se recarga sola y, al abrir, se confirma qué llegó (o se explica por qué no se ve).
+  const MARCA_TRASPASO = 'biblioteca-traspaso-recien';
+  let recargarAlCerrar = false;
   async function instalarTraspaso(rev) {
     pasoTraspaso('Instalando…', ['Guardando la copia de seguridad y colocando tus datos y tus módulos.'], [], { progreso: true });
     try {
       const res = await window.libraryDesktop.transferInstall({ token: rev.token, confirmado: true });
-      pasoTraspaso('Listo', ['Tus datos y tus módulos ya están en este teléfono.', 'La copia de lo que había antes quedó en ' + res.respaldo + '.'], [['Abrir mi biblioteca', () => location.reload(), true]]);
+      try { localStorage.setItem(MARCA_TRASPASO, JSON.stringify({ en: Date.now(), conteos: rev.resumen.conteos, modulos: rev.resumen.modulos.length })); } catch { /* sin almacenamiento: igual se recarga */ }
+      recargarAlCerrar = true;
+      pasoTraspaso('Listo', ['Tus datos y tus módulos ya están en este teléfono.', 'La copia de lo que había antes quedó en ' + res.respaldo + '.', 'Abriendo tu biblioteca…'], [['Abrir mi biblioteca', () => location.reload(), true]]);
+      setTimeout(() => location.reload(), 2500);
     } catch (e) { errorTraspaso(e); }
+  }
+  async function confirmarTraspasoAlAbrir() {
+    let marca = null;
+    try { marca = JSON.parse(localStorage.getItem(MARCA_TRASPASO) || 'null'); localStorage.removeItem(MARCA_TRASPASO); } catch { return; }
+    if (!marca || !marca.conteos || Date.now() - marca.en > 6 * 3600 * 1000) return;
+    // Espera a que la app termine de abrir la base (o a que avise que no pudo).
+    let aviso = '';
+    for (let i = 0; i < 240; i++) {
+      if (typeof storageReady !== 'undefined' && storageReady) break;
+      aviso = ($('#toast') && !$('#toast').hidden && $('#toast').textContent) || '';
+      if (/No se reemplazará|necesita recuperación|no se pudo/i.test(aviso)) break;
+      await new Promise(r => setTimeout(r, 500));
+    }
+    const planes = (typeof state !== 'undefined' && Array.isArray(state.plans)) ? state.plans : [];
+    const dias = planes.reduce((n, p) => n + (p.days || 0), 0), hechos = planes.reduce((n, p) => n + ((p.completed || []).length), 0);
+    const devocionales = (typeof state !== 'undefined' && Array.isArray(state.devotionals)) ? state.devotionals.length : 0;
+    const modulos = (typeof catalogData !== 'undefined' && catalogData && Array.isArray(catalogData.modules)) ? catalogData.modules.length : 0;
+    const c = marca.conteos;
+    const llego = typeof storageReady !== 'undefined' && storageReady && dias === c.diasPlan && hechos === c.diasCompletados && devocionales === c.devocionales;
+    if (!dialogoTraspaso) { dialogoTraspaso = crear('dialog', { id: 'movil-traspaso', 'aria-label': 'Traer desde la PC' }, [crear('div', { class: 'movil-traspaso-cuerpo' })]); document.body.append(dialogoTraspaso); }
+    html.dataset.traspasoConfirmado = llego ? 'si' : 'no';
+    if (llego) {
+      pasoTraspaso('Tu biblioteca llegó', [`Plan: ${hechos} de ${dias} días leídos.`, `Devocionales: ${devocionales}.`, `Módulos en tu biblioteca: ${modulos} (los comentarios y diccionarios pueden tardar un momento en aparecer la primera vez).`], [['Empezar a leer', () => dialogoTraspaso.close(), true]]);
+    } else {
+      pasoTraspaso('No se ve lo que trajiste', [
+        `Se esperaba: plan ${c.diasCompletados} de ${c.diasPlan} días y ${c.devocionales} devocionales. Se ve: plan ${hechos} de ${dias} y ${devocionales} devocionales.`,
+        aviso ? 'Aviso de la app: ' + aviso : 'La base todavía no terminó de abrir.',
+        'Tus datos quedaron guardados en el teléfono. Prueba «Volver a abrir»; si sigue igual, mándale una captura de esta pantalla a Claude.'
+      ], [['Volver a abrir', () => location.reload(), true], ['Cerrar', () => dialogoTraspaso.close()]]);
+    }
+    if (!dialogoTraspaso.open) dialogoTraspaso.showModal();
   }
   // El botón aparece solo si la plataforma ofrece la revisión del traspaso (en el teléfono).
   async function prepararTraspaso() {
@@ -370,6 +408,11 @@
     if (!dialogoTraspaso) {
       dialogoTraspaso = crear('dialog', { id: 'movil-traspaso', 'aria-label': 'Traer desde la PC' }, [crear('div', { class: 'movil-traspaso-cuerpo' })]);
       document.body.append(dialogoTraspaso);
+    }
+    if (!dialogoTraspaso.dataset.recarga) {
+      // Cerrar el «Listo» (atrás, Esc) también recarga: nunca quedarse en la vista vieja.
+      dialogoTraspaso.dataset.recarga = '1';
+      dialogoTraspaso.addEventListener('close', () => { if (recargarAlCerrar) location.reload(); });
     }
     if (!botonTraspaso) {
       botonTraspaso = crear('button', { type: 'button', class: 'quiet', id: 'movil-traer-pc', texto: '⇣ Traer desde la PC', onclick: () => { cerrarMas(); dialogoTraspaso.showModal(); iniciarTraspaso(); } });
@@ -535,6 +578,7 @@
     construirBarraVersiculo();
     construirControlesLectura();
     prepararTraspaso();
+    confirmarTraspasoAlAbrir();
     prepararIA().then(() => { prepararIA.hecho = true; });
     vigilarOriginal();
     // Se oculta cuando el lector desplaza el texto (no cuando la app centra el versículo elegido).

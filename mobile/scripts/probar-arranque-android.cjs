@@ -189,7 +189,7 @@ function cargarPagina(plugins) {
     console.log('paso: transferScan (' + seleccion.archivos.length + ' archivos)');
     const rev = await puente.transferScan(seleccion);
     console.log('revisión:', JSON.stringify(rev.resumen && rev.resumen.conteos), '· módulos:', rev.resumen && rev.resumen.modulos.length);
-    if (!rev.resumen || rev.resumen.conteos.diasCompletados !== 329 || rev.resumen.modulos.length !== 1) throw new Error('La revisión del traspaso no cuadra');
+    if (!process.env.PAQUETE_REAL && (!rev.resumen || rev.resumen.conteos.diasCompletados !== 329 || rev.resumen.modulos.length !== 1)) throw new Error('La revisión del traspaso no cuadra');
     console.log('paso: transferInstall');
     const inst = await puente.transferInstall({ token: rev.token, confirmado: true });
     if (!(inst.instalado === true && inst.requiereRecarga === true)) throw new Error('El traspaso no se instaló: ' + JSON.stringify(inst));
@@ -197,6 +197,12 @@ function cargarPagina(plugins) {
     puente = ventana.libraryDesktop;
     await ventana.BibliaPreparacion.modulos;
     const tras = await puente.bootstrap({ initial: { ...inicial, position: { book: 18, chapter: 23, verse: 1 } }, legacy: null, legacyValid: true });
+    if (process.env.PAQUETE_REAL) {
+      // Paquete real (solo en la PC de Edward): imprime conteos, nunca contenido.
+      const p0 = tras.state.plans[0] || {}, cat = await puente.catalog();
+      console.log('REAL tras recargar · plan:', (p0.entries || []).length + '/' + (p0.completed || []).length, '· devocionales:', tras.state.devotionals.length, '· notas:', Object.keys(tras.state.notes || {}).length, '· módulos en catálogo:', cat.modules.length, '· preparación:', ventana.document.documentElement.dataset.preparacion, '· fallos:', ventana.document.documentElement.dataset.serviciosFallos || 'ninguno');
+      await ventana.LibraryAndroidServices.close(); return;
+    }
     const plan = tras.state.plans[0] || {};
     const cat = await puente.catalog();
     const c = await puente.chapter({ book: 18, chapter: 23, module: 'texto-sintetico' });

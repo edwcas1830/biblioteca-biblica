@@ -141,17 +141,37 @@ async function esperarLista(app, etiqueta) {
   console.log('  (caché de la app: ' + enCache.split(/\r?\n/).filter(l => /\.bbt/.test(l)).map(l => l.trim()).join(' | ') + ')');
   const rechazo = await app.evaluar(`try{await window.BibliaPlataforma.desempacarPaquete({desde:'content://${PKG}.fileprovider/my_cache_images/cortado.bbt'});return 'aceptado';}catch(e){return e.message;}`, 120000);
   anotar(/incompleto/.test(rechazo), 'paquete incompleto rechazado', rechazo);
-  // Vuelve a dejar el paquete bueno desempacado para la revisión.
-  const seleccionBuena = await app.evaluar(`const r=await window.BibliaPlataforma.desempacarPaquete({desde:${JSON.stringify(uriPaquete)},bytes:${bytesPaquete}});return r;`, 300000);
-  const copiados = adb('shell', 'run-as', PKG, 'ls', '-l', 'files/traspaso-entrante');
-  anotar(esperados.every(a => copiados.includes(a)), 'archivos de traspaso en la memoria de la app', esperados.length + ' archivos');
-  const rev = await app.evaluar(`const r=await window.libraryDesktop.transferScan(${JSON.stringify(seleccionBuena)});window.__rev=r;return r.resumen;`, 300000);
-  anotar(rev && rev.conteos && rev.conteos.diasCompletados === 329 && rev.modulos.length === 1, 'revisión del traspaso', JSON.stringify(rev && rev.conteos));
-  const inst = await app.evaluar(`const r=await window.libraryDesktop.transferInstall({token:window.__rev.token,confirmado:true});return r.instalado===true&&r.requiereRecarga===true;`, 300000);
-  anotar(inst === true, 'instalación del traspaso');
-  await app.enviar('Page.reload', { ignoreCache: true });
-  await espera(3000);
+  // 6. Traspaso por la PANTALLA, como lo hace Edward, con toda la app funcionando:
+  //    Más › Traer desde la PC › Elegir el archivo › Instalar en este teléfono › (recarga sola) › «Tu biblioteca llegó».
+  //    Solo el selector de Android (ventana del sistema) se reemplaza por el paquete de prueba.
+  await app.evaluar(`window.BibliaPlataforma.elegirArchivosTraspaso=o=>window.BibliaPlataforma.desempacarPaquete({desde:${JSON.stringify(uriPaquete)},bytes:${bytesPaquete},alProgreso:o&&o.alProgreso});document.querySelector('#movil-nav [data-destino="mas"]').click();await new Promise(r=>setTimeout(r,500));document.querySelector('#movil-traer-pc').click();return true;`);
+  const tocar = async (texto, limite = 300000) => {
+    const fin = Date.now() + limite;
+    while (Date.now() < fin) {
+      const r = await app.evaluar(`const d=document.querySelector('#movil-traspaso');const b=[...d.querySelectorAll('button')].find(x=>x.textContent.trim()===${JSON.stringify(texto)});if(b){b.click();return {ok:true};}return {titulo:d.querySelector('h3')?.textContent||'',texto:[...d.querySelectorAll('p')].map(p=>p.textContent).join(' · ')};`);
+      if (r.ok) return;
+      if (r.titulo === 'No se pudo traer') throw new Error('La pantalla dice «No se pudo traer»: ' + r.texto);
+      await espera(1000);
+    }
+    throw new Error('No apareció el botón «' + texto + '»');
+  };
+  await tocar('Elegir el archivo');
+  await tocar('Instalar en este teléfono');
+  const resumenPantalla = await app.evaluar(`return document.querySelector('#movil-traspaso h3')?.textContent||'';`).catch(() => 'recargando');
+  anotar(true, 'revisión e instalación desde la pantalla', resumenPantalla);
+  await espera(5000); // la app se recarga sola a los 2,5 s
   app = await esperarLista(app, '3-tras-traspaso');
+  let confirmacion = null;
+  for (let i = 0; i < 90; i++) {
+    try {
+      confirmacion = await app.evaluar(`return {conf:document.documentElement.dataset.traspasoConfirmado||'',lista:typeof storageReady!=='undefined'&&storageReady,hechos:(state.plans[0]?.completed||[]).length,dias:state.plans[0]?.days||0,devocionales:state.devotionals.length,titulo:document.querySelector('#movil-traspaso[open] h3')?.textContent||'',texto:[...document.querySelectorAll('#movil-traspaso[open] p')].map(p=>p.textContent).join(' · ')};`, 5000);
+      if (confirmacion.conf) break;
+    } catch { /* recargando */ }
+    await espera(1000);
+  }
+  captura('3b-confirmacion');
+  anotar(confirmacion && confirmacion.conf === 'si' && confirmacion.lista && confirmacion.hechos === 329 && confirmacion.dias === 1189 && confirmacion.devocionales === 2, 'la app muestra lo traído («Tu biblioteca llegó»)', JSON.stringify(confirmacion));
+  await app.evaluar(`[...document.querySelectorAll('#movil-traspaso button')].find(x=>x.textContent.trim()==='Empezar a leer')?.click();return true;`);
   const fin = await app.evaluar(`await (window.BibliaPreparacion?.modulos||Promise.resolve());const b=await window.libraryDesktop.bootstrap({initial:{version:1,position:{book:18,chapter:23,verse:1},notes:{},highlights:{},plans:[],devotionals:[],prayers:[],prayerDrafts:{},guideResponses:{},aiStudies:[],devResponses:{},planNotes:{},appearance:{design:'a'},font:20},legacy:null,legacyValid:true});const p=b.state.plans[0]||{};const cat=await window.libraryDesktop.catalog();let verso='';try{const c=await window.libraryDesktop.chapter({book:18,chapter:23,module:'texto-sintetico'});verso=(c.verses[0]||{}).text||'';}catch(e){verso='ERROR '+e.message;}return {dias:(p.entries||[]).length||p.days,hechos:(p.completed||[]).length,devocionales:b.state.devotionals.length,nota:b.state.notes['18:23:1']||'',modulo:cat.modules.some(m=>m.id==='texto-sintetico'),verso};`, 300000);
   anotar(fin.dias === 1189 && fin.hechos === 329 && fin.devocionales === 2, 'datos traídos de la PC', JSON.stringify({ dias: fin.dias, hechos: fin.hechos, devocionales: fin.devocionales }));
   anotar(fin.modulo && /Texto inventado/.test(fin.verso), 'módulo e-Sword traído y legible', fin.verso.slice(0, 60));
