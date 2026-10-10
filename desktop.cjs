@@ -57,7 +57,14 @@ app.whenReady().then(async () => {
   ipcMain.handle('library:module-scan',async(event,{choose=false}={})=>{if(!trusted(event))throw Error('Origen no autorizado.');let directory=path.join(process.env['ProgramFiles(x86)']||'C:\\Program Files (x86)','e-Sword');if(hiddenTest&&testProfile&&fs.existsSync(path.join(testProfile,'fixture-import')))directory=path.join(testProfile,'fixture-import');if(choose||!fs.existsSync(directory)){const selected=await dialog.showOpenDialog(win,{title:'Carpeta de tu biblioteca e-Sword',properties:['openDirectory']});if(selected.canceled)return null;directory=selected.filePaths[0];}return request('moduleScan',{directory});});
   ipcMain.handle('library:module-install',async(event,tokens)=>{if(!trusted(event)||!Array.isArray(tokens)||tokens.length>500)throw Error('Selección no autorizada.');return request('moduleInstall',{tokens});});
   const ai=new AiService({root:app.getPath('userData'),safeStorage,openExternal:url=>shell.openExternal(url),notify:status=>{if(!win.isDestroyed())win.webContents.send('library:ai-state',status);}}),prepared=new Map();
-  app.on('before-quit',()=>ai.stop());
+  const {PersonalAi}=require('./lib/personal-ai.cjs'),personalAi=new PersonalAi({root:app.getPath('userData'),safeStorage,policy:()=>request('personalAiPolicy'),openExternal:url=>shell.openExternal(url)});
+  app.on('before-quit',()=>{ai.stop();personalAi.stop();});
+  ipcMain.handle('library:ai-personal-status',async event=>{if(!trusted(event))throw Error('Origen no autorizado.');personalAi.cache=null;return personalAi.status();});
+  ipcMain.handle('library:ai-personal-enable',(event,value)=>{if(!trusted(event))throw Error('Origen no autorizado.');return personalAi.setEnabled(value);});
+  ipcMain.handle('library:ai-personal-login',(event,provider)=>{if(!trusted(event))throw Error('Origen no autorizado.');return personalAi.login(provider);});
+  ipcMain.handle('library:ai-gemini-key',(event,key)=>{if(!trusted(event))throw Error('Origen no autorizado.');return key===null?personalAi.removeKey():personalAi.storeKey(key);});
+  ipcMain.handle('library:ai-gemini-models',event=>{if(!trusted(event))throw Error('Origen no autorizado.');return personalAi.models();});
+
   for(const [name,action] of [['status','status'],['connect','connect'],['disconnect','disconnect'],['models','listModels']])ipcMain.handle('library:ai-'+name,event=>{if(!trusted(event))throw new Error('Origen no autorizado.');return ai[action]();});
   ipcMain.handle('library:ai-prepare',async(event,data)=>{
     if(!trusted(event)||!data||JSON.stringify(data).length>10000)throw new Error('Consulta no válida.');
@@ -67,7 +74,7 @@ app.whenReady().then(async () => {
   });
   const getPrepared=id=>{const item=prepared.get(id);if(!item||Date.now()-item.createdAt>30*60*1000)throw new Error('Prepara de nuevo la consulta.');return item;};
   ipcMain.handle('library:ai-ask',async(event,data)=>{
-    if(!trusted(event)||!data)throw new Error('Origen no autorizado.');const item=getPrepared(data.id);await request('verifyAiSources',item.sources);const response=await ai.ask({prompt:item.prompt,model:data.model,allowData:data.allowData});
+    if(!trusted(event)||!data)throw new Error('Origen no autorizado.');const item=getPrepared(data.id);await request('verifyAiSources',item.sources);const provider=data.provider||'openrouter';const response=provider==='openrouter'?await ai.ask({prompt:item.prompt,model:data.model,allowData:data.allowData}):await personalAi.ask({provider,prompt:item.prompt,model:data.model||''});
     const citations=[];for(const ref of response.citations){try{const result=await request('chapter',{module:item.module||'rv1909',book:ref.book,chapter:ref.chapter}),verse=result.verses.find(v=>v.verse===ref.verse);if(verse)citations.push({...ref,title:result.title,text:verse.text,revision:result.revision});}catch{}}
     return {...response,citations,sources:item.sources};
   });
