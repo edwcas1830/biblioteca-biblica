@@ -1,0 +1,85 @@
+# Biblioteca Bíblica: APK de prueba para Android.
+# SOLO se ejecuta a mano (workflow_dispatch). Usa el Android SDK preinstalado en el runner,
+# lo que implica aceptar las condiciones del Android SDK: Edward lo autoriza al ejecutarlo.
+# Nunca incluye módulos personales: la auditoría falla si el APK trae .bblx/.cmtx/.dctx/.sqlite.
+#
+# Para activarlo: copiar este archivo a .github/workflows/android.yml (hoy .github/ está en
+# .gitignore del repo; hay que quitar esa línea) y lanzarlo desde Actions → «APK Android» → Run.
+name: APK Android
+
+on:
+  workflow_dispatch:
+    inputs:
+      rama:
+        description: Rama a compilar
+        required: true
+        default: android
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.rama }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Dependencias de la app común
+        run: npm ci
+
+      - name: Biblia RV1909 y lectores locales
+        run: |
+          npm run bible
+          npm run prepare:assets
+
+      - name: Pruebas compartidas (escritorio y teléfono)
+        run: npm test
+
+      - name: Dependencias móviles
+        working-directory: mobile
+        run: npm ci
+
+      - name: Armar www y sincronizar con Android
+        working-directory: mobile
+        run: |
+          node scripts/build-www.cjs
+          npx cap sync android
+
+      - name: Compilar APK de depuración
+        working-directory: mobile/android
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleDebug
+
+      - name: Auditoría del APK (nada privado)
+        run: |
+          APK=mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          unzip -l "$APK" > lista.txt
+          if grep -Ei '\.(bblx|cmtx|dctx|bbli|cmti|dcti|sqlite|sqlite3|db)$' lista.txt; then
+            echo "El APK trae archivos prohibidos"; exit 1
+          fi
+          sha256sum "$APK" | tee apk.sha256
+          ls -la "$APK"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: biblioteca-biblica-android-debug
+          path: |
+            mobile/android/app/build/outputs/apk/debug/app-debug.apk
+            apk.sha256
+            mobile/www-auditoria.json
+          retention-days: 14

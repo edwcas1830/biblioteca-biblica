@@ -1,6 +1,6 @@
 {
-  "fecha": "2026-10-10T07:30:52.623Z",
-  "archivos": 95,
+  "fecha": "2026-10-10T07:32:02.634Z",
+  "archivos": 100,
   "megabytes": 16.9,
   "prohibidos": [],
   "modulosLibres": [
@@ -8,6 +8,9 @@
     "step-greek",
     "step-hebrew"
   ],
-  "puentes": [],
-  "huellaIndex": "6345f3128db085db"
+  "puentes": [
+    "platform/bridge-contract.js",
+    "platform/android/bridge.js"
+  ],
+  "huellaIndex": "dedd7185c402e2fe"
 }

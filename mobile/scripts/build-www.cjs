@@ -33,16 +33,20 @@ copiar(path.join(mobile, 'web'), path.join(out, 'mobile'));
 // index.html: capa móvil antes de los scripts de la app y CSP del teléfono.
 const indexPath = path.join(out, 'index.html');
 let html = fs.readFileSync(indexPath, 'utf8');
-const puentes = [];
-for (const archivo of ['platform/contract.js', 'platform/web/bridge.js', 'platform/android/bridge.js']) {
-  if (fs.existsSync(path.join(out, archivo))) puentes.push(archivo);
-}
-const scriptsMovil = [...puentes, 'mobile/plataforma.js', 'mobile/movil.js']
+// Orden: Biblia → contrato → shared → adaptadores → integraciones móviles → controladores de app/.
+// Si Codex publica platform/scripts-movil.json, ese orden manda.
+const ordenCodex = path.join(out, 'platform', 'scripts-movil.json');
+const puentes = fs.existsSync(ordenCodex)
+  ? JSON.parse(fs.readFileSync(ordenCodex, 'utf8')).filter(f => fs.existsSync(path.join(out, f)))
+  : ['platform/bridge-contract.js', 'shared/references.js', 'shared/personal-model.js',
+     'platform/web/personal-store.js', 'platform/web/library.js', 'platform/web/bridge.js', 'platform/android/bridge.js']
+      .filter(f => fs.existsSync(path.join(out, f)));
+const scriptsMovil = [...puentes, 'mobile/plataforma.js', 'mobile/arranque.js', 'mobile/movil.js']
   .filter(f => fs.existsSync(path.join(out, f)))
   .map(f => `<script defer src="${f}"></script>`).join('\n  ');
-const primerScript = html.indexOf('<script');
-if (primerScript < 0) throw new Error('index.html sin scripts');
-html = html.slice(0, primerScript) + scriptsMovil + '\n  ' + html.slice(primerScript);
+const ancla = '<script defer src="bible-data.js"></script>';
+if (!html.includes(ancla)) throw new Error('index.html sin bible-data.js');
+html = html.replace(ancla, ancla + '\n  ' + scriptsMovil);
 html = html.replace('</head>', '  <link rel="stylesheet" href="mobile/movil.css">\n</head>');
 html = html.replace(/<meta name="viewport"[^>]*>/, '');
 html = html.replace('<head>', '<head>\n  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">');
