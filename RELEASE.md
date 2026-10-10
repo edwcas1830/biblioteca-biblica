@@ -1,6 +1,6 @@
-Biblioteca Bíblica 0.6.1 — preparada para instalación personal, sin publicar release.
+Biblioteca Bíblica 0.6.2 — mezcla del devocional elegida por Edward; preparada para instalación personal, sin publicar release.
 
-- Devocionales guardados al importar, En curso/Terminados con fecha, reanudación y lectura de libro con doble página, A−/A+ y pantalla completa. Edición opcional; los borradores de IA se revisan antes de guardar.
+- Flujo mixto confirmado: devocionales guardados al importar, En curso/Terminados con fecha, reanudación y lectura de libro con doble página, A−/A+ y pantalla completa. Edición opcional; los borradores de IA se revisan antes de guardar.
 - IA de estudio con conversación C, seis apartados, hilos privados y proveedores personales Codex/ChatGPT, Claude y Gemini; OpenRouter y copiar/abrir. Fuentes libres con atribución, licencia y procedencia.
 - YouTube mini visible de 200×200, acceso ♪, listas guardadas y búsqueda personal con clave propia.
 - Estudio ampliado, gráficos offline, círculo piloto e importador de módulos; diseños A/B/C y vistas flexibles conservados. Módulos y datos personales se incorporan aparte.
