@@ -32,7 +32,8 @@
       "!app/**/*.dctx",
       "package.json",
       "FUENTES.md",
-      "shared/**/*.js"
+      "shared/**/*.js",
+      "platform/bridge-contract.js"
     ],
     "extraResources": [
       {

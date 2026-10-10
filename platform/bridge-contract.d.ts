@@ -43,7 +43,7 @@ export interface TransferSummary {
 }
 export interface TransferReview { token:string; expiresAt:number; resumen:TransferSummary; requiereConfirmacion:true; }
 export interface TransferResult { instalado:true; resumen:TransferSummary; respaldo:string; requiereRecarga:true; }
-export interface Capabilities { version:1; platform:'web'|'android'; storage:'none'|'indexeddb'|'sqlite'; nativeVerified:boolean; operations:Record<keyof Omit<LibraryBridge,'getCapabilities'>,{available:boolean; reason?:string}>; }
+export interface Capabilities { version:1; platform:'web'|'android'|'desktop'; storage:'none'|'indexeddb'|'sqlite'; nativeVerified:boolean; operations:Record<keyof Omit<LibraryBridge,'getCapabilities'>,{available:boolean; reason?:string}>; }
 export type Unsubscribe = () => void;
 export interface LibraryBridge {
   getCapabilities():Promise<Capabilities>;
@@ -72,6 +72,8 @@ export interface LibraryBridge {
   aiDisconnect():Promise<AiStatus>; aiModels():Promise<{id:string; name:string}[]>;
   aiPrepare(data:AiSelection):Promise<AiPrepared>;
   aiAsk(data:{id:string; provider?:string; model:string; allowData?:boolean}):Promise<AiReply>;
+  /** One OpenRouter background; uses account credits, never the free text model list. */
+  aiImage(data:{prompt:string; aspect:'4:5'|'1:1'|'9:16'}):Promise<{dataUrl:string; model:string}>;
   aiCopy(data:{id:string; provider?:string}):Promise<{copied:boolean; opened:boolean}>;
   aiTextCopy(text:string):Promise<boolean>; aiCancel():Promise<boolean>;
   onAiProgress(callback:(value:{id:string; text:string})=>void):Unsubscribe;

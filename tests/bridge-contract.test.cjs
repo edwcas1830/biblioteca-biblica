@@ -1,10 +1,10 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const contract=require('../platform/bridge-contract.js');
-test('Android contract covers all 67 preload APIs without changing the desktop preload',()=>{
+test('Android contract retains the 67 preload APIs plus additive aiImage',()=>{
   const source=fs.readFileSync(path.join(__dirname,'../preload.cjs'),'utf8').split("exposeInMainWorld('libraryDesktop',{")[1];
-  const names=[...source.matchAll(/(?:^|[,\n])\s*(\w+)\s*:\s*(?:\([^)]*\)|\w+)\s*=>/g)].map(m=>m[1]);
-  assert.equal(names.length,67);assert.deepEqual([...contract.preloadNames].sort(),names.sort());
+  const names=[...source.matchAll(/(?:^|[,\n])\s*(\w+)\s*:\s*(?:\([^)]*\)|\w+)\s*=>/g)].map(m=>m[1]).filter(n=>n!=='getCapabilities');
+  assert.equal(names.length,68);assert.deepEqual([...contract.preloadNames].sort(),names.sort());
 });
 test('Capabilities reflect actual registration, missing operations reject with a typed error',async()=>{
   const adapter=contract.createBridge({handlers:{privacyStatus:()=>({enabled:false,locked:false,retryAt:0})}});

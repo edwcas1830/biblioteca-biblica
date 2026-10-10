@@ -10,6 +10,7 @@ async function run(){const server=net.createServer();await new Promise(r=>server
 for(let i=0;i<160;i++){if(await evaluate("typeof state!=='undefined' && document.querySelector('#verses')?.children.length>0 && (typeof storageReady==='undefined'||storageReady)"))break;await wait(250);}
 let report={executable:path.basename(args.exe),phase:args.phase||'v03'};
 if(args.phase==='ai-free'){report.ai=await require('./smoke-ai-free.cjs')({evaluate,call,screenshot,wait,args});}
+else if(args.phase==='ai-image'){report.imageApi=await require('./smoke-ai-image.cjs')({evaluate,call,screenshot,wait,args});}
 else if(args.phase==='study-chat'){report.chat=await require('./smoke-study-chat.cjs')({evaluate,call,screenshot,wait,args});}
 else if(args.phase==='personal-ai'){report.ai=await require('./smoke-personal-ai.cjs')({evaluate,call,screenshot,wait,args});}
 else if(args.phase==='book'){report.book=await require('./smoke-book.cjs')({evaluate,call,screenshot,wait,args});}

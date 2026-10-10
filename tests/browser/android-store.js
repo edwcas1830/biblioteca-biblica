@@ -68,6 +68,14 @@ window.testStorePhase1=async()=>{
     const result=await provider.ask({prompt:'Contexto inventado',model:'gemini-fixture-flash',study:true});equal(Object.keys(result.sections).length,6,'Secciones C');ok(!JSON.stringify(result).includes('PENSAMIENTO'),'Sin razonamiento interno');equal(calls[1].input.headers['x-goog-api-key'],key,'Header');ok(!calls[1].url.includes(key),'Clave fuera de URL');await provider.close();
   });
   // Put the expected snapshot in a second IDB record, not a JS global surviving reload.
+  await test('aiImage UMD entrega PNG que Chromium decodifica y puede dibujar sin enlace externo',async()=>{
+    const png='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGM4saXnPwAHWAMILdCQ7AAAAABJRU5ErkJggg==',calls=[];
+    const provider=LibraryOpenRouter.create({credentialStore:{leer:async()=> 'sk-or-v1-'+'c'.repeat(64),guardar:async()=>{},borrar:async()=>{}},fetchImpl:async(url,input)=>{calls.push({url,input});return new Response(JSON.stringify({choices:[{finish_reason:'stop',message:{images:[{image_url:{url:png}}]}}]}));}});
+    const result=await provider.image({prompt:'Fondo de prueba inventado',aspect:'9:16'});equal(result.dataUrl,png,'PNG completo');equal(result.model,LibraryAiImage.MODEL,'Modelo fijo');equal(calls.length,1,'Solo generación');
+    const raw=Uint8Array.from(atob(result.dataUrl.slice(22)),c=>c.charCodeAt(0)),bitmap=await createImageBitmap(new Blob([raw],{type:'image/png'}));
+    const canvas=document.createElement('canvas');canvas.width=1;canvas.height=1;const ctx=canvas.getContext('2d');ctx.drawImage(bitmap,0,0);equal(Array.from(ctx.getImageData(0,0,1,1).data),[200,180,140,255],'Tarjeta sin canvas contaminado');bitmap.close();await provider.close();
+    ok((await bridge.getCapabilities()).operations.aiImage.available,'Capacidad registrada');
+  });
   await store.transaction(['records'],'readwrite',tx=>tx.objectStore('records').put({key:'expected-test-snapshot',value:saved}));
   await store.close();return {phase:1,passed:names.length,names};
 };

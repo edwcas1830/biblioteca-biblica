@@ -81,5 +81,5 @@ test('Reports require a preview/confirmation, never claim sent without a develop
   await assert.rejects(f.service.handlers().aiReport({...input,confirmed:false}),{code:'VALIDATION'});const refused=fixture({reporter:async()=>({accepted:false})});await assert.rejects(refused.service.handlers().aiReport(input),{code:'UNAVAILABLE'});plain.service.close();f.service.close();refused.service.close();
 });
 test('Mobile extensions retain all Windows preload operation names and advertise only actual report transport in status',async()=>{
-  const f=fixture(),adapter=contract.createBridge({handlers:f.service.handlers(),events:['onAiState']});assert.equal((await adapter.bridge.getCapabilities()).operations.aiQuota.available,true);assert.equal(f.service.status().reporting,'not-configured');assert.equal(contract.preloadNames.length,67);f.service.close();
+  const f=fixture(),adapter=contract.createBridge({handlers:f.service.handlers(),events:['onAiState']});assert.equal((await adapter.bridge.getCapabilities()).operations.aiQuota.available,true);assert.equal(f.service.status().reporting,'not-configured');assert.equal(contract.preloadNames.length,68);f.service.close();
 });

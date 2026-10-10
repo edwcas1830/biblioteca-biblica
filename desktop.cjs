@@ -58,6 +58,16 @@ app.whenReady().then(async () => {
   ipcMain.handle('library:module-install',async(event,tokens)=>{if(!trusted(event)||!Array.isArray(tokens)||tokens.length>500)throw Error('Selección no autorizada.');return request('moduleInstall',{tokens});});
   const ai=new AiService({root:app.getPath('userData'),safeStorage,openExternal:url=>shell.openExternal(url),notify:status=>{if(!win.isDestroyed())win.webContents.send('library:ai-state',status);}}),prepared=new Map();
   const {PersonalAi}=require('./lib/personal-ai.cjs'),personalAi=new PersonalAi({root:app.getPath('userData'),safeStorage,policy:()=>request('personalAiPolicy'),openExternal:url=>shell.openExternal(url)});
+  const bridgeContract=require('./platform/bridge-contract.js'),imageCore=require('./shared/ai-image.js');
+  ipcMain.handle('library:capabilities',event=>{if(!trusted(event))throw Error('Origen no autorizado.');return {version:1,platform:'desktop',storage:'sqlite',nativeVerified:false,operations:Object.fromEntries(Object.keys(bridgeContract.operations).map(name=>[name,{available:bridgeContract.preloadNames.includes(name)}]))};});
+  ipcMain.handle('library:ai-image',async(event,data)=>{
+    if(!trusted(event))throw Error('Origen no autorizado.');
+    try{
+      imageCore.validate(data);
+      const check=async()=>{if((await request('privacyStatus')).locked)throw new imageCore.ImageError('LOCKED','Abre tu cuaderno antes de generar un fondo.');if(personalAi.busy)throw new imageCore.ImageError('CONFLICT','Espera a que termine la consulta anterior.');};
+      await check();const value=await ai.image(data,{beforeSend:check});await check();return {ok:true,value};
+    }catch(error){return {ok:false,error:error instanceof imageCore.ImageError?{code:error.code,message:error.message}:{code:'UNAVAILABLE',message:'No se pudo generar el fondo. Puedes usar una foto o un fondo local.'}};}
+  });
   app.on('before-quit',()=>{ai.stop();personalAi.stop();});
   const {YoutubeService}=require('./lib/youtube-service.cjs'),youtube=new YoutubeService({root:app.getPath('userData'),safeStorage,mode:()=>personalAi.mode()});
   for(const [name,action] of [['status','status'],['key','store'],['remove-key','remove'],['search','search']])ipcMain.handle('library:youtube-'+name,(event,data)=>{if(!trusted(event))throw Error('Origen no autorizado.');return youtube[action](data);});

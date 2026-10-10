@@ -1,7 +1,7 @@
 (function(root,factory){
-  if(typeof module==='object'&&module.exports)module.exports=factory(require('../bridge-contract.js'),require('../../app/ai-core.js'),require('../../app/study-chat-core.js'),require('./credentials.js'));
-  else root.LibraryOpenRouter=factory(root.LibraryBridgeContract,root.AiCore,root.StudyChatCore,root.LibraryAiCredentials);
-})(typeof globalThis!=='undefined'?globalThis:this,function(contract,core,chat,credentials){
+  if(typeof module==='object'&&module.exports)module.exports=factory(require('../bridge-contract.js'),require('../../app/ai-core.js'),require('../../app/study-chat-core.js'),require('./credentials.js'),require('../../shared/ai-image.js'));
+  else root.LibraryOpenRouter=factory(root.LibraryBridgeContract,root.AiCore,root.StudyChatCore,root.LibraryAiCredentials,root.LibraryAiImage);
+})(typeof globalThis!=='undefined'?globalThis:this,function(contract,core,chat,credentials,images){
   'use strict';
   const API='https://openrouter.ai/api/v1',fail=(code,message)=>{throw new contract.BridgeError(code,message);};
   const b64=bytes=>btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
@@ -93,7 +93,23 @@
         return {text:parsed.text.slice(0,12000),citations:(Array.isArray(parsed.citations)?parsed.citations:[]).filter(chat.ref).slice(0,5),model:typeof result.model==='string'?result.model.slice(0,200):model,structured,...(study?chat.result(parsed,allowLiving):{})};
       }finally{busy=false;if(controller===current)controller=null;}
     }
-    return Object.freeze({status,ready,connect,disconnect,listModels,refreshQuota,ask,cancel,close});
+    async function image(input,{beforeSend}={}){
+      const body=images.body(input);await ready;
+      if(closed)fail('UNAVAILABLE','La sesión de IA está cerrada.');
+      if(!key)fail('UNAVAILABLE','Conecta OpenRouter para generar un fondo.');
+      if(busy)fail('CONFLICT','Espera a que termine la consulta o el fondo anterior.');
+      if(retryAt>now())fail('QUOTA','Espera a que termine el límite temporal del proveedor.');
+      busy=true;controller=new AbortController();const current=controller,at=generation;
+      try{
+        if(beforeSend)await beforeSend();if(at!==generation||current.signal.aborted||closed)cancelled();
+        const value=await request('/chat/completions',{method:'POST',headers:{Authorization:'Bearer '+key,'Content-Type':'application/json','X-OpenRouter-Title':'Biblioteca Bíblica'},body:JSON.stringify(body),signal:current.signal},images.MAX_RESPONSE);
+        if(at!==generation||current.signal.aborted||closed)cancelled();
+        return images.result(value);
+      }catch(e){if(e instanceof images.ImageError)fail(e.code,e.message);throw e;}
+      finally{busy=false;if(controller===current)controller=null;}
+    }
+    const imageCall=async(input,options)=>{try{return await image(input,options);}catch(e){if(e instanceof images.ImageError)fail(e.code,e.message);throw e;}};
+    return Object.freeze({status,ready,connect,disconnect,listModels,refreshQuota,ask,image:imageCall,cancel,close});
   }
   return Object.freeze({create});
 });
