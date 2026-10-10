@@ -5,8 +5,7 @@
   "android": {
     "minWebViewVersion": 110,
     "allowMixedContent": false,
-    "captureInput": false,
-    "webContentsDebuggingEnabled": false
+    "captureInput": false
   },
   "server": {
     "androidScheme": "https"

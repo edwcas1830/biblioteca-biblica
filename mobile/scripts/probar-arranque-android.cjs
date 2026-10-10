@@ -24,7 +24,10 @@ function puenteNativo(impl) {
   fs.mkdirSync(datos, { recursive: true }); fs.mkdirSync(bases, { recursive: true });
   const portapapeles = [];
   const Clipboard = { write: async o => { if (!o || typeof o.string !== 'string') throw new Error('Clipboard.write exige {string}'); portapapeles.push(o.string); } };
-  const plugins = { CapacitorSQLite: helpers.sqlite(bases), Filesystem: helpers.filesystem(datos, { absoluteRoot: root }), Clipboard,
+  // Como Android/SQLCipher de verdad: al abrir una base escribible se crea sola la tabla android_metadata.
+  const sqliteBase = helpers.sqlite(bases);
+  const sqliteAndroid = { ...sqliteBase, open: async o => { await sqliteBase.open(o); if (!o.readonly) await sqliteBase.execute({ database: o.database, statements: "CREATE TABLE IF NOT EXISTS android_metadata (locale TEXT); INSERT INTO android_metadata SELECT 'es_US' WHERE NOT EXISTS (SELECT 1 FROM android_metadata);" }); } };
+  const plugins = { CapacitorSQLite: sqliteAndroid, Filesystem: helpers.filesystem(datos, { absoluteRoot: root }), Clipboard,
     App: { addListener: async () => ({ remove() {} }), exitApp: async () => {} },
     TextToSpeech: { getSupportedVoices: async () => ({ voices: [] }), speak: async () => {}, stop: async () => {} },
     Share: { share: async () => ({}) }, Browser: { open: async () => {} }, FilePicker: { pickFiles: async () => ({ files: [] }), copyFile: async () => {} },

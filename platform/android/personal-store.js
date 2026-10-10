@@ -55,7 +55,7 @@
     }
     async release(database){if(!this.connections.has(database))return;try{await this.sqlite.close(this.options(database));}finally{await this.sqlite.closeConnection(this.options(database));this.connections.delete(database);}}
     async structure(){
-      const rows=await this.query("SELECT name,type,sql FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%'");
+      const rows=await this.query("SELECT name,type,sql FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%' AND name <> 'android_metadata'");
       if(!rows.length)return false;
       if(rows.some(r=>!['table','index'].includes(r.type)||r.type==='table'&&(!Object.hasOwn(required,r.name)||/\bVIRTUAL\b/i.test(r.sql)))||rows.filter(r=>r.type==='table').length!==4)fail('CORRUPT','El esquema SQLite no es compatible. No se reemplazará.');
       for(const [table,columns]of Object.entries(required)){
@@ -117,7 +117,7 @@
       if(this.connections.has(this.backupDatabase))return;
       await this.connect(this.backupDatabase);
       try{
-        const rows=await this.query("SELECT name,type FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%'",[],this.backupDatabase);
+        const rows=await this.query("SELECT name,type FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%' AND name <> 'android_metadata'",[],this.backupDatabase);
         if(!rows.length)await this.execute('CREATE TABLE backups(id TEXT PRIMARY KEY,kind TEXT NOT NULL,payload TEXT NOT NULL,at TEXT NOT NULL);',this.backupDatabase);
         else if(rows.some(r=>r.type!=='index'&&(r.type!=='table'||r.name!=='backups'))||(await this.query('PRAGMA table_info(backups)',[],this.backupDatabase)).map(r=>r.name).join(',')!=='id,kind,payload,at')fail('CORRUPT','El almacén de respaldos necesita recuperación.');
       }catch(e){await this.release(this.backupDatabase);throw e;}

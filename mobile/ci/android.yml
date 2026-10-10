@@ -80,6 +80,34 @@ jobs:
           sha256sum "$APK" | tee apk.sha256
           ls -la "$APK"
 
+      # ---------- Prueba del APK real en un emulador Android, antes de entregarlo ----------
+      - name: Carpeta de traspaso sintética (datos inventados)
+        run: node mobile/scripts/fixture-traspaso.cjs "$RUNNER_TEMP/fixture-traspaso"
+
+      - name: Habilitar KVM para el emulador
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Probar la app en Android 14 (emulador)
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: node mobile/scripts/probar-en-emulador.cjs mobile/android/app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/fixture-traspaso/traspaso" prueba-emulador
+
+      - name: Resultados de la prueba en el emulador
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prueba-emulador
+          path: prueba-emulador/
+          retention-days: 14
+
       - uses: actions/upload-artifact@v4
         with:
           name: biblioteca-biblica-android-debug

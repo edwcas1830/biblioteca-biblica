@@ -41,7 +41,7 @@
     try{
       const integrity=await query('PRAGMA integrity_check');
       if(integrity.length!==1||Object.values(integrity[0])[0]!=='ok'||(await query('PRAGMA foreign_key_check')).length)fail('CORRUPT','La base del traspaso está dañada.');
-      const schema=await query("SELECT name,type,sql FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%'");
+      const schema=await query("SELECT name,type,sql FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%' AND name <> 'android_metadata'");
       if(schema.some(r=>!['table','index'].includes(r.type)||r.type==='table'&&(!Object.hasOwn(requiredTables,r.name)||/\bVIRTUAL\b/i.test(r.sql)))||schema.filter(r=>r.type==='table').length!==4)fail('CORRUPT','La base tiene un esquema no compatible.');
       for(const [table,columns]of Object.entries(requiredTables)){
         const rows=await query('PRAGMA table_info('+table+')');
