@@ -5,12 +5,15 @@ const books = window.BIBLE?.books;
 const core = window.BibleCore;
 const planCore = window.PlanCore;
 const appearanceCore=window.AppearanceCore;
+const paneCore=window.PaneLayoutCore;
 const STORE = 'biblioteca-biblica-v1';
 const initial = () => ({ version:1, position:{book:18,chapter:23,verse:1}, notes:{}, highlights:{}, devResponses:{}, devotionals:[], plans:[], font:20, night:false, appearance:appearanceCore.normalize() });
 let state = initial(), activeView='read', activeDev=null, activeDay=0, toastTimer, searchTimer;
 const desktop=window.libraryDesktop;
 let storageReady=false, saveQueue=Promise.resolve(), selectedVersion='rv1909', catalogData=null, readingGeneration=0, searchGeneration=0, studyGeneration=0, chapterData=null, savePending=0, saveFailed=false;
 let pendingPlan=null, reviewPage=0, activePlanDay=null, readerRange=null, studySelection='chapter', dictionaryGeneration=0, dictionaryEntries=[];
+let suppressReaderSyncUntil=0;
+const paneScrollPositions=new Map();
 const planPages=new Map(), planFilters=new Map();
 const PLAN_PAGE=30, REVIEW_PAGE=25;
 function toast(text) { $('#toast').textContent=text; $('#toast').hidden=false; clearTimeout(toastTimer); toastTimer=setTimeout(()=>$('#toast').hidden=true,5500); }
@@ -51,6 +54,7 @@ function validateState(candidate) {
   result.font=Number.isInteger(candidate.font)?Math.max(16,Math.min(28,candidate.font)):20;
   result.night=candidate.night===true;
   result.appearance=appearanceCore.normalize(candidate.appearance);
+  result.appearance.views=paneCore.normalize(result.appearance.views,result.appearance.panes);
   result.selectedVersion=typeof candidate.selectedVersion==='string'?candidate.selectedVersion:'rv1960';
   return result;
 }
@@ -68,6 +72,7 @@ function key(verse=state.position.verse) { const p=state.position; return `${sel
 function reference(p=state.position) { return `${books[p.book].name} ${p.chapter}:${p.verse}`; }
 function settings() {
   state.appearance=appearanceCore.normalize(state.appearance);
+  state.appearance.views=paneCore.normalize(state.appearance.views,state.appearance.panes);
   const root=document.documentElement,theme=appearanceCore.themeAt(state.appearance.theme);
   root.dataset.design=state.appearance.design;root.dataset.theme=theme;
   const link=$('#design-css'),href='designs/design-'+state.appearance.design+'.css';
@@ -75,7 +80,7 @@ function settings() {
   state.night=theme==='noche';document.body.classList.toggle('night',state.night);
   root.style.setProperty('--verse-size',state.font+'px');
   $('#design-select').value=state.appearance.design;$('#theme-select').value=state.appearance.theme;
-  for(const [pane,size] of Object.entries(state.appearance.panes||{biblia:42,comentario:30,diccionario:28}))root.style.setProperty('--pane-'+pane,size+'fr');
+  updateReadingMode();
   $('#night').textContent=state.night?'◐ Luz de día':'◐ Luz cálida';
 }
 
@@ -348,14 +353,16 @@ async function renderComment(){
     const chapter=result.entries.filter(e=>e.label==='Comentario del capítulo'),ranges=result.entries.filter(e=>!['Introducción al libro','Comentario del capítulo'].includes(e.label));
     const entries=studySelection==='chapter'&&chapter.length?chapter:ranges.length?ranges:chapter;
     content.innerHTML=(entries.length?entries.map(e=>`<section class="comment-entry"><h4>${esc(e.label)}</h4><div>${e.html}</div></section>`).join(''):'<p class="empty-slot">Esta fuente no tiene una nota para este pasaje.</p>')+result.entries.filter(e=>e.label==='Introducción al libro').map(e=>`<details class="comment-introduction"><summary>${esc(e.label)}</summary><div>${e.html}</div></details>`).join('');
-    content.scrollTop=0;
+    content.querySelectorAll('.comment-entry>div,.comment-introduction>div').forEach(trimModuleOpening);
+    content.scrollTop=0;paneScrollPositions.set('comentario',0);
   }catch(error){if(generation===studyGeneration)content.textContent=error.message;}
   finally{if(generation===studyGeneration)content.setAttribute('aria-busy','false');}
 }
 function showDictionaryEntry(index){
   const entry=dictionaryEntries[index];if(!entry)return;
   $('#dictionary-content').innerHTML=`<ul class="dictionary-results" aria-label="Resultados de diccionario">${dictionaryEntries.map((e,i)=>`<li><button class="dictionary-result" data-dictionary-entry="${i}" aria-pressed="${i===index}">${esc(e.title)}</button></li>`).join('')}</ul><article class="dictionary-entry"><h4>${esc(entry.title)}</h4><p class="source-caption">${esc(catalogData?.modules.find(m=>m.id===entry.module)?.titulo||entry.module)}</p><div>${entry.html}</div></article>`;
-  $('#dictionary-content').scrollTop=0;
+  trimModuleOpening($('#dictionary-content .dictionary-entry>div'));
+  $('#dictionary-content').scrollTop=0;paneScrollPositions.set('diccionario',0);
 }
 async function consultDictionary(){
   const generation=++dictionaryGeneration,content=$('#dictionary-content');syncDictionaryRef();content.setAttribute('aria-busy','true');content.textContent='Buscando…';
@@ -364,6 +371,16 @@ async function consultDictionary(){
   finally{if(generation===dictionaryGeneration)content.setAttribute('aria-busy','false');}
 }
 // Presentation hooks shared by all three CSS designs; module text is never rewritten on disk.
+function trimModuleOpening(container){
+  // Trim blank presentation padding only; keep paragraphs, headings and the module's text.
+  while(container?.firstChild){
+    const first=container.firstChild;
+    if(first.nodeType===Node.TEXT_NODE){first.textContent=first.textContent.trimStart();if(!first.textContent){first.remove();continue;}break;}
+    if(first.nodeName==='BR'||first.nodeName==='SPAN'&&!first.textContent.trim()){first.remove();continue;}
+    if(first.nodeName==='SPAN')trimModuleOpening(first);
+    break;
+  }
+}
 function decorateReading(){
   for(const verse of $('#verses').children){
     const walker=document.createTreeWalker(verse,NodeFilter.SHOW_TEXT),nodes=[];
@@ -393,17 +410,59 @@ function queryFromReading(query,strong=false){
   else if(!strong&&select.value==='strong-es')select.value=groups.includes('drae')?'drae':groups.includes('vine')?'vine':select.value;
   $('#dictionary-query').value=query;syncDictionaryRef();consultDictionary();
 }
+function effectivePanes(){return document.body.classList.contains('focus')?['biblia']:state.appearance.views.visible;}
 function updateReadingMode(){
-  const solo=document.body.classList.contains('focus')||document.body.classList.contains('reading-only');
-  $('#panes').dataset.active=String(!solo);$('#study-open').textContent=solo?'Abrir estudio':'Solo lectura';
-  $('#study-open').setAttribute('aria-pressed',String(!solo));
+  state.appearance.views=paneCore.normalize(state.appearance.views,state.appearance.panes);
+  const views=state.appearance.views,visible=effectivePanes(),solo=visible.length===1,container=$('#panes');
+  const geometry=[state.appearance.design,views.layout,visible.join(',')].join('|'),changed=container.dataset.geometry!==geometry;
+  if(changed){for(const pane of container.querySelectorAll('.pane:not([hidden])'))paneScrollPositions.set(pane.dataset.pane,pane.querySelector('.pane-body').scrollTop);container.dataset.geometry=geometry;suppressReaderSyncUntil=Date.now()+500;}
+  container.dataset.active=String(!solo);container.dataset.layout=views.layout;container.dataset.visible=visible.join(',');
+  document.body.classList.toggle('reading-only',solo);
+  for(const panel of container.querySelectorAll('.pane'))panel.hidden=!visible.includes(panel.dataset.pane);
+  for(const button of document.querySelectorAll('[data-toggle-pane]'))button.setAttribute('aria-pressed',String(visible.includes(button.dataset.togglePane)));
+  for(const button of document.querySelectorAll('[data-set-layout]'))button.setAttribute('aria-pressed',String(views.layout===button.dataset.setLayout));
+  $('#study-open').textContent=solo?'Abrir estudio':'Solo lectura';$('#study-open').setAttribute('aria-pressed',String(!solo));
   $('#focus').textContent=document.body.classList.contains('focus')?'✦ Volver a mi biblioteca':'✦ Modo intimidad';
+  applyPaneSizes();
+  const primary=$('#pane-resizer-primary'),secondary=$('#pane-resizer-secondary');
+  primary.hidden=solo;secondary.hidden=visible.length!==3;
+  primary.dataset.axis=views.layout==='rows'?'y':'x';secondary.dataset.axis='x';
+  primary.dataset.between=views.layout==='rows'&&visible.length===3?'biblia,comentario,diccionario':'biblia,'+(visible[1]||'comentario');
+  for(const separator of [primary,secondary]){
+    separator.setAttribute('aria-orientation',separator.dataset.axis==='y'?'horizontal':'vertical');
+    const ids=separator.dataset.between.split(',');separator.setAttribute('aria-controls',ids.map(id=>'pane-'+id).join(' '));
+    separator.setAttribute('aria-label',ids.length===3?'Ajustar Biblia y paneles de estudio':'Ajustar '+ids.map(id=>id==='biblia'?'Biblia':id==='comentario'?'Comentario':'Diccionario').join(' y '));
+  }
+  requestAnimationFrame(()=>{
+    if(changed){$('#verses [data-verse="'+state.position.verse+'"]')?.scrollIntoView({block:'nearest'});for(const id of visible.slice(1))$('#pane-'+id+' .pane-body').scrollTop=paneScrollPositions.get(id)||0;}
+    checkPaneFit();
+  });
+}
+function applyPaneSizes(){
+  const config=paneCore.configuration(state.appearance.views,effectivePanes()),container=$('#panes');
+  for(let i=0;i<3;i++)container.style.setProperty('--view-w'+(i+1),(config.weights[i]||1)+'fr');
+  for(let i=0;i<2;i++)container.style.setProperty('--view-a'+(i+1),(config.aux?.[i]||50)+'fr');
+}
+function setPaneVisibility(id,show){
+  const visible=effectivePanes();document.body.classList.remove('focus');
+  state.appearance.views.visible=paneCore.panels.filter(p=>p==='biblia'||(p===id?show:visible.includes(p)));
+  updateReadingMode();save();
+}
+function setPaneLayout(layout){state.appearance.views.layout=layout==='rows'?'rows':'columns';updateReadingMode();save();}
+function checkPaneFit(){
+  if(activeView!=='read')return;
+  const container=$('#panes'),cs=getComputedStyle(container),width=container.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight),height=container.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom),visible=effectivePanes();
+  const split=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--pane-split-size'))||12;
+  const tooSmall=visible.length>1&&(container.dataset.layout==='rows'?height<332||width<(visible.length===3?440+split:220):width<visible.length*220+(visible.length-1)*split||height<160);
+  const notice=$('#pane-layout-notice');if(notice.hidden===tooSmall)notice.hidden=!tooSmall;
+  notice.querySelector('span').textContent='Esta disposición necesita más espacio. Amplía la ventana, cierra un panel o prueba la otra orientación.';
+  $('#suggest-layout').textContent=container.dataset.layout==='rows'?'⫴ Probar lado a lado':'☰ Probar arriba y abajo';
 }
 function bindReaderSync(){
   const body=$('#verses');let intentUntil=0,timer;
   for(const name of ['wheel','pointerdown','keydown'])body.addEventListener(name,()=>{intentUntil=Date.now()+2500;},{passive:true});
   body.addEventListener('scroll',()=>{clearTimeout(timer);if(Date.now()>intentUntil)return;timer=setTimeout(()=>{
-    if(activeView!=='read'||!storageReady||document.activeElement===$('#note'))return;
+    if(activeView!=='read'||!storageReady||document.activeElement===$('#note')||Date.now()<suppressReaderSyncUntil)return;
     const top=body.getBoundingClientRect().top+12;
     const verse=[...body.children].find(el=>el.getBoundingClientRect().bottom>top);
     if(!verse||Number(verse.dataset.verse)===state.position.verse)return;
@@ -412,38 +471,39 @@ function bindReaderSync(){
     renderNote();save();
   },250);},{passive:true});
 }
+function paneResizeSpec(separator){
+  const views=state.appearance.views,visible=effectivePanes(),isSecondary=separator.id==='pane-resizer-secondary';
+  if(visible.length===1||isSecondary&&visible.length!==3)return null;
+  const rows=views.layout==='rows',a=isSecondary?'comentario':'biblia',b=isSecondary?'diccionario':visible[1];
+  return {a:$('#pane-'+a),b:$('#pane-'+b),axis:rows&&!isSecondary?'y':'x',field:rows&&isSecondary?'aux':'weights',first:isSecondary&&!rows?1:0,second:isSecondary&&!rows?2:1,key:paneCore.key(views.layout,visible)};
+}
 function bindPaneResizers(){
-  const defaults={biblia:42,comentario:30,diccionario:28};
-  const apply=values=>{state.appearance.panes=values;for(const [id,size] of Object.entries(values))document.documentElement.style.setProperty('--pane-'+id,size+'fr');};
   for(const separator of document.querySelectorAll('.pane-resizer')){
-    const [first,second]=separator.dataset.between.split(','),a=$(`[data-pane="${first}"]`),b=$(`[data-pane="${second}"]`);
     let drag=null;
-    const axis=()=>getComputedStyle(separator).getPropertyValue('--resize-axis').trim()==='y'?'y':'x';
-    const updateAria=()=>{const rectA=a.getBoundingClientRect(),rectB=b.getBoundingClientRect(),horizontal=axis()==='x',size=horizontal?'width':'height';separator.setAttribute('aria-orientation',horizontal?'vertical':'horizontal');separator.setAttribute('aria-valuenow',Math.round(100*rectA[size]/(rectA[size]+rectB[size]))||50);};
-    const resize=(ratio,values,span)=>{
-      const total=values[first]+values[second],minimum=Math.max(20,1000/total,Math.min(45,100*(axis()==='x'?220:140)/span));
-      ratio=Math.max(minimum,Math.min(100-minimum,ratio));
-      const next={...values,[first]:total*ratio/100,[second]:total*(1-ratio/100)};apply(next);updateAria();
-    };
+    const measure=spec=>{const size=spec.axis==='x'?'width':'height',a=spec.a.getBoundingClientRect()[size],b=spec.b.getBoundingClientRect()[size];return {first:a,span:a+b,ratio:100*a/(a+b)};};
+    const updateAria=()=>{const spec=paneResizeSpec(separator);if(!spec)return;const m=measure(spec),minimum=Math.min(50,100*(spec.axis==='x'?220:160)/m.span);separator.setAttribute('aria-valuenow',Math.round(m.ratio));separator.setAttribute('aria-valuemin',Math.ceil(minimum));separator.setAttribute('aria-valuemax',Math.floor(100-minimum));};
+    const apply=(spec,config)=>{state.appearance.views.sizes[spec.key]=config;applyPaneSizes();updateAria();};
+    const resize=(spec,config,ratio,span)=>apply(spec,paneCore.resize(config,spec.field,spec.first,spec.second,ratio,span,spec.axis==='x'?220:160));
     separator.addEventListener('pointerdown',event=>{
-      if(event.button!==0)return;event.preventDefault();
-      const horizontal=axis()==='x',rectA=a.getBoundingClientRect(),rectB=b.getBoundingClientRect(),size=horizontal?'width':'height';
-      drag={pointer:event.pointerId,start:horizontal?event.clientX:event.clientY,pixels:rectA[size],span:rectA[size]+rectB[size],values:{...(state.appearance.panes||defaults)}};
-      separator.setPointerCapture(event.pointerId);document.body.classList.add('resizing');
+      const spec=paneResizeSpec(separator);if(event.button!==0||!spec)return;event.preventDefault();
+      const m=measure(spec);drag={spec,pointer:event.pointerId,start:spec.axis==='x'?event.clientX:event.clientY,pixels:m.first,span:m.span,config:structuredClone(paneCore.configuration(state.appearance.views))};
+      separator.setPointerCapture(event.pointerId);document.body.classList.add('resizing');document.body.dataset.resizeAxis=spec.axis;
     });
-    separator.addEventListener('pointermove',event=>{if(!drag||event.pointerId!==drag.pointer)return;const delta=(axis()==='x'?event.clientX:event.clientY)-drag.start;resize(100*(drag.pixels+delta)/drag.span,drag.values,drag.span);});
-    const finish=cancel=>{if(!drag)return;if(cancel)apply(drag.values);drag=null;document.body.classList.remove('resizing');if(!cancel)save();};
+    const finish=cancel=>{if(!drag)return;if(cancel)apply(drag.spec,drag.config);drag=null;document.body.classList.remove('resizing');if(!cancel)save();};
+    separator.addEventListener('pointermove',event=>{if(!drag||event.pointerId!==drag.pointer)return;if(paneResizeSpec(separator)?.key!==drag.spec.key){finish(true);return;}const delta=(drag.spec.axis==='x'?event.clientX:event.clientY)-drag.start;resize(drag.spec,drag.config,100*(drag.pixels+delta)/drag.span,drag.span);});
     separator.addEventListener('pointerup',()=>finish(false));separator.addEventListener('pointercancel',()=>finish(true));separator.addEventListener('lostpointercapture',()=>finish(false));
     separator.addEventListener('keydown',event=>{
       if(event.key==='Escape'&&drag){finish(true);return;}
-      if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(event.key))return;
-      event.preventDefault();const rectA=a.getBoundingClientRect(),rectB=b.getBoundingClientRect(),size=axis()==='x'?'width':'height',span=rectA[size]+rectB[size];
-      const ratio=100*rectA[size]/span,desired=event.key==='Home'?20:event.key==='End'?80:ratio+(['ArrowRight','ArrowDown'].includes(event.key)?5:-5);
-      resize(desired,{...(state.appearance.panes||defaults)},span);save();
+      const spec=paneResizeSpec(separator),keys=spec?.axis==='y'?['ArrowUp','ArrowDown','Home','End']:['ArrowLeft','ArrowRight','Home','End'];
+      if(!spec||!keys.includes(event.key))return;
+      event.preventDefault();const m=measure(spec),ratio=event.key==='Home'?0:event.key==='End'?100:m.ratio+(['ArrowRight','ArrowDown'].includes(event.key)?5:-5);
+      resize(spec,paneCore.configuration(state.appearance.views),ratio,m.span);save();
     });
-    separator.addEventListener('dblclick',()=>{apply({...defaults});updateAria();save();});
+    separator.addEventListener('dblclick',()=>{const spec=paneResizeSpec(separator);if(spec){apply(spec,paneCore.defaults(state.appearance.views.layout,effectivePanes()));save();}});
     new ResizeObserver(updateAria).observe(separator);
   }
+  let frame;const schedule=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(checkPaneFit);};
+  new ResizeObserver(schedule).observe($('#panes'));$('#design-css').addEventListener('load',schedule);
 }
 function bindAppearance(){
   $('#design-select').addEventListener('change',()=>{state.appearance.design=$('#design-select').value;settings();save();});
@@ -454,7 +514,11 @@ function bindAppearance(){
   const updateTop=()=>{const visible=window.scrollY>600||scrollAreas().some(el=>el&&el.scrollTop>600);const button=$('#back-to-top');button.classList.toggle('is-visible',visible);button.setAttribute('aria-hidden',String(!visible));button.tabIndex=visible?0:-1;};
   document.addEventListener('scroll',updateTop,true);window.addEventListener('resize',updateTop);updateTop();
   $('#back-to-top').addEventListener('click',()=>{const behavior=matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth';window.scrollTo({top:0,behavior});for(const el of scrollAreas())el?.scrollTo({top:0,behavior});$('#book').focus({preventScroll:true});});
-  $('#study-open').addEventListener('click',()=>{const solo=document.body.classList.contains('focus')||document.body.classList.contains('reading-only');document.body.classList.remove('focus');document.body.classList.toggle('reading-only',!solo);updateReadingMode();});
+  $('#study-open').addEventListener('click',()=>{const solo=effectivePanes().length===1;document.body.classList.remove('focus');state.appearance.views.visible=solo?[...paneCore.panels]:['biblia'];updateReadingMode();save();});
+  document.querySelectorAll('[data-toggle-pane]').forEach(button=>button.addEventListener('click',()=>setPaneVisibility(button.dataset.togglePane,!effectivePanes().includes(button.dataset.togglePane))));
+  document.querySelectorAll('[data-hide-pane]').forEach(button=>button.addEventListener('click',()=>{setPaneVisibility(button.dataset.hidePane,false);$('#pane-'+(button.dataset.hidePane==='comentario'?'comment':'dictionary')+'-toggle').focus({preventScroll:true});}));
+  document.querySelectorAll('[data-set-layout]').forEach(button=>button.addEventListener('click',()=>setPaneLayout(button.dataset.setLayout)));
+  $('#suggest-layout').addEventListener('click',()=>setPaneLayout(state.appearance.views.layout==='rows'?'columns':'rows'));
   $('#dictionary-from-selection').addEventListener('click',()=>{const word=window.getSelection()?.toString().trim();if(!word||word.length>100){toast('Selecciona una palabra de la Biblia y pulsa Consultar selección.');return;}queryFromReading(word,/^[HG]\d{1,5}$/i.test(word));});
   bindPaneResizers();bindReaderSync();
   document.querySelectorAll('[data-action]').forEach(button=>button.addEventListener('click',()=>{const menu=button.closest('details');if(menu)menu.open=false;document.getElementById(button.dataset.action)?.click();}));

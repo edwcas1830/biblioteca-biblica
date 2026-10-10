@@ -29,7 +29,7 @@ body{height:100dvh;overflow:hidden}.rail{flex-basis:180px;min-height:0;height:10
 main,.focus main{height:100dvh;overflow:auto;display:flex;flex-direction:column;padding:0 20px;min-height:0}.topbar{flex-shrink:0;min-height:66px;padding:10px 0}.topbar>span{display:none}.topbar>.topbar-actions{width:100%;justify-content:flex-end;gap:8px;flex-wrap:nowrap}
 #read-view{display:flex;flex-direction:column;flex:1;min-height:0;padding:12px 0 8px;gap:8px}#read-view>.intro{display:none}.reading-toolbar{padding:0;min-height:40px;flex-shrink:0}.reader-invitation{font-size:14px;color:var(--muted);margin:0}.reading-actions{gap:4px}
 #library-controls{margin:0;gap:6px 14px;flex-shrink:0;font-size:13px}.voice-controls{gap:4px;flex-wrap:nowrap}.voice-controls select{margin:0;min-height:38px;padding:6px 8px}.library-controls small:empty,#module-status:empty{display:none}#voice-status{font-size:13px}.library-controls small{flex-basis:auto}#module-status{font-size:13px;margin:0;flex-shrink:0}
-#panes{display:grid;grid-template-columns:var(--pane-biblia,42fr) 12px var(--pane-comentario,30fr) 12px var(--pane-diccionario,28fr);gap:0;flex:1;min-height:0;min-width:0;max-width:none;margin:0}
+#panes{display:grid;gap:0;flex:1;min-height:0;min-width:0;max-width:none;margin:0}
 .pane,.open-book.pane,.night .open-book.pane{display:flex;flex-direction:column;min-width:0;min-height:0;padding:0;border:1px solid var(--line);border-radius:8px;background:var(--paper);box-shadow:none;overflow:hidden}
 .pane-head{flex-shrink:0;height:172px;display:flex;flex-direction:column;justify-content:flex-start;gap:8px;padding:14px 16px 10px;border-bottom:1px solid var(--line);overflow:visible}
 .pane-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:24px}.pane-head h2,.pane-head h3{font:600 20px/1.2 var(--font-heading);margin:0;text-align:left}.pane-kicker{font:13px/1.4 var(--font-ui);color:var(--muted)}#book-label{display:none}#comment-scope{display:none}
@@ -43,7 +43,7 @@ main,.focus main{height:100dvh;overflow:auto;display:flex;flex-direction:column;
 .pane-resizer{--resize-axis:x;cursor:col-resize;touch-action:none;position:relative;min-width:12px;min-height:12px;outline-offset:-2px}.pane-resizer::after{content:'';position:absolute;left:5px;top:40%;width:2px;height:20%;background:var(--control-border);border-radius:2px}.pane-resizer:hover::after,.pane-resizer:focus-visible::after{background:var(--focus)}.resizing,.resizing *{cursor:col-resize!important;user-select:none!important}
 .pane-notes{flex-shrink:0;background:var(--paper);border:1px solid var(--line);border-radius:6px}.pane-notes>summary{font:600 15px/1.4 var(--font-ui);padding:10px 16px;cursor:pointer}.pane-notes>summary span{font-size:13px;font-weight:400;margin-left:12px;color:var(--muted)}.notes-content{padding:12px 20px;max-height:34vh;overflow:auto}#note{font:17px/1.65 var(--font-reader);min-height:110px;margin-bottom:12px}.ink-colors{margin:0 0 12px}.ink{width:24px;height:24px}.study-guide{margin:12px 0;padding:12px 0}.study-guide p:not(.eyebrow){font:15px/1.7 var(--font-ui)}.study-guide small,#save-status{font:13px/1.6 var(--font-ui)}
 .app-footer{flex-shrink:0;margin:0;padding:8px 0;font-size:13px;letter-spacing:0}.app-footer span:nth-child(2){font-size:13px}
-body.reading-only #panes,body.focus #panes{display:flex;justify-content:center;max-width:none}body.reading-only .pane[data-pane="biblia"],body.focus .pane[data-pane="biblia"]{width:100%;max-width:860px}body.reading-only #panes>.pane:not([data-pane="biblia"]),body.focus #panes>.pane:not([data-pane="biblia"]),body.reading-only .pane-resizer,body.focus .pane-resizer,body.focus .pane-notes{display:none}body.focus .pane-body{padding-left:40px;padding-right:40px}
+body.reading-only .pane[data-pane="biblia"],body.focus .pane[data-pane="biblia"]{width:100%;max-width:860px}body.focus .pane-notes{display:none}body.focus .pane-body{padding-left:40px;padding-right:40px}
 @media(max-width:1200px){.rail{flex-basis:155px;padding:16px 10px}.reader-invitation{display:none}.pane-head{padding-left:12px;padding-right:12px}.pane-body,.pane-body.module-content,.reading-space .verses{padding:16px}.topbar-actions #night{display:none}}
 @media(max-width:1050px){.rail{display:none}.compact-nav{display:flex!important}.topbar-actions #night{display:none}.topbar-actions #focus{display:none}.pane-body,.pane-body.module-content{font-size:15px}.appearance-control select{max-width:175px}}
 #back-to-top{position:fixed;right:24px;bottom:24px;z-index:9;border:1px solid var(--control-border);background:var(--paper);color:var(--ink);box-shadow:0 4px 20px #0002;opacity:0;visibility:hidden;transform:translateY(8px);pointer-events:none;transition:opacity .16s,transform .16s,visibility .16s}
@@ -51,3 +51,64 @@ body.reading-only #panes,body.focus #panes{display:flex;justify-content:center;m
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}}
 
 .compact-nav{display:none}.library-menu{position:relative;font-size:14px}.library-menu summary{cursor:pointer;min-height:40px;padding:9px 12px;border:1px solid var(--control-border);border-radius:6px}.library-menu-items{position:absolute;top:100%;right:0;z-index:12;min-width:220px;background:var(--paper);border:1px solid var(--line);padding:8px;box-shadow:0 8px 28px #0002}.library-menu-items button{display:block;width:100%;text-align:left}
+
+/* Permanent, shared flexible-view geometry. Designs own paint, never these templates. */
+:root{--pane-split-size:12px}
+html[data-design] #panes[data-layout][data-visible]{display:grid;gap:0;grid-auto-flow:row;align-items:stretch;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr);grid-template-areas:"biblia"}
+html[data-design] #panes[data-visible="biblia"] .pane[data-pane="biblia"]{justify-self:center;width:100%}
+#pane-biblia{grid-area:biblia}#pane-comentario{grid-area:comentario}#pane-diccionario{grid-area:diccionario}#pane-resizer-primary{grid-area:primary}#pane-resizer-secondary{grid-area:secondary}
+html[data-design] #panes[data-layout="columns"][data-visible="biblia,comentario"]{grid-template-columns:minmax(220px,var(--view-w1,58fr)) var(--pane-split-size) minmax(220px,var(--view-w2,42fr));grid-template-areas:"biblia primary comentario"}
+html[data-design] #panes[data-layout="columns"][data-visible="biblia,diccionario"]{grid-template-columns:minmax(220px,var(--view-w1,58fr)) var(--pane-split-size) minmax(220px,var(--view-w2,42fr));grid-template-areas:"biblia primary diccionario"}
+html[data-design] #panes[data-layout="columns"][data-visible="biblia,comentario,diccionario"]{grid-template-columns:minmax(220px,var(--view-w1,42fr)) var(--pane-split-size) minmax(220px,var(--view-w2,30fr)) var(--pane-split-size) minmax(220px,var(--view-w3,28fr));grid-template-areas:"biblia primary comentario secondary diccionario"}
+html[data-design] #panes[data-layout="rows"][data-visible="biblia,comentario"]{grid-template-rows:minmax(160px,var(--view-w1,60fr)) var(--pane-split-size) minmax(160px,var(--view-w2,40fr));grid-template-areas:"biblia" "primary" "comentario"}
+html[data-design] #panes[data-layout="rows"][data-visible="biblia,diccionario"]{grid-template-rows:minmax(160px,var(--view-w1,60fr)) var(--pane-split-size) minmax(160px,var(--view-w2,40fr));grid-template-areas:"biblia" "primary" "diccionario"}
+html[data-design] #panes[data-layout="rows"][data-visible="biblia,comentario,diccionario"]{grid-template-columns:minmax(220px,var(--view-a1,50fr)) var(--pane-split-size) minmax(220px,var(--view-a2,50fr));grid-template-rows:minmax(160px,var(--view-w1,60fr)) var(--pane-split-size) minmax(160px,var(--view-w2,40fr));grid-template-areas:"biblia biblia biblia" "primary primary primary" "comentario secondary diccionario"}
+html[data-design] .reading-toolbar:has(.pane-view-controls){display:flex;flex-wrap:wrap;gap:8px 12px;justify-content:space-between;min-width:0}
+html[data-design] .reading-toolbar>.reading-actions{width:auto;flex:0 0 auto;flex-wrap:wrap}
+.pane-view-controls,.pane-toggles,.pane-orientation{display:flex;align-items:center;flex-wrap:wrap;gap:4px}
+.pane-view-controls{gap:12px}.pane-view-controls button{font:14px/1.4 var(--font-ui);min-height:36px;padding:7px 10px;white-space:nowrap}
+html[data-design] .pane-view-controls button[aria-pressed="true"]{background:color-mix(in srgb,var(--accent) 75%,var(--ink));color:var(--accent-ink);border-color:var(--accent)}
+html[data-design] .pane-view-controls button[aria-pressed="false"]{background:var(--paper);color:var(--ink);border-color:color-mix(in srgb,var(--control-border) 35%,var(--ink))}
+#pane-bible-toggle{opacity:1;cursor:default}
+.pane-layout-notice{flex-basis:100%;font:13px/1.5 var(--font-ui);color:var(--ink);padding:6px 10px;background:var(--panel);border:1px solid var(--control-border);border-radius:5px}
+.pane-layout-notice button{font-size:13px;text-decoration:underline;margin-left:6px}
+html[data-design] #panes .pane-head{position:relative;padding-right:44px}
+html[data-design] #panes .pane-close{position:absolute;top:8px;right:6px;width:32px;min-height:32px;padding:4px;font:16px/1.4 var(--font-ui);color:var(--ink);border-radius:5px}
+html[data-design] #panes .pane-close:hover{background:var(--panel)}
+html[data-design] #panes .pane[data-pane="biblia"] .pane-head{padding-right:16px}
+html[data-design] #panes .pane-resizer{min-width:0;min-height:0}
+html[data-design] #panes .pane-resizer[data-axis="y"]{cursor:row-resize}
+html[data-design] #panes .pane-resizer[data-axis="y"]::after{left:40%;top:5px;width:20%;height:2px;background:color-mix(in srgb,var(--control-border) 35%,var(--ink))}
+html[data-design] #panes .pane-resizer[data-axis="x"]{cursor:col-resize}
+html[data-design] #panes .pane-resizer[data-axis="x"]::after{left:5px;top:40%;width:2px;height:20%;background:color-mix(in srgb,var(--control-border) 35%,var(--ink))}
+html[data-design] body.resizing[data-resize-axis="y"],html[data-design] body.resizing[data-resize-axis="y"] *{cursor:row-resize!important}
+/* A shallow row needs a compact header, preserving the design's fonts, colours and surfaces. */
+html[data-design] #panes[data-layout="rows"] .pane-head{height:auto!important;min-height:0;display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:4px 8px;padding:8px 44px 8px 12px}
+html[data-design] #panes[data-layout="rows"] .pane[data-pane="biblia"] .pane-head{padding:8px 12px}
+html[data-design] #panes[data-layout="rows"] .pane-heading{flex:0 0 auto}
+html[data-design] #panes[data-layout="rows"] .pane-head .pane-ref{flex:1 0 100%;margin:0;min-height:0;font-size:13px}
+html[data-design] #panes[data-layout="rows"] .pane[data-pane="biblia"] .pane-ref{flex:1 1 auto}
+html[data-design] #panes[data-layout="rows"] .passage-picker{flex:0 1 330px;min-width:0}
+html[data-design] #panes[data-layout="rows"] #version-select{flex:0 1 170px;width:auto;margin:0}
+html[data-design] #panes[data-layout="rows"] #comment-select{flex:1 1 170px;min-width:0;width:auto}
+html[data-design] #panes[data-layout="rows"] .pane-head form{display:flex;flex-direction:row;flex-wrap:nowrap;flex:1 1 270px;min-width:0;gap:8px}
+html[data-design] #panes[data-layout="rows"] #dictionary-select{flex:0 1 140px;min-width:90px;width:140px}
+html[data-design] #panes[data-layout="rows"] .dictionary-query-row{flex:1 1 130px;min-width:0}
+html[data-design] #panes[data-layout="rows"] .pane-foot{min-height:32px;padding-top:3px;padding-bottom:3px}
+html[data-design] #panes[data-layout="rows"] .pane-body{min-height:0;padding-top:12px;padding-bottom:12px}
+
+html[data-design] #panes[data-layout="rows"] .passage-picker #chapter{width:100px;min-width:100px}
+
+/* In shallow rows, lead with the definition; provenance stays below the text. */
+html[data-design] #panes[data-layout="rows"] .dictionary-entry{display:flex;flex-direction:column}
+html[data-design] #panes[data-layout="rows"] .dictionary-entry>div{order:1}
+html[data-design] #panes[data-layout="rows"] .dictionary-entry .source-caption{order:2;margin:12px 0 0}
+html[data-design] #panes[data-layout="rows"] .dictionary-entry h4{font-size:18px;margin:0 0 6px}
+html[data-design] #panes[data-layout="rows"] .dictionary-results{flex-wrap:nowrap;overflow-x:auto;gap:6px;margin-bottom:10px;padding-bottom:4px}
+html[data-design] #panes[data-layout="rows"] .dictionary-results li{flex:0 0 auto}
+
+/* Full-width panels retain a comfortable text measure. */
+html[data-design] #panes[data-layout="rows"] .pane-body>.verse{max-width:70ch;margin-inline:auto}
+html[data-design] #panes[data-layout="rows"] .pane-body>.comment-entry,
+html[data-design] #panes[data-layout="rows"] .pane-body>.comment-introduction,
+html[data-design] #panes[data-layout="rows"] .pane-body>.dictionary-entry{max-width:80ch;margin-inline:auto}

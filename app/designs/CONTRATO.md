@@ -1,6 +1,6 @@
 # Contrato de diseño v0.4 — base común
 
-Rama `v0.4-diseno`, desde v0.3. **La aclaración final de Edward reemplaza el trío comentario/diccionario/notas:** son **Biblia · Comentario · Diccionario visibles simultáneamente**, cada uno con desplazamiento vertical independiente. Notas queda aparte. A y C son archivos provisionales hasta que sus autores los sustituyan; B lo hace Codex después de esta base.
+Rama `v0.4-diseno`, desde v0.3. **La aclaración final de Edward reemplaza el trío comentario/diccionario/notas:** son **Biblia · Comentario · Diccionario visibles simultáneamente**, cada uno con desplazamiento vertical independiente. Notas queda aparte. A, B y C son preferencias permanentes. Las vistas flexibles se comparten entre los tres diseños.
 
 ## Archivos y carga
 
@@ -17,11 +17,14 @@ html[data-design=a|b|c][data-theme=marfil|sepia|noche][data-study-scope=chapter|
     #design-select, #theme-select, #night, #focus
    section#read-view.view
     .intro (oculta en lector), #plan-reading-session[hidden]
-    .reading-toolbar: .reader-invitation, .reading-actions
+    .reading-toolbar: .pane-view-controls, .reading-actions, #pane-layout-notice
+      .pane-toggles: #pane-bible-toggle (fijo), #pane-comment-toggle, #pane-dictionary-toggle
+      .pane-orientation: #layout-columns, #layout-rows
       #study-open, #dictionary-from-selection, #search-open, #smaller, #larger
     #library-controls: #show-strong, .voice-controls, #voice-status
     #module-status
     section#panes.reading-layout[data-active=true|false][data-sources-ready=true|false]
+     [data-layout=columns|rows][data-visible=biblia|biblia,comentario|biblia,diccionario|biblia,comentario,diccionario]
      article.pane.reading-space.open-book[data-pane=biblia]
       header.pane-head: .pane-heading > #bible-title, #book-label
        .passage-picker > #book, #chapter; #version-select; #bible-ref.pane-ref
@@ -32,16 +35,16 @@ html[data-design=a|b|c][data-theme=marfil|sepia|noche][data-study-scope=chapter|
         .jesus-words; .module-heading; .rtf-bold; .rtf-italic
       footer.pane-foot > .page-controls: #previous, #next
        #edition-footer[hidden], #chapter-footer[hidden] (compatibilidad)
-     .pane-resizer[data-between="biblia,comentario"][role=separator][tabindex=0]
+     #pane-resizer-primary.pane-resizer[data-axis=x|y][data-between][role=separator][tabindex=0]
      article.pane[data-pane=comentario]
-      header.pane-head: #comment-title, #comment-scope; #comment-select
+      header.pane-head: #comment-title, #comment-scope; #comment-select; .pane-close[data-hide-pane=comentario]
        #selected-ref.pane-ref.study-ref[aria-live=polite]
       div#comment-content.pane-body.module-content[tabindex=0][aria-busy]
        .comment-entry > h4, div; details.comment-introduction opcional
       footer.pane-foot
-     .pane-resizer[data-between="comentario,diccionario"]
+     #pane-resizer-secondary.pane-resizer[data-axis=x][data-between]
      article.pane[data-pane=diccionario]
-      header.pane-head: #dictionary-title; form#dictionary-form
+      header.pane-head: #dictionary-title; .pane-close[data-hide-pane=diccionario]; form#dictionary-form
        #dictionary-select; .dictionary-query-row > #dictionary-query, #dictionary-submit
        #dictionary-ref.pane-ref[aria-live=polite]
       div#dictionary-content.pane-body.module-content[tabindex=0][aria-busy]
@@ -64,13 +67,19 @@ Fuentes locales disponibles, normales e itálicas: Literata, Cormorant Garamond,
 
 ## Disposición y separadores
 
-La base presenta tres columnas con pesos `--pane-biblia:42fr`, `--pane-comentario:30fr`, `--pane-diccionario:28fr`. Las preferencias guardadas sustituyen esos valores; usar las variables en los tracks del grid y **no imponer anchos fijos a los paneles que impidan redimensionar**. Columnas base: Biblia / separador / comentario / separador / diccionario. No envolver ni reordenar el DOM: CSS grid y áreas permiten otra composición.
+La Biblia siempre está. `data-visible` enumera los paneles elegidos en orden canónico; los demás usan `hidden`. `data-layout` mantiene la orientación elegida, aun con Biblia sola. Los interruptores de Comentario/Diccionario permanecen disponibles; las ✕ devuelven el foco a su interruptor. Solo lectura apaga ambos; Abrir estudio abre los dos. Intimidad oculta auxiliares temporalmente y al salir recupera la combinación guardada. Encender un interruptor desde intimidad permite elegir únicamente ese auxiliar.
 
-Cada separador ajusta únicamente los dos paneles de `data-between`. Su CSS declara `--resize-axis:x` (columnas; `cursor:col-resize`) o `y` (filas; `cursor:row-resize`). Para una composición en dos filas, el separador correspondiente tiene que quedar entre los paneles que controla y sus pesos deben intervenir en esas filas. Los límites se calculan a partir de los tamaños visibles: objetivo mínimo 220 px de ancho o 140 px de alto. Flechas ajustan, Home/End van a extremos, doble clic restaura 42/30/28, Escape cancela arrastre activo. Guardado al terminar, no por movimiento. Respetar `aria-orientation`/valores gestionados por JS.
+**Solo `common.css` define las columnas, filas y áreas de `#panes`.** No poner templates en A/B/C ni sus media queries. La base usa `--view-w1/2/3` para las proporciones principales y `--view-a1/2` para el reparto de los dos auxiliares en filas, aplicadas por JS. Separación común `--pane-split-size:12px`. Una Biblia sola queda centrada con la medida propia de cada diseño; dos paneles ocupan toda el área en 58/42 columnas o 60/40 filas; tres columnas parten de 42/30/28. Tres en filas parten de 50/50: Biblia arriba, abajo Comentario | Diccionario en 50/50 para dejar texto útil en ambos.
 
-`.pane-body` usa `min-height:0`, `overflow:auto`, `overscroll-behavior:contain`. **En Biblia usar `column-count:auto; column-width:auto`: count 1 con altura fija provoca columnas horizontales adicionales.** Ningún diseño puede esconder comentario/diccionario en modo estudio a 1366×768 o 1920×1080. No apilarlos fuera de la pantalla. La base reserva el alto disponible con flex; referencia y controles no se desplazan junto al texto.
+`appearance.views` guarda `{layout, visible, sizes}` dentro de las preferencias SQLite existentes. `sizes` usa claves `columns|biblia,comentario`, `rows|biblia,diccionario`, etc., con `{weights:[...], aux:[...]}` para el reparto inferior de tres filas. Cada combinación/orientación conserva su configuración y se comparte entre diseños. Los antiguos `appearance.panes` se conservan y se traducen al tamaño de las tres columnas. No nueva migración de datos.
 
-En `.reading-only` o `.focus`, ocultar los dos paneles auxiliares y separadores, conservar Biblia y el botón para abrir estudio. Intimidad además oculta rail/notas/pie; `.reading-only` conserva navegación. `#study-open` sirve para entrar y salir, incluso desde intimidad. No esconder ambos accesos de vuelta.
+`#pane-resizer-primary` controla el primer par en columnas, Biblia/auxiliar en dos filas, o Biblia/la fila inferior completa en tres filas. `#pane-resizer-secondary` solo aparece con tres paneles: comentario/diccionario, siempre en eje x. JS establece `data-axis`, `aria-orientation`, límites, controles y etiqueta. El marcador horizontal usa `row-resize`, el vertical `col-resize`. Flechas del eje correspondiente ajustan; Home/End respetan mínimos; Escape cancela el arrastre; doble clic restaura **la combinación actual**. Guardado al terminar, no por movimiento.
+
+Mínimos de panel: 220 px de ancho y 160 px de alto. Las proporciones se limitan por píxeles y los tracks usan `minmax` para ajustarse al tamaño sin corromper la preferencia guardada. Si el área no alcanza esos mínimos, aparece aviso con botón para probar la otra orientación; no se ocultan paneles ni se cambia la preferencia sin intervención. El diseño mantiene `min-height:0` en contenedores para permitir ese cálculo.
+
+`.pane-body`: desplazamiento independiente, `overflow:auto`, `overscroll-behavior:contain`; Biblia usa `column-count:auto;column-width:auto`. En filas, la base compacta encabezados y pies conservando fuentes, colores y superficies. Retira únicamente el relleno vacío inicial del RTF al presentar comentarios/definiciones; el módulo en disco no se modifica. En filas la procedencia del diccionario queda debajo de la definición y los resultados forman una tira desplazable. El pasaje seleccionado vuelve a quedar visible al cambiar vista y los auxiliares recuperan su posición de desplazamiento; un nuevo comentario/consulta empieza arriba.
+
+Conservar reglas de `.reading-only` para la medida de página y `.focus` para intimidad, **sin templates ni ocultaciones que contradigan `hidden`/`data-visible`**. La base aplica esos estados. No ocultar los interruptores de reapertura.
 
 ## Comportamientos comunes
 

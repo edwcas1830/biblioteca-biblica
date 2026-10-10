@@ -3,6 +3,7 @@
   const designs=['a','b','c'],themes=['auto','marfil','sepia','noche'];
   function normalize(value){
     const result={design:designs.includes(value?.design)?value.design:'a',theme:themes.includes(value?.theme)?value.theme:'auto'};
+    if(value?.views&&typeof value.views==='object')result.views=value.views;
     const panes=value?.panes;
     if(panes&&['biblia','comentario','diccionario'].every(id=>Number.isFinite(panes[id])&&panes[id]>=10&&panes[id]<=80)){
       const sum=panes.biblia+panes.comentario+panes.diccionario;

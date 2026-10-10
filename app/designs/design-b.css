@@ -56,7 +56,6 @@ html[data-design="b"] .checkbox-label{font-size:14px}
 html[data-design="b"] .voice-controls select{font-size:14px;border-color:var(--control-border);max-width:176px;min-height:38px;border-radius:8px}
 html[data-design="b"] .voice-controls button{font-size:14px;min-height:38px}
 html[data-design="b"] #voice-status{font-size:13px}
-html[data-design="b"] #panes{grid-template-columns:var(--pane-biblia,42fr) 16px var(--pane-comentario,30fr) 16px var(--pane-diccionario,28fr)}
 html[data-design="b"] .pane,html[data-design="b"] .open-book.pane,html[data-design="b"] .night .open-book.pane{
   background:var(--paper);border:1px solid var(--line);border-radius:12px;
   box-shadow:0 6px 20px #292d2708;

@@ -172,7 +172,7 @@ html[data-design="c"] .reader-invitation {
   display: none; 
 }
 html[data-design="c"] .reading-actions {
-  width: 100%;
+  width: auto;
   justify-content: flex-end;
 }
 html[data-design="c"] #module-status {
@@ -182,7 +182,6 @@ html[data-design="c"] #module-status {
 
 html[data-design="c"] #panes {
   display: grid;
-  grid-template-columns: var(--pane-biblia, 45fr) 12px var(--pane-comentario, 28fr) 12px var(--pane-diccionario, 27fr);
   gap: 0;
   padding: 0 24px;
   flex: 1;
@@ -389,12 +388,6 @@ html[data-design="c"] #back-to-top {
   border: 1px solid var(--line);
 }
 
-html[data-design="c"] body.reading-only #panes,
-html[data-design="c"] body.focus #panes {
-  display: grid;
-  grid-template-columns: minmax(auto, 860px);
-  justify-content: center;
-}
 html[data-design="c"] body.reading-only .pane[data-pane="comentario"],
 html[data-design="c"] body.reading-only .pane[data-pane="diccionario"],
 html[data-design="c"] body.reading-only .pane-resizer,
@@ -425,16 +418,13 @@ html[data-design="c"] body.focus .pane-notes {
     display: block !important;
   }
   html[data-design="c"] #panes {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto;
-    overflow-y: auto;
     padding: 0 16px;
-    gap: 16px;
+    gap: 0;
   }
   html[data-design="c"] .pane {
-    min-height: 400px;
+    min-height: 0;
   }
   html[data-design="c"] .pane-resizer {
-    display: none;
+    display: block;
   }
 }
