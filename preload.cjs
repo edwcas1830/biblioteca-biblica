@@ -1,5 +1,5 @@
 const {contextBridge,ipcRenderer}=require('electron');
-if(process.argv.includes('--biblioteca-test'))contextBridge.exposeInMainWorld('libraryTest',{muteAudio:muted=>ipcRenderer.invoke('library:test-mute',muted),minimizeEvent:()=>ipcRenderer.invoke('library:test-minimize'),capture:()=>ipcRenderer.invoke('library:test-capture'),resize:(width,height)=>ipcRenderer.invoke('library:test-resize',{width,height})});
+if(process.argv.includes('--biblioteca-test'))contextBridge.exposeInMainWorld('libraryTest',{circleConnect:data=>ipcRenderer.invoke('library:test-circle-connect',data),circleProtection:()=>ipcRenderer.invoke('library:test-circle-protection'),muteAudio:muted=>ipcRenderer.invoke('library:test-mute',muted),minimizeEvent:()=>ipcRenderer.invoke('library:test-minimize'),capture:()=>ipcRenderer.invoke('library:test-capture'),resize:(width,height)=>ipcRenderer.invoke('library:test-resize',{width,height})});
 contextBridge.exposeInMainWorld('libraryDesktop',{
   aiStatus:()=>ipcRenderer.invoke('library:ai-status'),aiConnect:()=>ipcRenderer.invoke('library:ai-connect'),aiDisconnect:()=>ipcRenderer.invoke('library:ai-disconnect'),aiModels:()=>ipcRenderer.invoke('library:ai-models'),
   aiPrepare:data=>ipcRenderer.invoke('library:ai-prepare',data),aiAsk:data=>ipcRenderer.invoke('library:ai-ask',data),aiCopy:data=>ipcRenderer.invoke('library:ai-copy',data),
@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('libraryDesktop',{
   bootstrap:data=>ipcRenderer.invoke('library:data-bootstrap',data),
   savePersonal:data=>ipcRenderer.invoke('library:data-save',data),
   graphicsChapter:data=>ipcRenderer.invoke('library:data-graphicsChapter',data),graphicsChronology:data=>ipcRenderer.invoke('library:data-graphicsChronology',data),graphicsPeople:data=>ipcRenderer.invoke('library:data-graphicsPeople',data),graphicsGenealogy:data=>ipcRenderer.invoke('library:data-graphicsGenealogy',data),
+  circleStatus:()=>ipcRenderer.invoke('library:circle-status'),circleSync:()=>ipcRenderer.invoke('library:circle-sync'),circleConnect:data=>ipcRenderer.invoke('library:circle-connect',data),circlePreview:data=>ipcRenderer.invoke('library:circle-preview',data),circleShare:data=>ipcRenderer.invoke('library:circle-share',data),circleRecovery:()=>ipcRenderer.invoke('library:circle-recovery'),circleResolve:data=>ipcRenderer.invoke('library:circle-resolve',data),circleReading:data=>ipcRenderer.invoke('library:circle-reading',data),circleLeave:()=>ipcRenderer.invoke('library:circle-leave'),circleCopyCode:()=>ipcRenderer.invoke('library:circle-copy-code'),
   connections:data=>ipcRenderer.invoke('library:data-connections',data),compare:data=>ipcRenderer.invoke('library:data-compare',data),studySources:()=>ipcRenderer.invoke('library:data-studySources'),
   catalog:()=>ipcRenderer.invoke('library:data-catalog'),
   metadata:()=>ipcRenderer.invoke('library:data-metadata'),

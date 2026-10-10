@@ -1,6 +1,7 @@
 'use strict';
 let privateLastActivity=Date.now(),pinResolver=null,privateBusy=false;
 function refreshPrivateViews(){
+ if(typeof circlePrivate==='function')circlePrivate();
  for(const f of [renderNote,renderPrayer])f();if(activeJourney)renderJourney();if(typeof renderGuide==='function')renderGuide();
  for(const b of document.querySelectorAll('[data-action="privacy-open"]'))b.textContent=state.privateLocked?'🔒 Abrir mi cuaderno':state.privacyEnabled?'🔓 Mi candado':'♧ Proteger mi cuaderno';
  $('#note').disabled=!!state.privateLocked;$('#note').placeholder=state.privateLocked?'Abre tu cuaderno con el PIN para ver tus notas.':'Escribe aquí tu reflexión…';
