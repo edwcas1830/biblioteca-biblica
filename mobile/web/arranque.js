@@ -119,6 +119,10 @@
         registrar(traspaso.handlers());
       } catch (e) { fallos.push(['traspaso', e]); }
     }
+    if (window.LibraryAndroidDocuments) {
+      try { const documentos = window.LibraryAndroidDocuments.create(); registrar(documentos.handlers()); window.BibliaDocumentos = documentos; }
+      catch (e) { fallos.push(['documentos', e]); }
+    }
     if (window.LibraryAndroidReader) {
       try {
         const lector = await window.LibraryAndroidReader.create({ ...plugins, bible: window.BIBLE, manifest: manifiesto });
