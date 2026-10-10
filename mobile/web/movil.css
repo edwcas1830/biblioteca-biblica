@@ -299,3 +299,13 @@
 #movil-traspaso .movil-traspaso-aviso { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--borde-hoja); }
 #movil-traspaso .movil-traspaso-acciones { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 #movil-traspaso .movil-traspaso-acciones button { min-height: 48px; padding: 0 16px; }
+
+/* Hoja compacta: la pestaña ya nombra el panel; más alto para el contenido. */
+:root[data-telefono="true"] #pane-comentario .pane-heading,
+:root[data-telefono="true"] #pane-diccionario .pane-heading { display: none; }
+:root[data-telefono="true"] #pane-comentario .pane-head,
+:root[data-telefono="true"] #pane-diccionario .pane-head { padding: 6px 14px 4px; gap: 4px; }
+:root[data-telefono="true"] #dictionary-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; width: 100%; }
+:root[data-telefono="true"] #dictionary-form .dictionary-query-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+:root[data-telefono="true"] #pane-comentario .pane-foot,
+:root[data-telefono="true"] #pane-diccionario .pane-foot { padding: 4px 14px; font-size: .75rem; }
