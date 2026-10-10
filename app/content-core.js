@@ -50,6 +50,12 @@
       return '<'+tag+'>'+html+'</'+tag+'>';
     }).join('').replace(/(?:<li>[\s\S]*?<\/li>)+/g,match=>'<ul>'+match+'</ul>');
   }
-  const api={blocks,textOf,fromText,recordsToDevotional,render};
+  function readingBlocks(value,title,books,plan){
+    const normalized=s=>String(s).normalize('NFD').replace(/\p{M}/gu,'').replace(/\s+/g,' ').trim().toLowerCase();
+    const result=blocks(value),first=textOf(result.slice(0,1));
+    if(normalized(first)===normalized(title)||/^\s*(día|dia|day|jornada)\s*\d+\s*$/i.test(first))result.shift();
+    return result.map(b=>{const text=textOf([b]).trim();if(/^tema de la semana\b/i.test(text))return {...b,kind:'heading',level:2};if(text&&text.length<90&&/\p{L}/u.test(text)&&text===text.toUpperCase()&&!/^\d/.test(text))return {...b,kind:'heading',level:4};if(b.kind==='paragraph'&&/^[«“"]/.test(text)&&plan.parseReferences(text,books).refs.length)return {...b,kind:'quote'};return b;});
+  }
+  const api={blocks,textOf,fromText,recordsToDevotional,render,readingBlocks};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.ContentCore=api;
 })(typeof window==='object'?window:globalThis);

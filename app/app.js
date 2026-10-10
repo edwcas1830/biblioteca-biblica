@@ -43,7 +43,7 @@ function validateState(candidate) {
     ids.add(dev.id);
     const validated=core.importDevotional('copia.json',JSON.stringify({title:dev.title,entries:dev.entries}),books);
     if(dev.completed!==undefined&&(!Array.isArray(dev.completed)||dev.completed.some(i=>!Number.isInteger(i)||i<0||i>=dev.entries.length)))throw new Error('Avance de devocional no válido.');
-    return {...validated,completed:[...new Set(dev.completed||[])],sourceName:String(dev.sourceName||'').slice(0,200),description:String(dev.description||'').slice(0,2000000),titleCase:dev.titleCase!==false,subtitle:String(dev.subtitle||'').slice(0,500),...(dev.introBlocks?{introBlocks:contentCore.blocks(dev.introBlocks)}:{}),...(dev.guide?{guide:GuideCore.configuration(dev.guide)}:{}),id:dev.id,origin:typeof dev.origin==='string'?dev.origin.slice(0,200):'Devocional recuperado',purpose:typeof dev.purpose==='string'?dev.purpose.slice(0,500):'',minutes:Number.isInteger(dev.minutes)?dev.minutes:undefined};
+    return {...validated,...DevotionalCore.metadata(dev),completed:[...new Set(dev.completed||[])],sourceName:String(dev.sourceName||'').slice(0,200),description:String(dev.description||'').slice(0,2000000),titleCase:dev.titleCase!==false,subtitle:String(dev.subtitle||'').slice(0,500),...(dev.introBlocks?{introBlocks:contentCore.blocks(dev.introBlocks)}:{}),...(dev.guide?{guide:GuideCore.configuration(dev.guide)}:{}),id:dev.id,origin:typeof dev.origin==='string'?dev.origin.slice(0,200):'Devocional recuperado',purpose:typeof dev.purpose==='string'?dev.purpose.slice(0,500):'',minutes:Number.isInteger(dev.minutes)?dev.minutes:undefined};
   });
   result.plans=candidate.plans.map(plan=>{
     if(!plan || !/^plan-\d+(?:-[a-z0-9]+)?$/.test(plan.id) || ids.has(plan.id)) throw new Error('Plan no válido.');
@@ -60,6 +60,8 @@ function validateState(candidate) {
   result.night=candidate.night===true;
   result.appearance=appearanceCore.normalize(candidate.appearance);
   result.appearance.views=paneCore.normalize(result.appearance.views,result.appearance.panes);
+  result.bookFont=Number.isInteger(candidate.bookFont)?Math.max(16,Math.min(30,candidate.bookFont)):20;
+  result.lastJourney=candidate.lastJourney?.kind==='dev'&&result.devotionals.some(d=>d.id===candidate.lastJourney.id)?{kind:'dev',id:candidate.lastJourney.id}:null;
   result.selectedVersion=typeof candidate.selectedVersion==='string'?candidate.selectedVersion:'rv1960';
   return result;
 }
@@ -143,7 +145,9 @@ function changeChapter(direction) {
   go(book,chapter); window.scrollTo({top:0});
 }
 function renderDevList() {
-  $('#dev-list').innerHTML=state.devotionals.length?state.devotionals.map(dev=>`<div class="dev-item"><div><h4>${esc(dev.title)}</h4><small>${esc(dev.origin)} · ${dev.entries.length} ${dev.entries.length===1?'lectura':'días'}${dev.minutes?' · '+dev.minutes+' min':''}</small></div><button class="outline" data-dev="${esc(dev.id)}">Abrir →</button></div>`).join(''):'<p class="empty">Tu biblioteca de devocionales comienza aquí.<br>Trae una lectura que amas o prepara una nueva.</p>';
+ const card=dev=>{const m=DevotionalCore.metadata(dev),date=m.finishedAt?new Date(m.finishedAt).toLocaleDateString('es'):'';return `<div class="dev-item"><div><h4>${esc(dev.title)}</h4><small>${m.status==='finished'?'Terminado'+(date?' · '+esc(date):''):'En curso'} · ${dev.completed?.length||0} de ${dev.entries.length} días</small></div><div><button class="outline" data-dev="${esc(dev.id)}">${m.status==='finished'?'Releer':'Continuar'} →</button>${m.status==='finished'?`<button class="quiet" data-dev-restart="${esc(dev.id)}">Reiniciar recorrido</button>`:''}</div></div>`;};
+ const underway=state.devotionals.filter(d=>DevotionalCore.metadata(d).status!=='finished'),finished=state.devotionals.filter(d=>DevotionalCore.metadata(d).status==='finished');
+ $('#dev-list').innerHTML=state.devotionals.length?`<h3>En curso</h3>${underway.length?underway.map(card).join(''):'<p class="muted">Todos tus recorridos están terminados.</p>'}${finished.length?'<h3>Terminados</h3>'+finished.map(card).join(''):''}`:'<p class="empty">Tu biblioteca de devocionales comienza aquí.<br>Trae una lectura que amas o prepara una nueva.</p>';
 }
 function renderDev() { if(activeDev)openJourney('dev',activeDev,activeDay); }
 function renderPlans() {
@@ -302,12 +306,12 @@ function bind() {
     try { const dev=core.createDevotional({topic:data.get('topic'),minutes:Number(data.get('minutes')),days:Number(data.get('days')),purpose:data.get('purpose')},books);state.devotionals.unshift(dev);save();renderDevList();activeDev=dev.id;activeDay=0;renderDev();toast('Tu guía de devoción está preparada.'); }
     catch(error){toast(error.message);}
   });
-  $('#dev-list').addEventListener('click',event=>{const button=event.target.closest('[data-dev]');if(button){activeDev=button.dataset.dev;activeDay=0;renderDev();}});
+  $('#dev-list').addEventListener('click',event=>{const restart=event.target.closest('[data-dev-restart]');if(restart){const dev=state.devotionals.find(d=>d.id===restart.dataset.devRestart);if(dev&&window.confirm('¿Reiniciar las marcas de lectura? Tus reflexiones se conservan.')){dev.completed=[];dev.lastIndex=0;dev.pages={};DevotionalCore.progress(dev);save();renderDevList();}return;}const button=event.target.closest('[data-dev]');if(button)openJourney('dev',button.dataset.dev);});
   document.addEventListener('click',event=>{const button=event.target.closest('[data-read-book]');if(button){go(Number(button.dataset.readBook),Number(button.dataset.readChapter));window.scrollTo({top:0});}});
   $('#import-dev').addEventListener('click',()=>$('#dev-file').click());
   $('#dev-file').addEventListener('change',async event=>{
     const file=event.target.files[0];if(!file)return;
-    try { $('#import-dev').disabled=true;await importDevFile(file);toast('Revisa tu devocional antes de guardarlo.'); }
+    try { $('#import-dev').disabled=true;await importDevFile(file);toast('Devocional guardado en tu biblioteca.'); }
     catch(error){toast(error instanceof SyntaxError?'El JSON no tiene un formato válido.':error.message);}
     finally{event.target.value='';$('#import-dev').disabled=false;}
   });
@@ -342,7 +346,7 @@ async function start() {
   $('#books-grid').innerHTML=books.map((book,i)=>`<button data-book="${i}">${esc(book.name)}</button>`).join('');
   $('#note').maxLength=100000;
   settings();renderReader();renderDevList();renderPlans();bind();bindPlanImport();
-  bindLibrary();bindAppearance();bindJourneys();bindAi();bindPrayer();bindPrivacy();bindGuides();bindMusic();bindStudy();bindGraphics();bindCircle();bindModuleImport();uiReady=true;
+  bindLibrary();bindAppearance();bindJourneys();bindAi();bindPrayer();bindPrivacy();bindGuides();bindMusic();bindStudy();bindGraphics();bindCircle();bindModuleImport();uiReady=true;if(state.lastJourney)openJourney('dev',state.lastJourney.id);
 }
 async function loadCatalog(){catalogData=await desktop.catalog();const versions=catalogData.modules.filter(m=>m.tipo==='biblia'&&m.rol==='version');selectedVersion=versions.some(m=>m.id===state.selectedVersion)?state.selectedVersion:versions.some(m=>m.id==='rv1960')?'rv1960':'rv1909';$('#version-select').innerHTML=versions.map(m=>`<option value="${esc(m.id)}">${esc(m.abreviatura||m.titulo)}</option>`).join('');$('#version-select').value=selectedVersion;const comments=catalogData.modules.filter(m=>m.rol==='comentario');$('#comment-select').innerHTML='<option value="">Elegir comentario</option>'+comments.map(m=>`<option value="${esc(m.id)}">${esc(m.titulo)}</option>`).join('');const options=[['strong-es','Strong español'],['vine','Vine · AT y NT'],['drae','RAE · Diccionario español']].filter(([id])=>id==='vine'?catalogData.modules.some(m=>m.id==='vine-at'||m.id==='vine-nt'):id==='drae'?catalogData.modules.some(m=>/^drae-[123]$/.test(m.id)):catalogData.modules.some(m=>m.id===id));for(const m of catalogData.modules.filter(m=>m.tipo==='diccionario'&&!['strong-es','vine-at','vine-nt','drae-1','drae-2','drae-3'].includes(m.id)))options.push([m.id,m.titulo]);$('#dictionary-select').innerHTML=options.map(([id,title])=>`<option value="${id}">${title}</option>`).join('');$('#show-strong').disabled=!(selectedVersion==='rv1960'&&catalogData.modules.some(m=>m.id==='rv1960-strong')||catalogData.modules.some(m=>m.id===selectedVersion&&m.strong));if($('#show-strong').disabled)$('#show-strong').checked=false;$('#comment-select').disabled=!comments.length;if(comments.length)$('#comment-select').value=(['diario-vivir','mundo-hispano'].find(id=>comments.some(m=>m.id===id))||comments[0].id);for(const id of ['dictionary-select','dictionary-query','dictionary-submit'])$('#'+id).disabled=!options.length;renderSources();}
 function renderSources(){if(!catalogData)return;$('#sources-list').innerHTML=catalogData.modules.map(m=>`<section class="source-card"><h4>${esc(m.titulo)}</h4><p>${esc(m.origen)} · ${esc(m.rol)}</p><p>${esc(m.licencia)}</p><p class="fine-print">${esc(m.versificacion)} · Revisión ${esc(m.sha256.slice(0,16))}</p>${m.sourceNotice?`<details><summary>Aviso incluido en la fuente</summary><p class="source-notice">${esc(m.sourceNotice)}</p></details>`:''}</section>`).join('');$('#sources-warning').textContent=catalogData.warnings.join('\n');renderStudySources();}

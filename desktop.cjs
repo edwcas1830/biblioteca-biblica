@@ -38,6 +38,8 @@ app.whenReady().then(async () => {
   win.on('minimize',()=>{win.webContents.setAudioMuted(true);win.webContents.send('library:music-pause');});win.on('restore',()=>win.webContents.setAudioMuted(false));
   win.webContents.session.webRequest.onBeforeSendHeaders({urls:['https://www.youtube.com/embed/*','https://www.youtube-nocookie.com/embed/*']},(details,callback)=>{const headers={...details.requestHeaders};if(details.webContentsId===win.webContents.id&&music.origin&&details.referrer?.startsWith(music.origin+'/'))headers.Referer='https://com.edward.bibliotecabiblica/';callback({requestHeaders:headers});});
   const trusted=event=>event.sender===win.webContents&&event.senderFrame===win.webContents.mainFrame;
+  ipcMain.handle('library:reader-fullscreen',(event,value)=>{if(!trusted(event)||value!==undefined&&typeof value!=='boolean')throw Error('Origen no autorizado.');const next=value??!win.isFullScreen();win.setFullScreen(next);win.webContents.send('library:fullscreen',next);return next;});
+  win.on('enter-full-screen',()=>win.webContents.send('library:fullscreen',true));win.on('leave-full-screen',()=>win.webContents.send('library:fullscreen',false));
   ipcMain.handle('library:music-player',(event,url)=>{if(!trusted(event))throw new Error('Origen no autorizado.');return music.player(url);});
   ipcMain.handle('library:music-external',(event,url)=>{if(!trusted(event))throw new Error('Origen no autorizado.');return shell.openExternal(musicCore.parse(url).url);});
   if(hiddenTest&&testProfile)ipcMain.handle('library:test-mute',(event,muted)=>{if(!trusted(event)||typeof muted!=='boolean')throw new Error('Origen no autorizado');win.webContents.setAudioMuted(muted);});
