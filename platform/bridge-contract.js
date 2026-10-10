@@ -118,7 +118,11 @@
         try { callback(value); } catch { /* Isolate consumer listeners. */ }
       }
     }
-    return Object.freeze({bridge: Object.freeze(bridge), register, emit});
+    function setStorage(next) {
+      if (!['none','indexeddb','sqlite'].includes(next) || platform === 'android' && next === 'indexeddb' || next !== 'none' && (!active.has('bootstrap') || !active.has('savePersonal'))) fail('Inicializa el repositorio antes de anunciar su almacenamiento.');
+      storage = next;
+    }
+    return Object.freeze({bridge: Object.freeze(bridge), register, emit, setStorage});
   }
   return Object.freeze({VERSION, BridgeError, operations, preloadNames: Object.freeze(names), createBridge});
 });

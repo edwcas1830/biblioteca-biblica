@@ -151,3 +151,29 @@ La lógica compartida es shared/pdf-document.js. Windows conserva su Worker Node
 La prueba de navegador usa script-src self, worker-src self y connect-src self, con todas las solicitudes externas bloqueadas. No hace falta JavaScript unsafe-eval. Algunos codecs opcionales de PDF.js necesitan WebAssembly: la cobertura entregada comprueba PDFs de texto originales CC0, no todos los formatos/encodings ni imágenes escaneadas; verificar esos casos y la política WebView en APK antes de ampliar las promesas. No desactivar la CSP como solución.
 
 `node scripts/test-android-documents.cjs` ejecuta PDF/DOCX reales sintéticos en Chromium sin preload y comprueba Workers, títulos/28 días, referencias, formato, errores, límites y que la página siga atendiendo su temporizador. `tests/android-documents.test.cjs` comprueba copia de subarrays, cancelación/cierre/timeout, reintento y limpieza. Un parser probado en Chromium no demuestra acceso SAF ni compatibilidad del WebView Android real.
+
+## Inicio Android y repositorio SQLite (pieza 2 nativa)
+
+El registro ya puede inicializar la biblioteca desde arranque.js. Crear el adaptador como hasta ahora, conectar las integraciones de voz/Share y exponer libraryDesktop; después:
+
+```js
+const sqlite = Capacitor.registerPlugin('CapacitorSQLite'); // plugin raw, no SQLiteConnection wrapper
+const lista = LibraryAndroidServices.attach(adaptador, {
+  sqlite, bible: window.BIBLE, manifest: window.BibliaManifiestos.rv1909
+});
+// Tu interfaz muestra «Preparando tu biblioteca…» mientras espera lista.
+try { await lista; /* retirar el aviso; bootstrap del controlador ya puede terminar */ }
+catch (error) { /* mostrar error.message + acción para reabrir; no iniciar una copia vacía */ }
+```
+
+attach devuelve una promesa de capacidades y es idempotente para el mismo adaptador. No hace falta esperar para exponer libraryDesktop: bootstrap/savePersonal/exportBackup/restoreBackup/privacyStatus esperan el inicio dentro de sus manejadores. El lector público se registra inmediatamente; usa la lógica portable RV1909/recursos libres sin IndexedDB. El módulo documents.js añade PDF Workers si está disponible. LibraryAndroidServices.status() informa idle/preparing/ready/failed/closed con errores seguros. El aviso de UI y su retirada siguen siendo responsabilidad de Claude; no se tocó mobile/.
+
+register() ahora propaga nuevos manejadores al adaptador adjunto. setStorage() también actualiza su getCapabilities(): storage es none hasta abrir y validar la base, y sqlite después. setStorage es una herramienta administrativa del adaptador, no una operación expuesta en libraryDesktop. nativeVerified permanece false. Un fallo de apertura llega al aviso y a bootstrap; no se usa localStorage/IndexedDB para simular éxito de guardado nativo.
+
+LibraryAndroidStore.PersonalStore usa las operaciones raw beginTransaction/commitTransaction/rollbackTransaction del plugin 8.1.1. Guarda esquema canónico 3 (meta/annotations/plans/plan_days), compatible con Windows, y añade meta.android-revision para evitar sobreescrituras desde sesiones antiguas. Los IDs de días no cambian. Inserciones por lotes de 100 y SQL con parámetros. Migración retiene el JSON antiguo exacto antes de escribir; restauración conserva el estado previo antes de cambiar la biblioteca activa. Un fallo revierte las cuatro tablas.
+
+Base principal conformada del plugin: biblioteca-personal → databases/biblioteca-personalSQLite.db. Respaldos en una segunda base biblioteca-respaldos, abierta bajo demanda; los snapshots y el texto legacy se quedan locales. El respaldo previo puede quedar guardado si luego falla la restauración: la biblioteca activa se revierte. No se afirma atomicidad distribuida entre las dos bases ni durabilidad ante pérdida eléctrica sin APK. La base principal usa journal_mode DELETE verificado por query y secure_delete, sin escribir sobre esquemas futuros/dañados.
+
+El traspaso preparado sigue usando el destino lógico DATA/files/biblioteca-personal.sqlite. **No habilitar transferInstall todavía:** hace falta mapear ese destino a la base conformada real, recuperarlo antes de abrir SQLite y cerrar/reabrir catálogo. Respaldar solo el snapshot de files dejaría fuera la biblioteca activa. Es la pieza siguiente. Las copias JSON sin PIN sí pueden restaurarse ya por restoreBackup.
+
+PIN todavía ausente: una base con private-vault se conserva y rechaza LOCKED; no se abre una biblioteca vacía encima. Los respaldos cifrados no se degradan a texto. Al desmontar, await LibraryAndroidServices.close(). Validación del plugin/dispositivo, migración real, falta de espacio y reconexión de traspaso/PIN quedan en la matriz APK.

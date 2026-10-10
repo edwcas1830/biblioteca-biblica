@@ -13,6 +13,7 @@ window.testStorePhase1=async()=>{
     for(let i=0;i<bytes.length;i+=65537)stream.update(bytes.subarray(i,i+65537));
     const expected=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),n=>n.toString(16).padStart(2,'0')).join('');equal(stream.hex(),expected,'Huella portable');
     ok(typeof LibraryTransfer.inspect==='function'&&typeof LibraryAndroidTransfer.create==='function','Fábricas UMD sin Node');
+    ok(typeof LibraryAndroidStore.PersonalStore==='function'&&typeof LibraryAndroidServices.attach==='function','Repositorio y arranque UMD sin Node');
   });
   await test('La vista web no anuncia traspaso nativo ni convierte SQLite a IndexedDB',async()=>{
     const caps=await bridge.getCapabilities();equal(caps.operations.transferScan.available,false,'Scan nativo ausente');equal(caps.operations.transferInstall.available,false,'Instalar ausente');
