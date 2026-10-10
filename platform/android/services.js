@@ -1,14 +1,15 @@
 (function(root,factory){
   const api=typeof module==='object'&&module.exports?factory(require('../bridge-contract.js'),require('./personal-store.js'),require('../web/library.js'),require('../web/documents.js'),require('./repository.js'),require('./transfer.js'),()=>require('./library.js')):factory(root.LibraryBridgeContract,root.LibraryAndroidStore,root.LibraryWebReader,root.LibraryWebDocuments,root.LibraryAndroidRepositoryFactory,root.LibraryAndroidTransfer,()=>root.LibraryAndroidReader);
   if(typeof module==='object'&&module.exports)module.exports=api;
-  else root.LibraryAndroidServices=api.create({publishRepository:repository=>{root.LibraryAndroidRepository=repository;}});
+  else root.LibraryAndroidServices=api.create({publishRepository:repository=>{root.LibraryAndroidRepository=repository;},onPrivacyClosed:()=>root.dispatchEvent?.(new CustomEvent('biblioteca:cuaderno-cerrado'))});
 })(typeof globalThis!=='undefined'?globalThis:this,function(contract,stores,readers,documents,repositories,transfers,nativeReaders){
   'use strict';
   // Native repositories install their handlers after successful initialization.
   // No IndexedDB fallback and no empty success results for absent native services.
-  function create({publishRepository=()=>{},readerFactory}={}){
-    const installed=new Map();let storage='none',attached=null,started=null,store=null,docs=null,phase='idle',failure=null,repository=null,transfer=null,nativeReader=null,readerOptions=null;
+  function create({publishRepository=()=>{},readerFactory,privacyFactory,onPrivacyClosed=()=>{}}={}){
+    const installed=new Map();let storage='none',attached=null,started=null,store=null,docs=null,phase='idle',failure=null,repository=null,transfer=null,nativeReader=null,readerOptions=null,readerLoad=null,readerPaused=false;
     const closeReader=async()=>{if(nativeReader){const reader=nativeReader;nativeReader=null;await reader.close();}};
+    const quiesceReader=async()=>{readerPaused=true;await readerLoad?.catch(()=>{});await closeReader();};
     const reloadReader=async()=>{
       await closeReader();const reader=await (readerFactory||nativeReaders()).create(readerOptions);nativeReader=reader;
       const handlers={};for(const name of Object.keys(reader.handlers()))handlers[name]=value=>store.serial(()=>nativeReader.handlers()[name](value));
@@ -35,15 +36,16 @@
       docs=documentService;if(docs)register(docs.handlers());
       started=Promise.resolve().then(async()=>{
         try{
-          store=new stores.PersonalStore({sqlite,books:bible.books});
+          store=new stores.PersonalStore({sqlite,books:bible.books,privacyFactory,onPrivacyClosed});
           if(filesystem){
             readerOptions={sqlite,filesystem,bible,manifest,resources,resourceBase};
-            repository=await repositories.create({store,filesystem,closeReader,reloadReader});publishRepository(repository);
+            repository=await repositories.create({store,filesystem,closeReader:quiesceReader,reloadReader,resumeReader:()=>{readerPaused=false;}});publishRepository(repository);
             transfer=transfers.create({sqlite,filesystem,books:bible.books,repository});
             // Recovery must precede opening either the personal DB or the module catalog.
             await transfer.recover();
           }
-          await store.open();
+          await store.preparePrivacy();await store.open();
+          if(store.pinAvailable)register({unlock:deferred('unlock'),setPin:deferred('setPin'),lockPrivate:deferred('lockPrivate'),disablePin:deferred('disablePin')});
           setStorage('sqlite');phase='ready';return attached.bridge.getCapabilities();
         }catch(e){
           try{await store?.close();}catch{}phase='failed';failure=e instanceof contract.BridgeError?e:new contract.BridgeError('STORAGE','No se pudo preparar SQLite. La biblioteca se conserva.');throw failure;
@@ -59,9 +61,16 @@
       }
       return started;
     }
-    // Own the reader lifecycle so imports cannot race a late background catalog load.
-    const loadReader=async()=>{await started;if(!readerOptions)throw new contract.BridgeError('UNAVAILABLE','Faltan los archivos nativos del lector.');return store.serial(async()=>{await reloadReader();return attached.bridge.getCapabilities();});};
-    const close=async()=>{docs?.close();try{await started;}catch{}if(store&&!store.closed)await store.serial(closeReader,{maintenance:true});await store?.close();setStorage('none');phase='closed';};
+    // Background package hashing must not hold the personal SQLite queue. Imports pause
+    // new catalog loads and drain this promise before touching any module files.
+    const loadReader=async()=>{
+      await started;if(!readerOptions)throw new contract.BridgeError('UNAVAILABLE','Faltan los archivos nativos del lector.');
+      if(readerPaused||store.paused||store.closed)throw new contract.BridgeError('LOCKED','Espera a que termine el traspaso antes de cargar módulos.');
+      if(nativeReader&&!readerLoad)return attached.bridge.getCapabilities();
+      if(!readerLoad)readerLoad=reloadReader().finally(()=>{readerLoad=null;});
+      await readerLoad;return attached.bridge.getCapabilities();
+    };
+    const close=async()=>{docs?.close();try{await started;}catch{}if(store&&!store.closed)await store.serial(quiesceReader,{maintenance:true});await store?.close();setStorage('none');phase='closed';};
     return Object.freeze({register,handlers:()=>Object.freeze(Object.fromEntries(installed)),storage:()=>storage,setStorage,attach,loadReader,repository:()=>repository,close,status:()=>({state:phase,...(failure?{error:{code:failure.code,message:failure.message}}:{})})});
   }
   return Object.freeze({create});

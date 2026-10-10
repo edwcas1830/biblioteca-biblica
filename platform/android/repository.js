@@ -7,7 +7,7 @@
   const logical='biblioteca-personal.sqlite';
   // Capacitor SQLite uses the app's databases directory, not Directory.DATA/files.
   // Resolve its actual URI without opening/creating an empty database before recovery.
-  async function create({store,filesystem,closeReader=async()=>{},reloadReader=async()=>{}}={}){
+  async function create({store,filesystem,closeReader=async()=>{},reloadReader=async()=>{},resumeReader=()=>{}}={}){
     if(!store||!filesystem||typeof store.sqlite.getUrl!=='function')fail('UNAVAILABLE','Falta la ubicación de SQLite para recuperar el traspaso.');
     let uri;
     await store.sqlite.createConnection({database:store.database,version:1,encrypted:false,mode:'no-encryption',readonly:false});
@@ -47,7 +47,7 @@
       },
       activate:async({database,modules,locked})=>{
         requireExclusive();if(database!==logical||modules!=='modulos/personal')fail('VALIDATION','Destinos del traspaso no válidos.');
-        if(locked)fail('UNAVAILABLE','Esta copia tiene PIN. Se conserva el respaldo; falta habilitar su apertura en Android.');
+        if(locked&&!store.pinAvailable)fail('UNAVAILABLE','El dispositivo no tiene listo el cifrado local para esta copia con PIN.');
         await store.open();const record=await store.readConsistent();
         if(!record)fail('CORRUPT','La biblioteca instalada no contiene datos.');
         const catalog=await reloadReader();
@@ -58,7 +58,8 @@
       resume:async({installed,blockWritesUntilBootstrap})=>{
         requireExclusive();
         if(!installed){await store.open();await reloadReader();}
-        store.writeBlocked=blockWritesUntilBootstrap;store.generation++;store.paused=false;
+        if(installed)await store.forgetSession();
+        store.writeBlocked=blockWritesUntilBootstrap;store.generation++;store.paused=false;resumeReader();
       }
     });
   }
