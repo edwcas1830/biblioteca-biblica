@@ -108,3 +108,6 @@ El contexto pasa por `Library.aiContext` y vuelve a comprobar revisión y permis
 # Series y guías v0.5
 
 `#series-create` usa los tokens activos. `#guide-card` acompaña la lectura del día, muestra una pregunta y alterna turnos sin cambiar la disposición de paneles bíblicos. `dev.guide` guarda método, modo, personas y paso por día; `guideResponses` conserva respuestas por devocional/día/método/paso/persona dentro del cuaderno privado. La IA recibe los parámetros elegidos y las fuentes permitidas del recorrido, nunca esas respuestas. Todo borrador pasa por la revisión de importación, con su origen visible.
+# Música v0.5
+
+`#music-panel` flota a 480 px de ancho con vídeo de 270 px de alto. El encabezado permite moverlo con puntero o flechas y respeta los límites de ventana. No cubrir el vídeo con adornos ni reducirlo bajo 200 × 200 px. `music.js` valida origen y ventana de los mensajes del iframe local; `MusicServer` sirve solo player.html/.js/.css por una ruta aleatoria, sin datos personales. El iframe remoto carece de acceso al preload. Al minimizar se pausa; cerrar lo descarga del DOM activo; no se carga al iniciar.

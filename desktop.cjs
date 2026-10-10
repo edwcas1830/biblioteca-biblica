@@ -7,6 +7,7 @@ const {Worker}=require('node:worker_threads');
 const crypto=require('node:crypto');
 const {AiService}=require('./lib/ai-service.cjs');
 const aiCore=require('./app/ai-core.js');
+const {MusicServer}=require('./lib/music-server.cjs'),musicCore=require('./app/music-core.js');
 app.setName('Biblioteca Bíblica');
 const hiddenTest = process.env.BIBLIOTECA_TEST_HIDDEN === '1';
 const testProfile=process.env.BIBLIOTECA_TEST_PROFILE;
@@ -33,7 +34,14 @@ app.whenReady().then(() => {
   let channel={enabled:false};
   try{channel=JSON.parse(fs.readFileSync(path.join(app.isPackaged?process.resourcesPath:__dirname,'update-channel.json'),'utf8'));}catch{}
   const updates=createUpdateService({app,updater:autoUpdater,enabled:channel.enabled===true,testing:hiddenTest||!!testProfile,notify:state=>{if(!win.isDestroyed())win.webContents.send('library:update-state-event',state);}});
+  const music=new MusicServer(__dirname);app.on('before-quit',()=>music.stop());
+  win.on('minimize',()=>{win.webContents.setAudioMuted(true);win.webContents.send('library:music-pause');});win.on('restore',()=>win.webContents.setAudioMuted(false));
+  win.webContents.session.webRequest.onBeforeSendHeaders({urls:['https://www.youtube.com/embed/*','https://www.youtube-nocookie.com/embed/*']},(details,callback)=>{const headers={...details.requestHeaders};if(details.webContentsId===win.webContents.id&&music.origin&&details.referrer?.startsWith(music.origin+'/'))headers.Referer='https://com.edward.bibliotecabiblica/';callback({requestHeaders:headers});});
   const trusted=event=>event.sender===win.webContents&&event.senderFrame===win.webContents.mainFrame;
+  ipcMain.handle('library:music-player',(event,url)=>{if(!trusted(event))throw new Error('Origen no autorizado.');return music.player(url);});
+  ipcMain.handle('library:music-external',(event,url)=>{if(!trusted(event))throw new Error('Origen no autorizado.');return shell.openExternal(musicCore.parse(url).url);});
+  if(hiddenTest&&testProfile)ipcMain.handle('library:test-mute',(event,muted)=>{if(!trusted(event)||typeof muted!=='boolean')throw new Error('Origen no autorizado');win.webContents.setAudioMuted(muted);});
+  if(hiddenTest&&testProfile)ipcMain.handle('library:test-minimize',event=>{if(!trusted(event))throw new Error('Origen no autorizado');win.emit('minimize');const muted=win.webContents.isAudioMuted();return {muted,eventSimulated:true};});
   const ai=new AiService({root:app.getPath('userData'),safeStorage,openExternal:url=>shell.openExternal(url),notify:status=>{if(!win.isDestroyed())win.webContents.send('library:ai-state',status);}}),prepared=new Map();
   app.on('before-quit',()=>ai.stop());
   for(const [name,action] of [['status','status'],['connect','connect'],['disconnect','disconnect'],['models','listModels']])ipcMain.handle('library:ai-'+name,event=>{if(!trusted(event))throw new Error('Origen no autorizado.');return ai[action]();});

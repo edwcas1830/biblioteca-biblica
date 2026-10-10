@@ -13,3 +13,6 @@ test('Copias cifradas se restauran cerradas, autentican el contenido y no borran
 test('Testimonios requieren texto, fecha y referencia; notas del método conservan privacidad y estados',()=>{
  const p=fixture().prayers[0];assert.equal(core.validate([p])[0].status,'pending');assert.throws(()=>core.validate([{...p,status:'answered'}]),/respuesta/);const answered={...p,status:'answered',answer:{text:'Respuesta recibida',date:'2026-10-09',reference:{book:18,chapter:23,verse:1}}};assert.equal(core.validate([answered])[0].answer.reference.book,18);assert.equal(core.methods.acas.length,4);assert.equal(core.methods.padre.length,6);assert.throws(()=>core.drafts({'wrong:0':'x'}));
 });
+test('Una copia autenticada pero con notas inválidas se rechaza antes de reemplazar la biblioteca',t=>{
+ const s=new PersonalStore(fs.mkdtempSync(path.join(os.tmpdir(),'biblia-pin-invalid-'))),vault=require('../lib/private-vault.cjs');t.after(()=>s.close());s.write(fixture());const salt='a'.repeat(32),key=vault.derive('567890',salt),envelope=vault.encrypt({...vault.empty(),notes:{invalid:'Nota mal referenciada'}},key,salt);assert.throws(()=>s.restoreBackup({state:{...fixture(),...vault.empty()},privateVault:envelope,pin:'567890'}));assert.equal(s.load().notes['42:3:16'],fixture().notes['42:3:16']);assert.equal(s.privacyStatus().enabled,false);key.fill(0);
+});
