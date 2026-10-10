@@ -379,6 +379,8 @@
       if (/No se reemplazará|necesita recuperación|no se pudo/i.test(aviso)) break;
       await new Promise(r => setTimeout(r, 500));
     }
+    try { await Promise.race([window.BibliaPreparacion && window.BibliaPreparacion.modulos, new Promise(r => setTimeout(r, 180000))]); } catch { /* se informa abajo */ }
+    await new Promise(r => setTimeout(r, 600)); // deja que la lista de módulos se recargue
     const planes = (typeof state !== 'undefined' && Array.isArray(state.plans)) ? state.plans : [];
     const dias = planes.reduce((n, p) => n + (p.days || 0), 0), hechos = planes.reduce((n, p) => n + ((p.completed || []).length), 0);
     const devocionales = (typeof state !== 'undefined' && Array.isArray(state.devotionals)) ? state.devotionals.length : 0;
@@ -387,8 +389,10 @@
     const llego = typeof storageReady !== 'undefined' && storageReady && dias === c.diasPlan && hechos === c.diasCompletados && devocionales === c.devocionales;
     if (!dialogoTraspaso) { dialogoTraspaso = crear('dialog', { id: 'movil-traspaso', 'aria-label': 'Traer desde la PC' }, [crear('div', { class: 'movil-traspaso-cuerpo' })]); document.body.append(dialogoTraspaso); }
     html.dataset.traspasoConfirmado = llego ? 'si' : 'no';
+    const avisosCatalogo = (typeof catalogData !== 'undefined' && catalogData && Array.isArray(catalogData.warnings)) ? catalogData.warnings : [];
+    const fallosModulos = [html.dataset.serviciosFallos || '', ...avisosCatalogo].filter(Boolean).join(' · ');
     if (llego) {
-      pasoTraspaso('Tu biblioteca llegó', [`Plan: ${hechos} de ${dias} días leídos.`, `Devocionales: ${devocionales}.`, `Módulos en tu biblioteca: ${modulos} (los comentarios y diccionarios pueden tardar un momento en aparecer la primera vez).`], [['Empezar a leer', () => dialogoTraspaso.close(), true]]);
+      pasoTraspaso('Tu biblioteca llegó', [`Plan: ${hechos} de ${dias} días leídos.`, `Devocionales: ${devocionales}.`, `Módulos en tu biblioteca: ${modulos}.`, ...(fallosModulos ? ['Aviso de los módulos: ' + fallosModulos] : [])], [['Empezar a leer', () => dialogoTraspaso.close(), true]]);
     } else {
       pasoTraspaso('No se ve lo que trajiste', [
         `Se esperaba: plan ${c.diasCompletados} de ${c.diasPlan} días y ${c.devocionales} devocionales. Se ve: plan ${hechos} de ${dias} y ${devocionales} devocionales.`,
@@ -421,6 +425,16 @@
     botonTraspaso.hidden = false;
   }
   window.addEventListener('biblioteca:capacidades', prepararTraspaso);
+  // Si los módulos personales terminan de prepararse DESPUÉS de que la app cargó su lista (primera
+  // apertura tras un traspaso), se vuelve a cargar la lista: antes quedaban solo los módulos libres.
+  window.addEventListener('biblioteca:capacidades', async e => {
+    if (!e.detail || !('modulos' in e.detail) || !e.detail.modulos) return;
+    for (let i = 0; i < 120 && !(typeof storageReady !== 'undefined' && storageReady); i++) await new Promise(r => setTimeout(r, 500));
+    if (typeof loadCatalog !== 'function' || typeof catalogData === 'undefined') return;
+    const antes = catalogData && Array.isArray(catalogData.modules) ? catalogData.modules.length : 0;
+    try { await loadCatalog(); if (catalogData.modules.length !== antes && typeof renderReader === 'function') renderReader(); } catch { /* la lista anterior sigue */ }
+    window.dispatchEvent(new CustomEvent('biblioteca:modulos-actualizados'));
+  });
 
   // ---------- IA en el teléfono (OpenRouter con código pegado, compartir y reportar) ----------
   // Solo con el puente del contrato (teléfono o vista web); en escritorio sigue el flujo de Windows.

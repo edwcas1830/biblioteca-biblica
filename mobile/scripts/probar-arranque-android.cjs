@@ -195,7 +195,9 @@ function cargarPagina(plugins) {
     if (!(inst.instalado === true && inst.requiereRecarga === true)) throw new Error('El traspaso no se instaló: ' + JSON.stringify(inst));
     ventana = cargarPagina(plugins);
     puente = ventana.libraryDesktop;
+    const tModulos = Date.now();
     await ventana.BibliaPreparacion.modulos;
+    console.log('módulos listos tras recargar en', Date.now() - tModulos, 'ms · estado:', ventana.document.documentElement.dataset.serviciosNativos, ventana.document.documentElement.dataset.serviciosFallos || '');
     const tras = await puente.bootstrap({ initial: { ...inicial, position: { book: 18, chapter: 23, verse: 1 } }, legacy: null, legacyValid: true });
     if (process.env.PAQUETE_REAL) {
       // Paquete real (solo en la PC de Edward): imprime conteos, nunca contenido.
@@ -209,6 +211,10 @@ function cargarPagina(plugins) {
       }
       const pantalla = require(path.join(__dirname, 'validar-como-pantalla.cjs'))(ventana, www, tras.state);
       console.log('REAL la pantalla acepta lo traído:', pantalla.acepta ? 'sí' : 'NO · ' + pantalla.motivo);
+      // Segunda apertura normal (sin traspaso): ¿se vuelve a esperar lo mismo?
+      await ventana.LibraryAndroidServices.close();
+      ventana = cargarPagina(plugins); const t2 = Date.now(); await ventana.BibliaPreparacion.modulos;
+      console.log('REAL segunda apertura: módulos listos en', Date.now() - t2, 'ms');
       await ventana.LibraryAndroidServices.close(); return;
     }
     const plan = tras.state.plans[0] || {};

@@ -35,6 +35,10 @@
         if(directory.type!=='directory'||!/^[a-z0-9-]{1,80}$/.test(directory.name)){warnings.push('Se omitió una carpeta de paquete no válida.');continue;}
         const root='modulos/'+directory.name;
         let pack;try{pack=JSON.parse(await files.readText(root+'/manifest.json',2000000));if(!Array.isArray(pack.modulos)||pack.modulos.length>500)throw Error();}catch{warnings.push('Un manifiesto de paquete no se pudo leer.');continue;}
+        // Huellas ya verificadas (tamaño + fecha + SHA-256 del manifiesto): sin esto cada apertura volvía a leer
+        // los 200 MB del paquete personal (minutos en el teléfono) antes de mostrar los módulos.
+        let huellas={},huellasCambiaron=false;try{const leidas=JSON.parse(await files.readText(root+'/.huellas.json',1000000));if(leidas&&typeof leidas==='object'&&!Array.isArray(leidas))huellas=leidas;}catch{}
+        const vigentes={};
         for(const m of pack.modulos){
           let file;
           try{
@@ -42,12 +46,15 @@
             const extension={biblia:'.bblx',diccionario:'.dctx',comentario:'.cmtx'}[m.tipo];
             if(!m.archivo.endsWith(extension)||!(m.tipo==='biblia'?['version','apoyo']: [m.tipo,'apoyo']).includes(m.rol))fail('CORRUPT','El tipo del módulo no coincide con su archivo o función.');
             file=root+'/'+m.archivo;await snapshot(file);const stat=await files.stat(file);
-            if(stat.type!=='file'||stat.size!==m.bytes||await files.sha256(file,m.bytes)!==m.sha256)fail('CORRUPT','La huella del módulo no coincide.');
+            const previa=Object.hasOwn(huellas,m.archivo)?huellas[m.archivo]:null,confiable=!!previa&&previa.sha256===m.sha256&&previa.bytes===stat.size&&previa.mtime===stat.mtime;
+            if(stat.type!=='file'||stat.size!==m.bytes||!confiable&&await files.sha256(file,m.bytes)!==m.sha256)fail('CORRUPT','La huella del módulo no coincide.');
+            vigentes[m.archivo]={sha256:m.sha256,bytes:stat.size,mtime:stat.mtime};if(!confiable)huellasCambiaron=true;
             const coverage=await inspect(m,file),personal=directory.name==='personal'&&m.publico!==true;
             const metadata={...m,registros:coverage.records,unidos:coverage.joined,paquete:pack.paquete||directory.name,personalPackage:personal,personalDefault:personal&&pack.modoPersonal===true,publico:m.publico===true,iaPermitida:m.iaPermitida===true,licencia:m.licencia||pack.uso||'Licencia no declarada: módulo personal; no redistribuir.',versificacion:m.versificacion||'Referencias e-Sword; conserva rangos de la fuente',origen:m.origen||'Paquete local instalado'};
             modules.set(m.id,{metadata,file,stat,coverage});
           }catch(e){warnings.push((typeof m?.titulo==='string'?m.titulo.slice(0,100):'Módulo')+': '+(e instanceof contract.BridgeError?e.message:'No se pudo verificar.'));if(file&&connections.has(file)){await connections.get(file).close();connections.delete(file);}}
         }
+        if(huellasCambiaron||Object.keys(huellas).some(k=>!Object.hasOwn(vigentes,k)))try{await files.writeAtomic(root+'/.huellas.json',JSON.stringify(vigentes));}catch{ /* solo acelera la próxima apertura */ }
       }
       return {modules:[...modules.values()].map(v=>v.metadata),warnings};
     })().catch(e=>{loading=null;throw e;}));
