@@ -1,6 +1,7 @@
 package com.edward.bibliotecabiblica;
 
 import android.net.Uri;
+import android.util.Log;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -55,9 +56,11 @@ public class TraspasoPaquetePlugin extends Plugin {
                 r.put("archivos", archivos);
                 call.resolve(r);
             } catch (PaqueteInvalido e) {
+                Log.w("TraspasoPaquete", "paquete rechazado: " + e.getMessage());
                 borrar(destino);
                 call.reject(e.getMessage(), "CORRUPT");
             } catch (Exception e) {
+                Log.e("TraspasoPaquete", "no se pudo desempacar " + desde, e);
                 borrar(destino);
                 call.reject("No se pudo abrir el paquete del traspaso: " + e.getMessage(), "CORRUPT");
             }
