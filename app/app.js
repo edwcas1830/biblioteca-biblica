@@ -43,7 +43,7 @@ function validateState(candidate) {
     ids.add(dev.id);
     const validated=core.importDevotional('copia.json',JSON.stringify({title:dev.title,entries:dev.entries}),books);
     if(dev.completed!==undefined&&(!Array.isArray(dev.completed)||dev.completed.some(i=>!Number.isInteger(i)||i<0||i>=dev.entries.length)))throw new Error('Avance de devocional no válido.');
-    return {...validated,completed:[...new Set(dev.completed||[])],sourceName:String(dev.sourceName||'').slice(0,200),description:String(dev.description||'').slice(0,20000),...(dev.introBlocks?{introBlocks:contentCore.blocks(dev.introBlocks)}:{}),...(dev.guide?{guide:GuideCore.configuration(dev.guide)}:{}),id:dev.id,origin:typeof dev.origin==='string'?dev.origin.slice(0,200):'Devocional recuperado',purpose:typeof dev.purpose==='string'?dev.purpose.slice(0,500):'',minutes:Number.isInteger(dev.minutes)?dev.minutes:undefined};
+    return {...validated,completed:[...new Set(dev.completed||[])],sourceName:String(dev.sourceName||'').slice(0,200),description:String(dev.description||'').slice(0,2000000),subtitle:String(dev.subtitle||'').slice(0,500),...(dev.introBlocks?{introBlocks:contentCore.blocks(dev.introBlocks)}:{}),...(dev.guide?{guide:GuideCore.configuration(dev.guide)}:{}),id:dev.id,origin:typeof dev.origin==='string'?dev.origin.slice(0,200):'Devocional recuperado',purpose:typeof dev.purpose==='string'?dev.purpose.slice(0,500):'',minutes:Number.isInteger(dev.minutes)?dev.minutes:undefined};
   });
   result.plans=candidate.plans.map(plan=>{
     if(!plan || !/^plan-\d+(?:-[a-z0-9]+)?$/.test(plan.id) || ids.has(plan.id)) throw new Error('Plan no válido.');

@@ -14,6 +14,7 @@ function openJourney(kind,id,index=0){activeJourney={kind,id,index};showView('jo
 function renderJourney(){
   const data=journeyData();if(!data)return;const {item,index,entry,readings,done,noteKey}=data,total=item.entries.length,completed=item.completed?.length||0,plan=activeJourney.kind==='plan';
   $('#journey-title').textContent=item.title||{nt:'Nuevo Testamento',all:'Toda la Biblia',salmos:'Salmos'}[item.scope];
+  $('#journey-subtitle').textContent=item.subtitle||'';$('#journey-subtitle').hidden=!item.subtitle;
   $('#journey-origin').textContent=item.origin||item.sourceName||'Plan de lectura personal';
   $('#journey-progress-label').textContent=`${completed} de ${total} días leídos · ${Math.round(completed/total*100)}%`;
   $('#journey-progress').value=completed;$('#journey-progress').max=total;
@@ -21,7 +22,7 @@ function renderJourney(){
   $('#journey-index').innerHTML=item.entries.slice(start,end).map((day,j)=>{const i=start+j;return `<button class="journey-index-item ${i===index?'is-current':''}" data-journey-day="${i}" aria-current="${i===index?'step':'false'}"><span>${(item.completed||[]).includes(i)?'✓':'○'}</span><span>${esc(plan?dayOf(item,i).title:day.title)}</span></button>`;}).join('');
   $('#journey-index-range').textContent=`${start+1}–${end} de ${total}`;$('#journey-index-prev').disabled=page===0;$('#journey-index-next').disabled=end===total;
   $('#journey-day-title').textContent=entry.title;$('#journey-day-position').textContent=`DÍA ${index+1} DE ${total}`;
-  $('#journey-intro').closest('details').hidden=!item.description&&!item.purpose;$('#journey-intro').textContent=item.description||item.purpose||'';
+  $('#journey-intro').closest('details').hidden=!item.description&&!item.purpose;$('#journey-intro').innerHTML=item.introBlocks?.length?contentCore.render(item.introBlocks,books,planCore):esc(item.description||item.purpose||'');
   $('#journey-passages').innerHTML=readings.map((r,i)=>`<button class="outline" data-journey-reading="${i}">Abrir ${esc(planCore.formatRef(r,books))} ↗</button>`).join('');
   const body=entry.body||entry.sourceText||readings.map(r=>planCore.formatRef(r,books)).join('\n');
   const formatted=entry.blocks||contentCore.fromText(body),firstText=contentCore.textOf(formatted.slice(0,1));
@@ -36,7 +37,7 @@ function renderJourney(){
 async function importDevFile(file){
   let dev,warnings=[];
   if(/\.(pdf|docx)$/i.test(file.name)){
-    const source=await window.PlanDocuments.read(file);dev=contentCore.recordsToDevotional(source.records,file.name,books,planCore);warnings=source.warnings;
+    const source=await window.PlanDocuments.read(file);dev=contentCore.recordsToDevotional(source.records,file.name,books,planCore,source);warnings=source.warnings;
   }else{
     if(file.size>2000000)throw new Error('El archivo de texto supera 2 MB.');dev=core.importDevotional(file.name,await file.text(),books);
     if(/\.(txt|md)$/i.test(file.name))dev=contentCore.recordsToDevotional(contentCore.fromText(dev.entries[0].body).map(b=>({text:contentCore.textOf([b]),spans:b.spans,kind:b.kind})),file.name,books,planCore);

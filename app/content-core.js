@@ -13,23 +13,25 @@
   }
   const textOf=value=>value.map(b=>b.spans.map(s=>s.text).join('')).join('\n');
   function fromText(text){return String(text).split(/\n/).map(line=>{const heading=line.match(/^#{1,4}\s+(.+)/),list=line.match(/^\s*(?:[-*•]|\d+[.)])\s+(.+)/);let text=heading?.[1]||list?.[1]||line;const spans=text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/).filter(Boolean).map(t=>({text:t.replace(/^\*\*|\*\*$/g,'').replace(/^\*|\*$/g,''),bold:t.startsWith('**'),italic:t.startsWith('*')&&!t.startsWith('**')}));return {kind:heading?'heading':list?'list':'paragraph',spans};});}
-  function recordsToDevotional(records,filename,books,plan){
+  function recordsToDevotional(records,filename,books,plan,source={}){
     if(!Array.isArray(records)||records.reduce((n,r)=>n+r.text.length,0)>2000000)throw new Error('El documento supera 2 MB de texto.');
     const entries=[],preface=[];let current=null;
     const explicit=r=>/^(?:\[[ x✓]*\]|[☑☐✅✓✔])?\s*(?:día|dia|day|jornada)\s*\d+\b/i.test(r.text)||/^\s*\d{1,2}[/.\-]\d{1,2}(?:[/.\-]\d{2,4})?(?:\s|$)/.test(r.text)||/^\s*\d{1,2}\s+(?:de\s+)?(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\b/i.test(r.text);
     const hasDays=records.some(explicit);
+    const first=records.find(r=>r.text.trim()),titleRecord=first?.kind==='heading'&&!explicit(first)?first:null;
+    const firstDay=records.findIndex(explicit),titleCandidate=hasDays?records.slice(0,firstDay).find(r=>r.kind==='heading'):titleRecord;
+    const title=String(source.title||titleCandidate?.text.trim()||filename.replace(/\.[^.]+$/,'')).slice(0,200);
     for(const record of records){
       if(!record.text.trim())continue;
-      const heading=explicit(record)||!hasDays&&record.kind==='heading';
-      if(heading){current={title:record.text.trim().slice(0,200),body:'',blocks:[]};entries.push(current);}
+      const heading=explicit(record)||!hasDays&&record.kind==='heading'&&record!==titleRecord;
+      if(heading){const number=record.text.match(/^\s*(?:día|dia|day|jornada)\s*(\d+)\s*$/i)?.[1];current={title:(number&&source.indexTitles?.[number]||record.text.trim()).slice(0,200),body:'',blocks:[]};entries.push(current);}
       if(!current)preface.push(...(record.blocks||[{kind:record.kind,spans:record.spans||[{text:record.text}]}]));
       else current.blocks.push(...(record.blocks||[{kind:record.kind,spans:record.spans||[{text:record.text}]}]));
     }
-    if(!entries.length)entries.push({title:filename.replace(/\.[^.]+$/,''),blocks:preface.splice(0),body:''});
+    if(!entries.length)entries.push({title,blocks:preface.splice(0),body:''});
     if(entries.length>366)throw new Error('El devocional admite hasta 366 días o secciones.');
     for(const entry of entries){entry.blocks=blocks(entry.blocks);entry.body=textOf(entry.blocks);entry.readings=plan.parseReferences(entry.body,books).refs;}
-    const titleRecord=records.find(r=>r.kind==='heading'&&!explicit(r));
-    return {id:'import-'+Date.now()+'-'+Math.random().toString(36).slice(2,8),title:(hasDays&&titleRecord?titleRecord.text.trim():filename.replace(/\.[^.]+$/,'')).slice(0,200),origin:'Devocional importado · '+filename.slice(0,160),sourceName:filename.slice(0,200),description:textOf(blocks(preface)),introBlocks:blocks(preface),entries,completed:[]};
+    return {id:'import-'+Date.now()+'-'+Math.random().toString(36).slice(2,8),title,subtitle:String(source.subtitle||'').slice(0,500),origin:'Devocional importado · '+filename.slice(0,160),sourceName:filename.slice(0,200),description:textOf(blocks(preface)),introBlocks:blocks(preface),entries,completed:[]};
   }
   // Rebuild only escaped text and a small formatting vocabulary, never imported HTML.
   function render(value,books,plan){

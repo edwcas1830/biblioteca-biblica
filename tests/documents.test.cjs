@@ -20,3 +20,19 @@ test('Actualizar un plan leído desde SQLite conserva avance e IDs aunque cambie
   const old={...incoming,completed:[0],dayIds:['day-'+ 'a'.repeat(32),'day-'+ 'b'.repeat(32)],entries:incoming.entries.map(e=>({...e,readings:e.readings.map(({book,...r})=>({...r,book}))}))};
   const merged=plan.mergePlan(old,incoming,books);assert.deepEqual(merged.completed,[0]);assert.deepEqual(merged.dayIds,old.dayIds);
 });
+test('PDF multipágina distingue 28 días de su índice, une la portada y conserva introducción y texto repetido dentro del cuerpo',async()=>{
+  const parsed=await readPdf(new Uint8Array(fixtures.indexedPdf())),dev=content.recordsToDevotional(parsed.records,'nombre-archivo.pdf',books,plan,parsed);
+  assert.equal(dev.title,'Una pausa compartida');assert.equal(dev.subtitle,'Un recorrido de 28 días de lectura y gratitud');assert.equal(dev.entries.length,28);
+  assert.match(dev.description,/Nota de edición/);assert.match(dev.description,/Introducción/);assert.doesNotMatch(dev.description,/CONTENIDO/);
+  assert.equal(dev.entries[0].title,'Día 1: Una pausa 1');assert.equal(dev.entries[27].title,'Día 28: Una pausa 28');
+  for(const entry of dev.entries){assert.ok(entry.body.includes('observación original'));assert.equal(entry.body.split('LECTURA COMPARTIDA').length-1,1);assert.doesNotMatch(entry.body,/\n\d+\s*$/);}
+  assert.match(parsed.warnings.join(' '),/2 páginas de índice/);
+  // A brief reading schedule without a later duplicate is not an index.
+  const brief=parsed.records.filter(r=>r.page===6);const {prepareRecords}=require('../lib/pdf-document.cjs');const short=prepareRecords([1,2,3].map((n,i)=>({...brief[0],text:'Día '+n,page:1,y:700-i*40})),1);assert.equal(short.records.length,3);
+  const withBodies=[1,2].flatMap(page=>[1,2,3].flatMap((n,i)=>[{...brief[0],text:'Día '+n,page,y:700-i*80},{...brief[0],text:'Gracias por este día.',page,y:670-i*80}]));assert.equal(prepareRecords(withBodies,2).records.length,12);
+});
+test('Word sin números de día usa su título principal y los encabezados secundarios como secciones',()=>{
+  const dev=content.recordsToDevotional([{text:'Devocional: Una pausa',kind:'heading',headingLevel:1},{text:'Tema: Gratitud',kind:'heading',headingLevel:2},{text:'Una reflexión y Salmos 23:1.'},{text:'Oración',kind:'heading',headingLevel:2},{text:'Gracias por este día.'}],'nombre-archivo.docx',books,plan);
+  assert.equal(dev.title,'Devocional: Una pausa');assert.equal(dev.entries.length,2);assert.equal(dev.entries[0].title,'Tema: Gratitud');assert.match(dev.entries[0].body,/reflexión/);
+  const one=content.recordsToDevotional([{text:'Mi título',kind:'heading'},{text:'Contenido completo.'}],'archivo.docx',books,plan);assert.equal(one.title,'Mi título');assert.equal(one.entries.length,1);assert.match(one.entries[0].body,/Contenido completo/);
+});

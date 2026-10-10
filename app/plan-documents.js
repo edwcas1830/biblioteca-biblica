@@ -33,6 +33,10 @@
       if(!id||seen.has(id))return undefined;seen.add(id);const style=styleMap.get(id);if(!style)return undefined;
       return bool(child(child(style,'rPr'),name))??styleFormat(val(child(style,'basedOn')),name,seen);
     }
+    function styleOutline(id,seen=new Set()){
+      if(!id||seen.has(id))return undefined;seen.add(id);const style=styleMap.get(id);if(!style)return undefined;
+      return val(child(child(style,'pPr'),'outlineLvl'))??styleOutline(val(child(style,'basedOn')),seen);
+    }
     let defaultStrike=false;
     if(stylesText){const defaults=descendants(xml(stylesText),'rPrDefault')[0];defaultStrike=bool(child(child(defaults,'rPr'),'strike'))===true;}
     function recordFromParagraph(p){
@@ -58,9 +62,10 @@
         }
         for(const item of Array.from(node.children||[]))walk(item);
       }
-      const outline=val(child(child(p,'pPr'),'outlineLvl')),numbered=!!child(child(p,'pPr'),'numPr');
+      const outline=val(child(child(p,'pPr'),'outlineLvl'))??styleOutline(pstyle),numbered=!!child(child(p,'pPr'),'numPr');
       const kind=/heading|title|titulo|título/i.test(pstyle||'')||outline!==undefined?'heading':numbered?'list':/quote|cita/i.test(pstyle||'')?'quote':'paragraph';
-      walk(p);return {text,spans,checkbox,kind,blocks:[{kind,spans}]};
+      const headingLevel=outline!==undefined?Number(outline)+1:Number(pstyle?.match(/(?:heading|t[ií]tulo)\s*(\d)/i)?.[1])||1;
+      walk(p);return {text,spans,checkbox,kind,headingLevel,blocks:[{kind,level:headingLevel,spans}]};
     }
     function combine(records,separator='\t'){
       let text='',spans=[];const statuses=[];
