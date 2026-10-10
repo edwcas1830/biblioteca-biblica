@@ -179,6 +179,9 @@ async function esperarLista(app, etiqueta) {
   const ui = await app.evaluar(`return {telefono:document.documentElement.dataset.telefono,nav:!!document.querySelector('#movil-nav'),hoja:!!document.querySelector('#movil-hoja-cabecera'),versiculos:document.querySelectorAll('#verses .verse').length};`);
   captura('4-interfaz');
   anotar(ui.nav && ui.hoja && ui.versiculos > 0, 'interfaz de teléfono', JSON.stringify(ui));
+  // Llavero seguro: la clave de IA se guarda cifrada con el Android Keystore y debe sobrevivir a actualizar.
+  const llavero = await app.evaluar(`const d=await window.BibliaLlavero.disponible();await window.BibliaLlavero.guardar('gemini','clave-de-prueba-123');return {d,v:await window.BibliaLlavero.leer('gemini')};`);
+  anotar(llavero.d === true && llavero.v === 'clave-de-prueba-123', 'llavero seguro guarda y lee', JSON.stringify({ disponible: llavero.d, coincide: llavero.v === 'clave-de-prueba-123' }));
   // 7. Actualizar encima (como hará Edward con cada versión nueva): misma firma → los datos se quedan.
   try { app.cerrar(); } catch { /* ya cerrada */ }
   adb('install', '-r', apk);
@@ -194,6 +197,8 @@ async function esperarLista(app, etiqueta) {
     await espera(1000);
   }
   anotar(actualizado && actualizado.lista && actualizado.hechos === 329 && actualizado.devocionales === 2 && actualizado.modulos >= 5, 'actualizar encima conserva los datos', JSON.stringify(actualizado));
+  const llaveroDespues = await app.evaluar(`const v=await window.BibliaLlavero.leer('gemini');await window.BibliaLlavero.borrar('gemini');return {v,borrada:(await window.BibliaLlavero.leer('gemini'))===null};`);
+  anotar(llaveroDespues.v === 'clave-de-prueba-123' && llaveroDespues.borrada, 'la clave sigue tras actualizar y se puede borrar', JSON.stringify({ sigue: llaveroDespues.v === 'clave-de-prueba-123', borrada: llaveroDespues.borrada }));
   fs.writeFileSync(path.join(salida, 'consola.txt'), app.consola.join('\n'));
   app.cerrar();
 })().catch(e => {

@@ -131,7 +131,7 @@ jobs:
         run: |
           test -f prueba-emulador/informe.txt
           cat prueba-emulador/informe.txt
-          grep -q "^OK  actualizar encima conserva los datos" prueba-emulador/informe.txt
+          grep -q "^OK  la clave sigue tras actualizar y se puede borrar" prueba-emulador/informe.txt
 
       - name: Resultados de la prueba en el emulador
         if: always()

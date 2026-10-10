@@ -186,5 +186,14 @@
     } finally { if (oyente) try { await oyente.remove(); } catch { /* ya quitado */ } }
   }
 
+  // Llavero seguro (Android Keystore, LlaveroSeguroPlugin.java): claves de IA que sobreviven al cierre de la app.
+  const Llavero = plugin('LlaveroSeguro');
+  window.BibliaLlavero = Object.freeze({
+    disponible: async () => { if (!Llavero) return false; try { return (await Llavero.disponible()).disponible === true; } catch { return false; } },
+    leer: async nombre => { if (!Llavero) return null; return (await Llavero.leer({ nombre })).valor ?? null; },
+    guardar: async (nombre, valor) => { if (!Llavero) throw Object.assign(new Error('El llavero seguro solo existe en el teléfono.'), { code: 'UNAVAILABLE' }); await Llavero.guardar({ nombre, valor }); },
+    borrar: async nombre => { if (Llavero) await Llavero.borrar({ nombre }); }
+  });
+
   window.BibliaPlataforma = { capacidades, compartir, pausarMusica, elegirArchivosTraspaso, desempacarPaquete };
 })();

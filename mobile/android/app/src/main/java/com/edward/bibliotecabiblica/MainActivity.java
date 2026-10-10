@@ -8,6 +8,8 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         // Plugin propio: desempacar el traspaso de un solo archivo (.bbt) sin pasar por el WebView.
         registerPlugin(TraspasoPaquetePlugin.class);
+        // Plugin propio: llavero en el Android Keystore para las claves de IA.
+        registerPlugin(LlaveroSeguroPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

@@ -146,6 +146,7 @@ function cargarPagina(plugins) {
   console.log('bootstrap OK en', Date.now() - t0, 'ms · preparación:', ventana.document.documentElement.dataset.preparacion);
   console.log('paso: savePersonal'); await puente.savePersonal({ ...arranque.state, notes: { '42:3:16': 'Nota de prueba del arranque' } });
   const caps = await puente.getCapabilities();
+  if (process.env.LISTAR_OPS) console.log('NO DISPONIBLES:', Object.entries(caps.operations).filter(([, o]) => !o.available).map(([n, o]) => n + (o.reason ? '(' + o.reason + ')' : '')).join(' | '));
   console.log('storage:', caps.storage, '| catalog:', caps.operations.catalog.available, '| readPdf:', caps.operations.readPdf.available, '| transferScan:', caps.operations.transferScan.available, '| transferInstall:', caps.operations.transferInstall.available);
   console.log('paso: chapter'); const cap = await puente.chapter({ book: 42, chapter: 3 });
   console.log('Juan 3 versículos:', (cap.verses || cap.rows || []).length);
