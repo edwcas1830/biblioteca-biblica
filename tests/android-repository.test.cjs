@@ -6,11 +6,11 @@ const helpers=require('./mobile-fixtures.cjs'),services=require('../platform/and
 const sandbox={window:{}};vm.runInNewContext(require('node:fs').readFileSync(path.join(__dirname,'../app/bible-data.js'),'utf8'),sandbox);const bible=JSON.parse(JSON.stringify(sandbox.window.BIBLE));
 const resources={manifest:async()=>({modulos:[]}),file:async()=>{throw Error('No external resources in fixture');}};
 const state=(label='original')=>({version:1,position:{book:18,chapter:23,verse:1},notes:{'18:23:1':label},highlights:{},plans:[{id:'plan-123',title:'Plan inventado',days:1189,entries:Array.from({length:1189},(_,i)=>({title:'Día '+i,readings:[{book:18,chapter:23}]})),completed:Array.from({length:329},(_,i)=>i)}],devotionals:['a','b'].map(x=>({id:'dev-sintetico-'+x,title:'Devocional original '+x,entries:[{title:'Día 1',body:'Texto inventado',book:18,chapter:23}],completed:[]})),prayers:[],prayerDrafts:{},guideResponses:{},aiStudies:[],devResponses:{},planNotes:{}});
-async function fixture(t,{readerFactory,privacyFactory}={}){
+async function fixture(t,{readerFactory,privacyFactory,aiOptions}={}){
   const root=await helpers.root(t),data=path.join(root,'files'),databases=path.join(root,'databases');await fs.mkdir(data);await fs.mkdir(databases);
   const sqlite=helpers.sqlite(databases),filesystem=helpers.filesystem(data,{absoluteRoot:root}),registry=services.create({readerFactory,privacyFactory}),adapter=contract.createBridge({platform:'android'});
   helpers.dispose(root,()=>registry.close());
-  const attach=()=>registry.attach(adapter,{sqlite,filesystem,bible,manifest:{iaPermitida:true},resources});
+  const attach=()=>registry.attach(adapter,{sqlite,filesystem,bible,manifest:{iaPermitida:true},resources,aiOptions});
   return {root,data,databases,sqlite,filesystem,registry,adapter,bridge:adapter.bridge,attach};
 }
 async function incoming(f,{invalidModule=false,pin=false}={}){
@@ -58,6 +58,14 @@ test('Real SQLite import replaces conformed DB, keeps durable backup, rebinds mo
 test('Revision changes between review and install leave original DB/catalog intact',async t=>{
   const f=await fixture(t);await f.attach();const saved=(await f.bridge.bootstrap({initial:state()})).state,x=await incoming(f),r=await f.bridge.transferScan(x.input);saved.notes['18:23:1']='guardada después del resumen';await f.bridge.savePersonal(saved);
   await assert.rejects(f.bridge.transferInstall({token:r.token,confirmado:true}),{code:'CONFLICT'});assert.equal((await f.bridge.exportBackup()).notes['18:23:1'],saved.notes['18:23:1']);
+});
+
+test('Native AI registers automatically, uses active reader and invalidates prepared context on transfer',async t=>{
+  let copied;const f=await fixture(t);f.adapter.register({aiTextCopy:async text=>{copied=text;return true;},shareText:async()=>({completed:true})});await f.attach();await f.bridge.bootstrap({initial:state()});
+  const caps=await f.bridge.getCapabilities();assert.equal(caps.operations.aiPrepare.available,true);assert.equal(caps.operations.aiShare.available,true);assert.equal((await f.bridge.aiStatus()).credentialStorage,'session');
+  const p=await f.bridge.aiPrepare({module:'rv1909',book:42,chapter:3,verse:16,task:'explain',study:true,includeBible:true});assert.equal(p.sources[0].module,'rv1909');assert.doesNotMatch(p.prompt,/original|Nota privada/);
+  assert.deepEqual(await f.bridge.aiCopy({id:p.id}),{copied:true,opened:false});assert.equal(copied,p.prompt);assert.deepEqual(await f.bridge.aiShare({id:p.id}),{shared:true});
+  const x=await incoming(f),r=await f.bridge.transferScan(x.input);await f.bridge.transferInstall({token:r.token,confirmado:true});await f.bridge.bootstrap({initial:state()});await assert.rejects(f.bridge.aiCopy({id:p.id}),{code:'CONFLICT'});
 });
 for(const kind of ['invalid-module','PIN'])test('Failed activation '+kind+' restores conformed database and original catalog, never an empty success',async t=>{
   const f=await fixture(t);await f.attach();await f.bridge.bootstrap({initial:state()});await f.registry.loadReader();const x=await incoming(f,{invalidModule:kind==='invalid-module',pin:kind==='PIN'}),r=await f.bridge.transferScan(x.input);

@@ -39,6 +39,24 @@ window.testStorePhase1=async()=>{
     const modules=LibraryJsonModules.create({resources:{manifest:async()=>({modulos:[{id:'fixture-comment',tipo:'comentario',rol:'comentario',titulo:'Fixture original CC0',registros:1,dataFile:'fixture-comment.json.gz',dataSha256:'a'.repeat(64)}]}),file:async()=>[[43,3,4,16,2,'Comentario inventado <script>literal</script>']]}});
     const reader=LibraryReader.create({bible:window.BIBLE,source:modules});const result=await reader.comments({module:'fixture-comment',book:42,chapter:4,verse:2});equal(result.entries.length,1,'Rango cruzado');ok(result.entries[0].html.includes('&lt;script&gt;')&&!result.entries[0].html.includes('<script>'),'HTML seguro');
   });
+  await test('IA UMD en Chromium: PKCE manual, cuenta de sesión, cuota real y seis secciones con citas locales',async()=>{
+    const token='sk-or-v1-'+'a'.repeat(64);let exchange,opened,copy,request;
+    const ai=LibraryWebBridge.create({bible:window.BIBLE,manifest:{iaPermitida:true},resourceBase:'/app/data/',dbName:'test-ai-session',events:['onAiState'],handlers:{aiTextCopy:async text=>{copy=text;return true;},shareText:async()=>({completed:false})},aiOptions:{openExternal:async url=>{opened=url;},fetchImpl:async(url,input)=>{
+      let body;if(url.endsWith('/auth/keys')){exchange=JSON.parse(input.body);body={key:token};}
+      else if(url.endsWith('/key'))body={data:{free_model_daily_requests:{used:2,limit:50,remaining:48}}};
+      else if(url.endsWith('/models'))body={data:[{id:'qwen/test:free',pricing:{prompt:'0',completion:'0'}}]};
+      else{request=JSON.parse(input.body);body={choices:[{message:{content:JSON.stringify({text:'Observación inventada',sections:{brief:'Idea breve'},citations:[{book:42,chapter:3,verse:16,text:'NO USAR CITA GENERADA'}]})}}]};}
+      return new Response(JSON.stringify(body));
+    }}}),api=ai.bridge;
+    await api.bootstrap({initial:fixtureState()});const login=await api.aiConnect(),url=new URL(login.authorizationUrl);ok(!url.searchParams.has('callback_url'),'Sin callback');await api.aiConnect({code:'fixture-code'});
+    const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(exchange.code_verifier)),challenge=btoa(String.fromCharCode(...new Uint8Array(hash))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');equal(challenge,url.searchParams.get('code_challenge'),'PKCE real WebCrypto');
+    equal((await api.aiQuota()).daily.remaining,48,'Cuota del proveedor');equal((await api.aiModels())[0].id,'qwen/test:free','Modelo gratis');
+    const p=await api.aiPrepare({module:'rv1909',book:42,chapter:3,verse:16,task:'explain',study:true,includeBible:true,notes:'NO ENVIAR NOTA'});ok(!p.prompt.includes('NO ENVIAR NOTA'),'Sin notas');
+    const result=await api.aiAsk({id:p.id});equal(Object.keys(result.sections).length,6,'Diseño C');ok(result.citations[0].text!== 'NO USAR CITA GENERADA','Cita local');equal(request.provider.max_price.completion,0,'Sin precio positivo');
+    await api.aiCopy({id:p.id,provider:'chatgpt'});equal(opened,'https://chatgpt.com/','URL sin pregunta');equal(copy,p.prompt,'Contexto elegido');equal((await api.aiShare({id:p.id})).shared,false,'Selector cancelado');
+    equal((await api.aiReport({reason:'incorrecta',text:result.text,confirmed:true})).sent,false,'Sin canal no simular envío');await ai.close();
+    const restarted=LibraryWebBridge.create({bible:window.BIBLE,resourceBase:'/app/data/',dbName:'test-ai-session'});equal((await restarted.bridge.aiStatus()).connected,false,'Credencial no persistida');await restarted.close();
+  });
   // Put the expected snapshot in a second IDB record, not a JS global surviving reload.
   await store.transaction(['records'],'readwrite',tx=>tx.objectStore('records').put({key:'expected-test-snapshot',value:saved}));
   await store.close();return {phase:1,passed:names.length,names};

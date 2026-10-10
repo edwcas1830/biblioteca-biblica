@@ -1,13 +1,13 @@
 (function(root,factory){
-  const api=typeof module==='object'&&module.exports?factory(require('../bridge-contract.js'),require('./personal-store.js'),require('../web/library.js'),require('../web/documents.js'),require('./repository.js'),require('./transfer.js'),()=>require('./library.js')):factory(root.LibraryBridgeContract,root.LibraryAndroidStore,root.LibraryWebReader,root.LibraryWebDocuments,root.LibraryAndroidRepositoryFactory,root.LibraryAndroidTransfer,()=>root.LibraryAndroidReader);
+  const api=typeof module==='object'&&module.exports?factory(require('../bridge-contract.js'),require('./personal-store.js'),require('../web/library.js'),require('../web/documents.js'),require('./repository.js'),require('./transfer.js'),()=>require('./library.js'),require('../ai/service.js')):factory(root.LibraryBridgeContract,root.LibraryAndroidStore,root.LibraryWebReader,root.LibraryWebDocuments,root.LibraryAndroidRepositoryFactory,root.LibraryAndroidTransfer,()=>root.LibraryAndroidReader,root.LibraryMobileAi);
   if(typeof module==='object'&&module.exports)module.exports=api;
   else root.LibraryAndroidServices=api.create({publishRepository:repository=>{root.LibraryAndroidRepository=repository;},onPrivacyClosed:()=>root.dispatchEvent?.(new CustomEvent('biblioteca:cuaderno-cerrado'))});
-})(typeof globalThis!=='undefined'?globalThis:this,function(contract,stores,readers,documents,repositories,transfers,nativeReaders){
+})(typeof globalThis!=='undefined'?globalThis:this,function(contract,stores,readers,documents,repositories,transfers,nativeReaders,aiFactory){
   'use strict';
   // Native repositories install their handlers after successful initialization.
   // No IndexedDB fallback and no empty success results for absent native services.
   function create({publishRepository=()=>{},readerFactory,privacyFactory,onPrivacyClosed=()=>{}}={}){
-    const installed=new Map();let storage='none',attached=null,started=null,store=null,docs=null,phase='idle',failure=null,repository=null,transfer=null,nativeReader=null,readerOptions=null,readerLoad=null,readerPaused=false;
+    const installed=new Map();let storage='none',attached=null,started=null,store=null,docs=null,ai=null,phase='idle',failure=null,repository=null,transfer=null,nativeReader=null,readerOptions=null,readerLoad=null,readerPaused=false;
     const closeReader=async()=>{if(nativeReader){const reader=nativeReader;nativeReader=null;await reader.close();}};
     const quiesceReader=async()=>{readerPaused=true;await readerLoad?.catch(()=>{});await closeReader();};
     const reloadReader=async()=>{
@@ -25,7 +25,7 @@
       storage=value;
       attached?.setStorage(value);
     }
-    function attach(adapter,{sqlite,filesystem,bible,manifest,resources,resourceBase,documentBase}={}){
+    function attach(adapter,{sqlite,filesystem,bible,manifest,resources,resourceBase,documentBase,aiOptions={}}={}){
       if(!adapter||typeof adapter.register!=='function'||typeof adapter.setStorage!=='function'||!adapter.bridge?.getCapabilities)throw new contract.BridgeError('VALIDATION','Falta el adaptador Android del contrato.');
       if(attached){if(attached!==adapter)throw new contract.BridgeError('CONFLICT','Esta biblioteca ya tiene una sesión de inicio.');return started;}
       if(!Array.isArray(bible?.books)||bible.books.length!==66)throw new contract.BridgeError('VALIDATION','Faltan los datos públicos de la Biblia.');
@@ -34,9 +34,11 @@
       // Reader data is portable logic, not an IndexedDB/native storage fallback.
       register(reader);
       docs=documentService;if(docs)register(docs.handlers());
+      ai=aiFactory?.create({...aiOptions,call:(name,value)=>attached.bridge[name](value),epoch:()=>store?.generation||0,emit:(name,value)=>{try{attached.emit(name,value);}catch(e){if(e?.code!=='UNAVAILABLE')throw e;}}});
+      if(ai)register(ai.handlers());
       started=Promise.resolve().then(async()=>{
         try{
-          store=new stores.PersonalStore({sqlite,books:bible.books,privacyFactory,onPrivacyClosed});
+          store=new stores.PersonalStore({sqlite,books:bible.books,privacyFactory,onPrivacyClosed:()=>{ai?.invalidate();onPrivacyClosed();}});
           if(filesystem){
             readerOptions={sqlite,filesystem,bible,manifest,resources,resourceBase};
             repository=await repositories.create({store,filesystem,closeReader:quiesceReader,reloadReader,resumeReader:()=>{readerPaused=false;}});publishRepository(repository);
@@ -53,10 +55,10 @@
       });
       // Avoid unhandled rejection if the UI installs its loading/error view a little later.
       started.catch(()=>{});
-      const deferred=method=>async value=>{await started;return store[method](value);};
+      const deferred=method=>async value=>{await started;if(['lockPrivate','setPin','disablePin','restoreBackup'].includes(method))ai?.invalidate();return store[method](value);};
       register({bootstrap:deferred('bootstrap'),savePersonal:deferred('write'),exportBackup:deferred('exportBackup'),restoreBackup:deferred('restoreBackup'),privacyStatus:deferred('privacyStatus')});
       if(filesystem){
-        const transferOperation=method=>async value=>{await started;try{return await transfer[method](value);}finally{if(store.paused){setStorage('none');phase='failed';failure=new contract.BridgeError('LOCKED','Reinicia para recuperar el respaldo antes de abrir la biblioteca.');}}};
+        const transferOperation=method=>async value=>{await started;if(method==='transferInstall')ai?.invalidate();try{return await transfer[method](value);}finally{if(store.paused){setStorage('none');phase='failed';failure=new contract.BridgeError('LOCKED','Reinicia para recuperar el respaldo antes de abrir la biblioteca.');}}};
         register({transferScan:transferOperation('transferScan'),transferInstall:transferOperation('transferInstall')});
       }
       return started;
@@ -70,7 +72,7 @@
       if(!readerLoad)readerLoad=reloadReader().finally(()=>{readerLoad=null;});
       await readerLoad;return attached.bridge.getCapabilities();
     };
-    const close=async()=>{docs?.close();try{await started;}catch{}if(store&&!store.closed)await store.serial(quiesceReader,{maintenance:true});await store?.close();setStorage('none');phase='closed';};
+    const close=async()=>{ai?.close();docs?.close();try{await started;}catch{}if(store&&!store.closed)await store.serial(quiesceReader,{maintenance:true});await store?.close();setStorage('none');phase='closed';};
     return Object.freeze({register,handlers:()=>Object.freeze(Object.fromEntries(installed)),storage:()=>storage,setStorage,attach,loadReader,repository:()=>repository,close,status:()=>({state:phase,...(failure?{error:{code:failure.code,message:failure.message}}:{})})});
   }
   return Object.freeze({create});

@@ -41,6 +41,7 @@ test('Native service registry starts honestly empty and validates registrations 
 });
 test('Ordered mobile manifest loads dependencies before adapters and native services',()=>{
   const list=JSON.parse(fs.readFileSync(path.join(__dirname,'../platform/scripts-movil.json'),'utf8'));assert.equal(new Set(list).size,list.length);
-  for(const file of list){assert.match(file,/^(platform|shared)\/[-a-z0-9/]+\.js$/);assert.ok(fs.existsSync(path.join(__dirname,'..',file)));}
+  for(const file of list){assert.match(file,/^(?:(platform|shared)\/[-a-z0-9/]+|ai-core)\.js$/);assert.ok(fs.existsSync(path.join(__dirname,'..',file==='ai-core.js'?'app/'+file:file)));}
+  assert.ok(list.indexOf('platform/ai/service.js')>list.indexOf('ai-core.js'));assert.ok(list.indexOf('platform/ai/service.js')>list.indexOf('shared/ai-context.js'));assert.ok(list.indexOf('platform/android/services.js')>list.indexOf('platform/ai/service.js'));
   assert.ok(list.indexOf('shared/personal-model.js')>list.indexOf('shared/references.js'));assert.ok(list.indexOf('platform/web/bridge.js')>list.indexOf('platform/web/personal-store.js'));assert.ok(list.indexOf('platform/android/services.js')>list.indexOf('platform/bridge-contract.js'));
 });

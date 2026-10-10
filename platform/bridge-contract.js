@@ -41,7 +41,7 @@
     aiTextCopy: value => text(value), youtubeExternal: value => text(value, 200), musicPlayer: value => text(value, 2000), musicExternal: value => text(value, 2000),
     youtubeKey: value => text(value, 200), aiGeminiKey: value => { if (value !== null) text(value, 200); }, aiPersonalEnable: bool, aiPersonalLogin: value => text(value, 40),
     aiConnect: optional(payload), moduleScan: optional(payload),
-    aiPrepare: payload, aiAsk: payload, aiCopy: payload, youtubeSearch: payload,
+    aiPrepare: payload, aiAsk: payload, aiCopy: payload, aiShare: payload, aiReport: payload, youtubeSearch: payload,
     graphicsChronology: payload, graphicsPeople: payload, graphicsGenealogy: payload,
     circleConnect: payload, circlePreview: payload, circleShare: payload, circleResolve: payload, circleReading: payload,
     playVoice: value => { payload(value); text(value.text, 200000); }, shareText: value => { payload(value); text(value.text); },
@@ -70,7 +70,7 @@
     'moduleScan','moduleInstall','connections','compare','studySources','catalog','metadata','chapter','search','comments','dictionary',
     'getUpdateState','checkForUpdates','downloadUpdate','installUpdate','onUpdateState'
   ];
-  const mobileNames = ['playVoice', 'stopVoice', 'voiceOptions', 'shareText', 'transferScan', 'transferInstall'];
+  const mobileNames = ['playVoice', 'stopVoice', 'voiceOptions', 'shareText', 'transferScan', 'transferInstall', 'aiQuota', 'aiShare', 'aiReport'];
   const operations = Object.freeze(Object.fromEntries([...names, ...mobileNames].map(name => [name, Object.freeze({event: eventNames.includes(name), validate: validate[name] || none})])));
   function createBridge({platform = 'web', storage = 'none', handlers = {}, events = [], reasons = {}, nativeVerified = false} = {}) {
     if (!['web', 'android'].includes(platform)) fail('Plataforma desconocida.');
