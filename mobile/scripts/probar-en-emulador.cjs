@@ -179,6 +179,11 @@ async function esperarLista(app, etiqueta) {
   const ui = await app.evaluar(`return {telefono:document.documentElement.dataset.telefono,nav:!!document.querySelector('#movil-nav'),hoja:!!document.querySelector('#movil-hoja-cabecera'),versiculos:document.querySelectorAll('#verses .verse').length};`);
   captura('4-interfaz');
   anotar(ui.nav && ui.hoja && ui.versiculos > 0, 'interfaz de teléfono', JSON.stringify(ui));
+  // Imagen con versículos en el teléfono: se abre, arma Salmos 23:1-2 y dibuja en tamaño historia.
+  const imagen = await app.evaluar(`go(18,23,1);await new Promise(r=>setTimeout(r,800));window.BibliaImagen.abrir();await new Promise(r=>setTimeout(r,600));const h=document.querySelector('#imagen-hasta');h.value='2';h.dispatchEvent(new Event('change'));document.querySelector('#imagen-formato').value='historia';await window.BibliaImagen.dibujar();await new Promise(r=>setTimeout(r,800));const c=window.BibliaImagen._lienzo();return {ref:document.querySelector('#imagen-referencia').value,texto:document.querySelector('#imagen-texto').value.slice(0,40),w:c.width,h:c.height,compartir:typeof window.BibliaPlataforma.compartirImagen==='function'};`, 60000);
+  captura('4b-imagen-versiculo');
+  await app.evaluar(`document.querySelector('#imagen-cerrar').click();return true;`);
+  anotar(imagen.ref === 'Salmos 23:1-2' && /JEHOVÁ/.test(imagen.texto) && imagen.w === 1080 && imagen.h === 1920 && imagen.compartir, 'imagen con versículos en el teléfono', JSON.stringify(imagen));
   // Llavero seguro: la clave de IA se guarda cifrada con el Android Keystore y debe sobrevivir a actualizar.
   const llavero = await app.evaluar(`const d=await window.BibliaLlavero.disponible();await window.BibliaLlavero.guardar('gemini','clave-de-prueba-123');return {d,v:await window.BibliaLlavero.leer('gemini')};`);
   anotar(llavero.d === true && llavero.v === 'clave-de-prueba-123', 'llavero seguro guarda y lee', JSON.stringify({ disponible: llavero.d, coincide: llavero.v === 'clave-de-prueba-123' }));
