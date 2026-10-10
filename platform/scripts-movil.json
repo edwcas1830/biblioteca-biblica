@@ -11,11 +11,13 @@
   "platform/web/resources.js",
   "platform/web/modules.js",
   "platform/web/library.js",
+  "platform/web/documents.js",
   "platform/web/bridge.js",
   "platform/android/services.js",
   "platform/android/transfer.js",
   "platform/android/modules.js",
   "platform/android/fts.js",
   "platform/android/library.js",
+  "platform/android/documents.js",
   "platform/android/bridge.js"
 ]

@@ -130,3 +130,24 @@ El lector descubre DATA/modulos/<paquete>/manifest.json, verifica tamaño/huella
 FTS5 vive en una base derivada `biblioteca-indice` separada: nunca modifica los módulos. Construye por lotes un índice de versículos y otro de claves de diccionario; evita traer RAE entero a memoria. Las revisiones y la versión del parser invalidan cachés. Cada reemplazo es transaccional y un motor sin FTS5 falla explícitamente. Este lector **no** implementa el repositorio personal: no llamar setStorage('sqlite') solo por inicializarlo. La recuperación del traspaso debe preceder a la apertura del lector.
 
 RTF tiene una sola implementación en shared/rtf.js, usada también por Windows. Solo produce etiquetas controladas y texto escapado; no ejecuta HTML del módulo. Los enlaces palabra→Strong solo se crean al cotejar la redacción. No confundir las capacidades disponibles con nativeVerified: las pruebas Node usan SQLite real, pero adaptadores de plugin sintéticos; todavía falta ejecutar los plugins en APK.
+
+## Documentos en segundo plano (pieza 5)
+
+Ejecutar `node scripts/prepare-assets.cjs` **antes** de build-www. Copia la versión instalada y fijada de pdfjs-dist a app/vendor/pdfjs (API, Worker, CMaps, fuentes estándar, codecs y licencia Apache-2.0). vendor sigue ignorado en Git; los archivos se generan a partir del lock, no se descargan al importar ni necesitan una CDN. El ensamblador existente copia app/ a www/, por tanto vendor/ queda al lado de platform/ y shared/. No agregar shared/pdf-document.js como script de la página: lo importa el Worker.
+
+LibraryWebBridge.create habilita readPdf automáticamente cuando LibraryWebDocuments está cargado y hay Workers. En Android, registrar explícitamente el servicio, sin prometer almacenamiento SQLite:
+
+```js
+const documentos = LibraryAndroidDocuments.create();
+LibraryAndroidServices.register(documentos.handlers());
+adapter.register(documentos.handlers()); // si ya está creado
+// Al desmontar: documentos.close(); en web, adapter.documents.close().
+```
+
+El controlador PlanDocuments no cambia: PDF usa readPdf y DOCX sigue usando el JSZip local. readPdf conserva PdfResult y transfiere una **copia** del Uint8Array, sin separar el archivo del lector. Extraction/reflow se hace en un Worker módulo local y PDF.js recibe un Worker real mediante GlobalWorkerOptions.workerPort. No hay respaldo silencioso al hilo principal. Una lectura simultánea devuelve CONFLICT; cierre y tiempo máximo (120 s) cancelan/terminan los Workers, sin guardar parcialmente.
+
+La lógica compartida es shared/pdf-document.js. Windows conserva su Worker Node e import legacy; ahora espera la carga asíncrona de fuentes para mantener negrita/cursiva también en navegador. Límites: 10 MB, 300 páginas, 2 MB de texto, 20.000 registros; no OCR, ni interpretación automática de tachados dibujados. Mantiene portada, subtítulo, índice de días, márgenes y avisos de revisión. No ejecuta acciones JavaScript del PDF, no abre vínculos ni carga fuentes del sistema. PDFs dañados/protegidos reciben errores humanos sin devolver rutas o texto crudo en el error.
+
+La prueba de navegador usa script-src self, worker-src self y connect-src self, con todas las solicitudes externas bloqueadas. No hace falta JavaScript unsafe-eval. Algunos codecs opcionales de PDF.js necesitan WebAssembly: la cobertura entregada comprueba PDFs de texto originales CC0, no todos los formatos/encodings ni imágenes escaneadas; verificar esos casos y la política WebView en APK antes de ampliar las promesas. No desactivar la CSP como solución.
+
+`node scripts/test-android-documents.cjs` ejecuta PDF/DOCX reales sintéticos en Chromium sin preload y comprueba Workers, títulos/28 días, referencias, formato, errores, límites y que la página siga atendiendo su temporizador. `tests/android-documents.test.cjs` comprueba copia de subarrays, cancelación/cierre/timeout, reintento y limpieza. Un parser probado en Chromium no demuestra acceso SAF ni compatibilidad del WebView Android real.
