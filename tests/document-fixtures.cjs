@@ -21,7 +21,7 @@ async function docx(){
   zip.file('word/numbering.xml','<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:abstractNum w:abstractNumId="0"><w:multiLevelType w:val="singleLevel"/><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="bullet"/><w:lvlText w:val="•"/></w:lvl></w:abstractNum><w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num></w:numbering>');
   zip.file('word/document.xml',documentXml);return zip.generateAsync({type:'nodebuffer'});
 }
-function pdf(scanned=false){
+function pdf(scanned=false,pageCount=1){
   const content=scanned?'0 0 100 100 re f':[
     ['F2',22,740,'Un recorrido de gratitud'],['F1',12,710,'Indicaciones: lee despacio.'],
     ['F2',18,665,'Día 1 · Detenerse'],['F1',12,635,'Pasaje: Salmos 23:1-3.'],
@@ -29,6 +29,7 @@ function pdf(scanned=false){
     ['F2',18,510,'Día 2 · Compartir'],['F1',12,482,'Pasaje: Juan 3:16.'],['F1',12,455,'Reflexión original para probar el lector.']
   ].map(([font,size,y,text])=>`BT /${font} ${size} Tf 50 ${y} Td (${text.replace(/[\\()]/g,'\\$&')}) Tj ET`).join('\n');
   const objects=['<< /Type /Catalog /Pages 2 0 R >>','<< /Type /Pages /Kids [3 0 R] /Count 1 >>','<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R /F2 6 0 R /F3 7 0 R >> >> /Contents 4 0 R >>',`<< /Length ${Buffer.byteLength(content,'latin1')} >>\nstream\n${content}\nendstream`,...['Helvetica','Helvetica-Bold','Helvetica-Oblique'].map(f=>`<< /Type /Font /Subtype /Type1 /BaseFont /${f} /Encoding /WinAnsiEncoding >>`)];
+  const kids=['3 0 R'];for(let n=1;n<pageCount;n++){kids.push((objects.length+1)+' 0 R');objects.push(objects[2]);}objects[1]=`<< /Type /Pages /Kids [${kids.join(' ')}] /Count ${pageCount} >>`;
   let source='%PDF-1.4\n',offsets=[0];objects.forEach((o,i)=>{offsets.push(Buffer.byteLength(source,'latin1'));source+=`${i+1} 0 obj\n${o}\nendobj\n`;});const xref=Buffer.byteLength(source,'latin1');source+=`xref\n0 ${objects.length+1}\n0000000000 65535 f \n`+offsets.slice(1).map(o=>String(o).padStart(10,'0')+' 00000 n \n').join('')+`trailer\n<< /Size ${objects.length+1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;return Buffer.from(source,'latin1');
 }
 function indexedPdf(){
