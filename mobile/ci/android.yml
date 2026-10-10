@@ -1,13 +1,17 @@
 # Biblioteca Bíblica: APK de prueba para Android.
-# SOLO se ejecuta a mano (workflow_dispatch). Usa el Android SDK preinstalado en el runner,
-# lo que implica aceptar las condiciones del Android SDK: Edward lo autoriza al ejecutarlo.
+# Solo corre por un acto deliberado: «Run workflow» (workflow_dispatch) o un push a la rama
+# android-apk, que nadie empuja sin el «sí» de Edward. Usa el Android SDK preinstalado en el
+# runner, lo que implica aceptar las condiciones del Android SDK: Edward lo autoriza con ese «sí».
+# (GitHub solo muestra «Run workflow» si el archivo está en main; la rama android-apk evita tocar main.)
 # Nunca incluye módulos personales: la auditoría falla si el APK trae .bblx/.cmtx/.dctx/.sqlite.
 #
 # Para activarlo: copiar este archivo a .github/workflows/android.yml (hoy .github/ está en
-# .gitignore del repo; hay que quitar esa línea) y lanzarlo desde Actions → «APK Android» → Run.
+# .gitignore del repo; hay que quitar esa línea), crear la rama android-apk y empujarla.
 name: APK Android
 
 on:
+  push:
+    branches: [android-apk]
   workflow_dispatch:
     inputs:
       rama:
@@ -27,7 +31,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.rama }}
+          ref: ${{ inputs.rama || github.ref }}
 
       - uses: actions/setup-node@v4
         with:
