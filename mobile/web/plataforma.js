@@ -95,5 +95,41 @@
   new MutationObserver(ajustarBarras).observe(html, { attributes: true, attributeFilter: ['data-theme'] });
   ajustarBarras();
 
-  window.BibliaPlataforma = { capacidades, compartir, pausarMusica };
+  // ---------- Traspaso desde la PC: elegir y copiar archivos ----------
+  // El lector elige TODOS los archivos de la carpeta traspaso-android (OneDrive o descargas).
+  // Se copian por flujo (sin cargarlos en memoria) a files/traspaso-entrante/ del almacenamiento
+  // privado de la app. La verificación de huellas e importación es del servicio de datos (Codex).
+  const FilePicker = plugin('FilePicker');
+  const Filesystem = plugin('Filesystem');
+  capacidades.traspaso = !!(FilePicker && Filesystem);
+  const CARPETA_ENTRANTE = 'traspaso-entrante';
+  function nombreSeguro(nombre) {
+    const n = String(nombre || '').trim();
+    if (!n || n.length > 120 || /[\\/]/.test(n) || n.startsWith('.') || /[\u0000-\u001f]/.test(n)) return null;
+    return n;
+  }
+  async function elegirArchivosTraspaso({ alProgreso } = {}) {
+    if (!capacidades.traspaso) throw Object.assign(new Error('Elegir archivos solo funciona en el teléfono.'), { code: 'UNAVAILABLE' });
+    const { files } = await FilePicker.pickFiles({ limit: 0, types: ['*/*'], readData: false });
+    if (!files || !files.length) return { archivos: [], carpeta: CARPETA_ENTRANTE };
+    try { await Filesystem.rmdir({ directory: 'DATA', path: CARPETA_ENTRANTE, recursive: true }); } catch { /* no existía */ }
+    await Filesystem.mkdir({ directory: 'DATA', path: CARPETA_ENTRANTE, recursive: true });
+    const { uri } = await Filesystem.getUri({ directory: 'DATA', path: CARPETA_ENTRANTE });
+    const base = uri.replace(/^file:\/\//, '');
+    const total = files.reduce((s, f) => s + (f.size || 0), 0);
+    let copiados = 0;
+    const archivos = [];
+    for (const f of files) {
+      const nombre = nombreSeguro(f.name);
+      if (!nombre || !f.path) throw Object.assign(new Error(`No se puede copiar «${f.name}».`), { code: 'VALIDATION' });
+      if (alProgreso) alProgreso({ archivo: nombre, copiados, total });
+      await FilePicker.copyFile({ from: f.path, to: `${base}/${nombre}`, overwrite: true });
+      copiados += f.size || 0;
+      archivos.push({ nombre, ruta: `${CARPETA_ENTRANTE}/${nombre}`, bytes: f.size || 0 });
+    }
+    if (alProgreso) alProgreso({ archivo: null, copiados, total });
+    return { archivos, carpeta: CARPETA_ENTRANTE };
+  }
+
+  window.BibliaPlataforma = { capacidades, compartir, pausarMusica, elegirArchivosTraspaso };
 })();
