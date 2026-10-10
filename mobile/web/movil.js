@@ -375,6 +375,109 @@
   }
   window.addEventListener('biblioteca:capacidades', prepararTraspaso);
 
+  // ---------- IA en el teléfono (OpenRouter con código pegado, compartir y reportar) ----------
+  // Solo con el puente del contrato (teléfono o vista web); en escritorio sigue el flujo de Windows.
+  async function prepararIA() {
+    const puente = window.libraryDesktop;
+    if (!puente || typeof puente.getCapabilities !== 'function') return;
+    let caps; try { caps = await puente.getCapabilities(); } catch { return; }
+    const disponible = n => !!(caps.operations[n] && caps.operations[n].available);
+    const abrir = url => (window.BibliaAbrirFuera ? window.BibliaAbrirFuera(url) : window.open(url, '_blank', 'noopener'));
+
+    // 1. Conectar: abrir OpenRouter en el navegador del sistema y pegar el código que muestra.
+    const conectar = $('#ai-connect'), estadoAjustes = $('#ai-settings-status');
+    if (conectar && disponible('aiConnect') && !$('#movil-ia-codigo')) {
+      const bloque = crear('section', { id: 'movil-ia-codigo', hidden: '' }, [
+        crear('p', { texto: 'Se abrió OpenRouter en el navegador. Autoriza la Biblioteca y copia el código que te muestra; pégalo aquí.' }),
+        crear('div', { class: 'movil-ia-codigo-fila' }, [
+          crear('input', { id: 'movil-ia-codigo-campo', type: 'text', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', maxlength: '500', 'aria-label': 'Código de OpenRouter', placeholder: 'Pega el código aquí' }),
+          crear('button', { type: 'button', class: 'primary', id: 'movil-ia-codigo-enviar', texto: 'Conectar' })
+        ]),
+        crear('button', { type: 'button', class: 'quiet', id: 'movil-ia-reabrir', texto: 'Abrir OpenRouter otra vez ↗' }),
+        crear('p', { class: 'movil-ia-aviso', texto: 'La conexión dura mientras la app está abierta: al cerrarla tendrás que volver a conectar.' })
+      ]);
+      conectar.after(bloque);
+      // El texto de escritorio habla de la protección de Windows: en el teléfono la clave vive solo en memoria.
+      for (const pa of $$('#ai-settings p.muted')) {
+        if (/protegida por Windows/.test(pa.textContent)) pa.textContent = 'La autorización se completa en el navegador del teléfono. La clave queda solo en la memoria de la app mientras está abierta y no se incluye en las copias ni en el traspaso.';
+      }
+      let url = null;
+      conectar.addEventListener('click', async e => {
+        e.preventDefault(); e.stopImmediatePropagation();
+        try {
+          const r = await puente.aiConnect();
+          url = r && r.authorizationUrl;
+          if (!url) { if (estadoAjustes) estadoAjustes.textContent = 'No se pudo preparar la conexión.'; return; }
+          bloque.hidden = false; $('#movil-ia-codigo-campo').value = '';
+          await abrir(url);
+          setTimeout(() => { const c = $('#movil-ia-codigo-campo'); if (c) c.focus(); }, 300);
+        } catch (err) { if (estadoAjustes) estadoAjustes.textContent = err.message; }
+      }, true);
+      $('#movil-ia-reabrir').addEventListener('click', () => { if (url) abrir(url); });
+      $('#movil-ia-codigo-enviar').addEventListener('click', async () => {
+        const campo = $('#movil-ia-codigo-campo'), code = campo.value.trim();
+        if (!code) { campo.focus(); return; }
+        try {
+          const r = await puente.aiConnect({ code });
+          bloque.hidden = true; campo.value = '';
+          if (estadoAjustes) estadoAjustes.textContent = (r && r.connectionNotice) || 'Conectado.';
+          const refrescar = $('#ai-model-refresh'); if (refrescar) refrescar.click();
+        } catch (err) { if (estadoAjustes) estadoAjustes.textContent = err.message; }
+      });
+    }
+
+    // 2. Compartir pregunta: la misma consulta preparada, a la app de ChatGPT, Gemini o Claude del lector.
+    const accionesVista = $('#ai-preview .ai-actions');
+    if (accionesVista && disponible('aiShare') && !$('#movil-ia-compartir')) {
+      accionesVista.prepend(crear('button', { type: 'button', id: 'movil-ia-compartir', texto: 'Compartir pregunta ↗', onclick: async () => {
+        const id = window.BibliaIA && window.BibliaIA.ultimaPreparacion;
+        if (!id) { mostrarAviso('Primero pulsa «Ver qué se envía».'); return; }
+        try { const r = await puente.aiShare({ id }); if (r && (r.shared || r.completed)) mostrarAviso('Pregunta compartida.'); }
+        catch (err) { mostrarAviso(err.message); }
+      } }));
+    }
+
+    // 3. Reportar respuesta (política de Play): revisar, motivo, detalle y confirmar. Nunca dice «enviado» si no lo fue.
+    const hilo = $('#ai-thread');
+    if (hilo && disponible('aiReport') && !$('#movil-ia-reporte')) {
+      const dialogo = crear('dialog', { id: 'movil-ia-reporte', 'aria-label': 'Reportar respuesta' }, [crear('div', { class: 'movil-traspaso-cuerpo' })]);
+      document.body.append(dialogo);
+      const MOTIVOS = [['incorrecta', 'Es incorrecta o inventa citas'], ['ofensiva', 'Es ofensiva'], ['peligrosa', 'Es peligrosa'], ['privacidad', 'Expone algo privado'], ['otra', 'Otra razón']];
+      hilo.addEventListener('click', e => {
+        const b = e.target.closest('[data-ai-reply="report"]');
+        if (!b) return;
+        e.preventDefault(); e.stopImmediatePropagation();
+        const articulo = b.closest('article') || b.parentElement;
+        const texto = (articulo ? articulo.innerText : '').replace(/Copiar|Llevar a nota|Reportar error|Error señalado en este equipo/g, '').trim().slice(0, 30000);
+        const selModelo = $('#ai-model');
+        const modelo = (articulo && articulo.dataset.model) || (selModelo && selModelo.value) || '';
+        const cuerpo = $('.movil-traspaso-cuerpo', dialogo);
+        const lista = crear('div', { class: 'movil-ia-motivos', role: 'radiogroup', 'aria-label': 'Motivo' });
+        MOTIVOS.forEach(([v, t], i) => lista.append(crear('label', { class: 'opcion' }, [crear('input', Object.assign({ type: 'radio', name: 'motivo-ia', value: v }, i === 0 ? { checked: '' } : {})), crear('span', { texto: ' ' + t })])));
+        const detalle = crear('textarea', { maxlength: '2000', rows: '3', placeholder: 'Detalle (opcional)', 'aria-label': 'Detalle del reporte' });
+        const nota = crear('p', { class: 'movil-traspaso-aviso', texto: 'Se reporta solo el texto de esta respuesta y el modelo. No se envían tu pregunta completa, tus notas ni tus oraciones.' });
+        const acciones = crear('div', { class: 'movil-traspaso-acciones' });
+        cuerpo.replaceChildren(crear('h3', { texto: 'Reportar esta respuesta' }), lista, detalle, nota, acciones);
+        acciones.append(
+          crear('button', { type: 'button', class: 'primary', texto: 'Confirmar reporte', onclick: async () => {
+            const marcado = lista.querySelector('input:checked');
+            try {
+              const r = await puente.aiReport({ text: texto, model: modelo, reason: marcado ? marcado.value : 'otra', detail: detalle.value.slice(0, 2000), confirmed: true });
+              const enviado = !!(r && r.sent);
+              cuerpo.replaceChildren(
+                crear('h3', { texto: enviado ? 'Enviado' : 'No enviado todavía' }),
+                crear('p', { texto: enviado ? 'Reporte enviado. Gracias.' : 'Tu reporte quedó como borrador: esta versión de prueba aún no tiene un canal para recibirlo. No se envió.' }),
+                crear('div', { class: 'movil-traspaso-acciones' }, [crear('button', { type: 'button', class: 'primary', texto: 'Cerrar', onclick: () => dialogo.close() })]));
+            } catch (err) { nota.textContent = err.message; }
+          } }),
+          crear('button', { type: 'button', class: 'quiet', texto: 'Cancelar', onclick: () => dialogo.close() })
+        );
+        dialogo.showModal();
+      }, true);
+    }
+  }
+  window.addEventListener('biblioteca:capacidades', () => { if (!prepararIA.hecho) { prepararIA.hecho = true; prepararIA(); } });
+
   // Strong y voz (#library-controls) se pliegan tras un botón «Lectura» para no quitar alto al texto.
   function construirControlesLectura() {
     const acciones = $('.reading-actions');
@@ -399,6 +502,7 @@
     construirBarraVersiculo();
     construirControlesLectura();
     prepararTraspaso();
+    prepararIA().then(() => { prepararIA.hecho = true; });
     vigilarOriginal();
     // Se oculta cuando el lector desplaza el texto (no cuando la app centra el versículo elegido).
     for (const ev of ['touchmove', 'wheel']) $('#verses')?.addEventListener(ev, ocultarBarra, { passive: true });

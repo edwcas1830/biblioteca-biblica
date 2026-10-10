@@ -6,7 +6,9 @@
   const cap = window.Capacitor;
   const html = document.documentElement;
   const nativo = !!(cap && typeof cap.isNativePlatform === 'function' && cap.isNativePlatform());
-  const EVENTOS = ['onMusicPause', 'onFullscreen'];
+  const EVENTOS = ['onMusicPause', 'onFullscreen', 'onAiState'];
+  // La IA abre OpenRouter (y ChatGPT/Gemini/Claude al copiar) en el navegador del sistema, nunca en la WebView.
+  const aiOptions = { openExternal: url => abrirFuera(url) };
   const manifiesto = window.BibliaManifiestos && window.BibliaManifiestos.rv1909;
   let adaptador = null;
 
@@ -20,7 +22,7 @@
       events: EVENTOS
     });
   } else if (!nativo && window.LibraryWebBridge) {
-    adaptador = window.LibraryWebBridge.create({ bible: window.BIBLE, manifest: manifiesto, dbName: 'biblioteca-preview-v1', events: EVENTOS });
+    adaptador = window.LibraryWebBridge.create({ bible: window.BIBLE, manifest: manifiesto, dbName: 'biblioteca-preview-v1', events: EVENTOS, aiOptions });
   }
   if (!adaptador) { document.documentElement.dataset.puente = 'ausente'; return; }
 
@@ -91,6 +93,10 @@
     const activo = !!document.fullscreenElement;
     if (!activo && html.classList.contains('lectura-inmersiva')) { html.classList.remove('lectura-inmersiva'); adaptador.emit('onFullscreen', false); }
   });
+  // Portapapeles para «Copiar» de la IA: nativo en Android, del navegador en la vista web. Sin portapapeles, no se registra.
+  const Clipboard = nativo && cap.registerPlugin ? cap.registerPlugin('Clipboard') : null;
+  if (Clipboard) integraciones.aiTextCopy = async ({ text }) => { await Clipboard.write({ string: text }); };
+  else if (navigator.clipboard && navigator.clipboard.writeText) integraciones.aiTextCopy = async ({ text }) => { await navigator.clipboard.writeText(text); };
   if (Object.keys(integraciones).length) adaptador.register(integraciones);
 
   // Ciclo de vida → evento del contrato (la música se pausa al salir de la app).
@@ -98,7 +104,16 @@
 
   document.documentElement.dataset.puente = nativo ? 'android' : 'web';
 
-  if (!nativo) { window.libraryDesktop = adaptador.bridge; return; }
+  window.BibliaAbrirFuera = abrirFuera;
+  // La interfaz del teléfono necesita el id de la última pregunta preparada para «Compartir pregunta».
+  window.BibliaIA = { ultimaPreparacion: null };
+  const recordarPreparacion = puente => {
+    if (typeof puente.aiPrepare !== 'function') return puente;
+    const original = puente.aiPrepare;
+    return Object.freeze({ ...puente, aiPrepare: async (...a) => { const r = await original(...a); if (r && r.id) window.BibliaIA.ultimaPreparacion = r.id; return r; } });
+  };
+
+  if (!nativo) { window.libraryDesktop = recordarPreparacion(adaptador.bridge); return; }
 
   // ---------- Android: servicios nativos de Codex, en este orden ----------
   // 1. attach: ubicación real de SQLite, recuperación de un traspaso interrumpido, base personal,
@@ -134,7 +149,7 @@
   // interrumpido, abre la base personal y registra lector público, documentos y traspaso.
   const biblioteca = (async () => {
     if (!plugins || !window.LibraryAndroidServices || !window.LibraryAndroidServices.attach) throw new Error('Faltan los servicios de Android.');
-    return window.LibraryAndroidServices.attach(adaptador, { sqlite: plugins.sqlite, filesystem: plugins.filesystem, bible: window.BIBLE, manifest: manifiesto });
+    return window.LibraryAndroidServices.attach(adaptador, { sqlite: plugins.sqlite, filesystem: plugins.filesystem, bible: window.BIBLE, manifest: manifiesto, aiOptions });
   })();
   biblioteca.then(() => avisar('lista', ''))
     .catch(e => avisar('fallo', (e && e.message) || 'No se pudo abrir tu biblioteca. Tus datos se conservan.'));
@@ -160,6 +175,6 @@
     if (typeof op !== 'function') { puente[nombre] = op; continue; }
     puente[nombre] = EVENTOS_CONTRATO.has(nombre) ? op : async (...args) => { await espera; return real[nombre](...args); };
   }
-  window.libraryDesktop = Object.freeze(puente);
+  window.libraryDesktop = recordarPreparacion(puente);
   window.BibliaPreparacion = { biblioteca, modulos };
 })();

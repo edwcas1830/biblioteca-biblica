@@ -324,3 +324,17 @@
 #preparacion-biblioteca .preparacion-reintentar { min-height: 48px; padding: 0 22px; }
 @keyframes girar-preparacion { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { #preparacion-biblioteca .preparacion-icono { animation: none; } }
+
+/* IA en el teléfono: pegar el código de OpenRouter y reportar respuestas. */
+#movil-ia-codigo { display: grid; gap: 8px; margin: 10px 0; padding: 12px; border: 1px solid var(--borde-hoja, currentColor); border-radius: 12px; }
+#movil-ia-codigo p { margin: 0; }
+.movil-ia-codigo-fila { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.movil-ia-codigo-fila input { min-width: 0; font-family: ui-monospace, monospace; }
+.movil-ia-aviso { font-size: .85rem; opacity: .85; }
+#movil-ia-reporte textarea { width: 100%; box-sizing: border-box; }
+.movil-ia-motivos { display: grid; gap: 2px; }
+.movil-ia-motivos .opcion { display: flex; gap: 8px; align-items: center; min-height: 40px; }
+/* Panel de IA: los enlaces y fuentes largas se parten; nada desborda a lo ancho. */
+:root[data-telefono="true"] #ai-pane, :root[data-telefono="true"] #ai-pane * { overflow-wrap: anywhere; min-width: 0; }
+:root[data-telefono="true"] #ai-pane #ai-context, :root[data-telefono="true"] #ai-pane textarea { width: 100%; box-sizing: border-box; }
+:root[data-telefono="true"] #ai-pane .ai-actions { display: flex; flex-wrap: wrap; gap: 6px; }

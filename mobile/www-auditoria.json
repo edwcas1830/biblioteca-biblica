@@ -1,6 +1,6 @@
 {
-  "fecha": "2026-10-10T10:08:26.508Z",
-  "archivos": 354,
+  "fecha": "2026-10-10T10:32:33.222Z",
+  "archivos": 357,
   "megabytes": 23.7,
   "prohibidos": [],
   "modulosLibres": [
@@ -10,6 +10,10 @@
   ],
   "puentes": [
     "platform/bridge-contract.js",
+    "ai-core.js",
+    "shared/ai-context.js",
+    "platform/ai/openrouter.js",
+    "platform/ai/service.js",
     "shared/references.js",
     "shared/personal-model.js",
     "shared/private-vault.js",
@@ -35,5 +39,5 @@
     "platform/android/documents.js",
     "platform/android/bridge.js"
   ],
-  "huellaIndex": "8ff8c6d6cb9f155a"
+  "huellaIndex": "50a83e834317fcbb"
 }
