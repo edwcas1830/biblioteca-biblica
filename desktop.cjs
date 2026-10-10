@@ -72,19 +72,22 @@ app.whenReady().then(async () => {
 
   for(const [name,action] of [['status','status'],['connect','connect'],['disconnect','disconnect'],['models','listModels']])ipcMain.handle('library:ai-'+name,event=>{if(!trusted(event))throw new Error('Origen no autorizado.');return ai[action]();});
   ipcMain.handle('library:ai-prepare',async(event,data)=>{
-    if(!trusted(event)||!data||JSON.stringify(data).length>10000)throw new Error('Consulta no válida.');
-    const context=await request(data.series?'aiSeriesContext':'aiContext',data),preview=aiCore.prepare({task:data.task,question:data.question,context}),id=crypto.randomBytes(24).toString('hex');
+    if(!trusted(event)||!data||JSON.stringify(data).length>15000)throw new Error('Consulta no válida.');
+    if((await request('privacyStatus')).locked)throw Error('Abre tu cuaderno para consultar tu estudio.');
+    const context=await request(data.series?'aiSeriesContext':'aiContext',data),preview=aiCore.prepare({task:data.task,question:data.question,context,study:data.study===true,history:data.history||'',allowLiving:data.allowLiving===true}),id=crypto.randomBytes(24).toString('hex');
     if(prepared.size>=5)prepared.delete(prepared.keys().next().value);prepared.set(id,{...preview,context,createdAt:Date.now(),module:data.module});
     return {id,...preview,notices:context.notices};
   });
   const getPrepared=id=>{const item=prepared.get(id);if(!item||Date.now()-item.createdAt>30*60*1000)throw new Error('Prepara de nuevo la consulta.');return item;};
   ipcMain.handle('library:ai-ask',async(event,data)=>{
-    if(!trusted(event)||!data)throw new Error('Origen no autorizado.');const item=getPrepared(data.id);await request('verifyAiSources',item.sources);const provider=data.provider||'openrouter';const response=provider==='openrouter'?await ai.ask({prompt:item.prompt,model:data.model,allowData:data.allowData}):await personalAi.ask({provider,prompt:item.prompt,model:data.model||''});
-    const citations=[];for(const ref of response.citations){try{const result=await request('chapter',{module:item.module||'rv1909',book:ref.book,chapter:ref.chapter}),verse=result.verses.find(v=>v.verse===ref.verse);if(verse)citations.push({...ref,title:result.title,text:verse.text,revision:result.revision});}catch{}}
-    return {...response,citations,sources:item.sources};
+    if(!trusted(event)||!data)throw new Error('Origen no autorizado.');if((await request('privacyStatus')).locked)throw Error('Abre tu cuaderno para consultar tu estudio.');const item=getPrepared(data.id);await request('verifyAiSources',item.sources);const provider=data.provider||'openrouter';const onProgress=text=>{if(!win.isDestroyed()&&typeof text==='string')win.webContents.send('library:ai-progress',{id:data.id,text:text.slice(0,30000)});};const response=provider==='openrouter'?await ai.ask({prompt:item.prompt,model:data.model,allowData:data.allowData,study:item.study,onProgress}):await personalAi.ask({provider,prompt:item.prompt,model:data.model||'',study:item.study,onProgress});
+    const citations=[];for(const ref of response.citations){try{const result=await request('chapter',{module:item.module||'rv1909',book:ref.book,chapter:ref.chapter}),verse=result.verses.find(v=>v.verse===ref.verse);if(verse)citations.push({...ref,title:result.title,text:verse.text,module:item.module||'rv1909',revision:result.revision});}catch{}}
+    if(response.keywords){const actual=new Set(item.context.sources.filter(s=>s.kind==='bible').flatMap(s=>s.text.match(/[HG]\d{1,5}/g)||[]));const verified=[];for(const k of response.keywords.filter(k=>actual.has(k.code))){try{const found=await request('dictionary',{group:'strong-es',query:k.code});if(found.entries.some(e=>e.title===k.code))verified.push(k);}catch{}}response.keywords=verified;}const chat=require('./app/study-chat-core.js');return {...response,...(item.study?chat.result(response,item.allowLiving):{}),citations,sources:item.sources,allowLiving:item.allowLiving};
   });
+  ipcMain.handle('library:ai-text-copy',(event,text)=>{if(!trusted(event)||typeof text!=='string'||text.length>50000)throw Error('Texto no válido.');clipboard.writeText(text);return true;});
+  ipcMain.handle('library:ai-cancel',event=>{if(!trusted(event))throw Error('Origen no autorizado.');ai.controller?.abort();personalAi.stop();return true;});
   ipcMain.handle('library:ai-copy',async(event,{id,provider})=>{
-    if(!trusted(event))throw new Error('Origen no autorizado.');const item=getPrepared(id);await request('verifyAiSources',item.sources);const url=provider?aiCore.external(provider,item.prompt):null;clipboard.writeText(item.prompt);if(url)await shell.openExternal(url);return {copied:true,opened:!!url};
+    if(!trusted(event))throw new Error('Origen no autorizado.');if((await request('privacyStatus')).locked)throw Error('Abre tu cuaderno para consultar tu estudio.');const item=getPrepared(id);await request('verifyAiSources',item.sources);const url=provider?aiCore.external(provider,item.prompt):null;clipboard.writeText(item.prompt);if(url)await shell.openExternal(url);return {copied:true,opened:!!url};
   });
   let documentBusy=false;
   ipcMain.handle('library:read-pdf',async(event,bytes)=>{

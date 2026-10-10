@@ -1,16 +1,51 @@
-html[data-design] #ai-dialog{width:min(960px,92vw);max-height:88vh;background:var(--paper);color:var(--ink);border:1px solid var(--control-border);padding:28px;border-radius:12px;overflow:auto;font-family:var(--font-ui)}
-html[data-design] #ai-dialog h2{font:30px var(--font-heading);margin:0;color:var(--ink)}
-html[data-design] #ai-dialog h3{font:21px var(--font-heading);color:var(--ink)}
-html[data-design] .ai-account{padding:18px;background:var(--panel);border:1px solid var(--line);border-radius:8px;margin:20px 0}
-html[data-design] .ai-account-row,html[data-design] .ai-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-html[data-design] #ai-dialog button{min-height:36px;color:var(--ink);background:var(--panel);border-color:var(--control-border)}
-html[data-design] #ai-dialog label{display:block;color:var(--ink);font-size:14px}
-html[data-design] #ai-dialog label.checkbox-label{display:flex;margin:12px 0}
-html[data-design] #ai-dialog select,html[data-design] #ai-dialog textarea{color:var(--ink);background:var(--panel);font:16px/1.6 var(--font-ui)}
-html[data-design] #ai-context{font-size:14px;max-height:240px}
-html[data-design] #ai-sources{white-space:pre-wrap;font:13px/1.7 var(--font-ui);color:var(--ink)}
-html[data-design] #ai-preview,html[data-design] #ai-result{border-top:1px solid var(--line);margin-top:22px;padding-top:22px}
-html[data-design] #ai-result-text{white-space:pre-wrap;font:18px/1.8 var(--font-reader);color:var(--ink)}
-html[data-design] #ai-citations section{padding:16px;border-left:3px solid var(--focus);background:var(--panel);margin:16px 0}
-html[data-design] #ai-citations p{font:18px/1.75 var(--font-reader);color:var(--ink)}
-html[data-design] #ai-citations small,html[data-design] #ai-result-source,html[data-design] #ai-status,html[data-design] #ai-comment-permission{font:14px/1.6 var(--font-ui);color:var(--ink)}
+html[data-design] #reading-desk{display:flex;flex:1;min-height:0;min-width:0;overflow:hidden}
+html[data-design] #reading-desk[data-ai=true]{display:grid;grid-template-columns:minmax(0,1fr) 12px var(--ai-width,350px);gap:0}
+html[data-design] #reading-desk>#panes{grid-column:1;grid-row:1;min-width:0;min-height:0;height:100%;width:100%}
+html[data-design=a] #reading-desk{grid-column:1/-1;grid-row:5}
+html[data-design] #reading-desk>#ai-resizer{grid-column:2;grid-row:1}
+html[data-design] #reading-desk>#ai-pane{grid-column:3;grid-row:1}
+html[data-design] #ai-pane{display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden;background:var(--paper);border:1px solid var(--line);font-family:var(--font-ui);color:var(--ink)}
+html[data-design] #ai-pane[hidden],html[data-design] #ai-resizer[hidden]{display:none}
+html[data-design] .ai-pane-head{padding:10px 12px;border-bottom:1px solid var(--line);flex:none;background:var(--panel)}
+html[data-design] .ai-head-row{display:flex;align-items:center;gap:8px;min-width:0}
+html[data-design] .ai-head-row h3{flex:1;font:20px var(--font-heading);margin:0}
+html[data-design] #ai-reference{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-design] #ai-scope{width:112px;font-size:12px;padding:5px}
+html[data-design] #ai-scope{margin:0;min-height:28px}
+html[data-design] .ai-pane-head{padding:8px 12px}
+html[data-design] #ai-studies-open{padding:3px 0;min-height:22px}
+html[data-design] #ai-pane small{font-size:11px;line-height:1.5;color:var(--muted)}
+html[data-design] #ai-thread{flex:1;min-height:100px;overflow:auto;padding:14px 12px;overscroll-behavior:contain}
+html[data-design] .ai-bubble{border:1px solid var(--line);padding:14px;border-radius:12px;margin:0 0 14px;overflow-wrap:anywhere}
+html[data-design] .ai-user{background:var(--panel);margin-left:22px;font:14px/1.6 var(--font-ui)}
+html[data-design] .ai-assistant{background:var(--paper);font:16px/1.7 var(--font-reader)}
+html[data-design] .ai-bubble p{margin:6px 0;white-space:pre-wrap}
+html[data-design] .ai-section h4{font:600 14px var(--font-ui);color:var(--accent);margin:20px 0 6px}
+html[data-design] .ai-scripture{border-left:3px solid var(--accent);background:var(--panel);padding:12px;margin:16px 0;font:16px/1.7 var(--font-reader)}
+html[data-design] .ai-source{position:relative;font:12px/1.5 var(--font-ui);padding:5px 0}
+html[data-design] .ai-source summary{cursor:pointer;color:var(--accent)}
+html[data-design] .ai-source p{max-height:180px;overflow:auto;padding:8px;border:1px solid var(--line);background:var(--panel)}
+html[data-design] .ai-source:hover:not([open])::after{content:attr(data-excerpt);display:block;max-height:150px;overflow:auto;padding:8px;background:var(--panel);border:1px solid var(--line);white-space:pre-wrap}
+html[data-design] .ai-followups,html[data-design] .ai-keywords{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+html[data-design] .ai-followups button,html[data-design] .ai-keywords button{font-size:12px;text-align:left;padding:6px 8px;border:1px solid var(--control-border);border-radius:10px}
+html[data-design] #ai-compose{flex:none;max-height:46%;overflow:auto;border-top:1px solid var(--line);padding:10px 12px}
+html[data-design] #ai-compose select,html[data-design] #ai-compose textarea{width:100%;font:13px/1.5 var(--font-ui);padding:7px;margin:0 0 5px;min-height:30px;background:var(--panel);color:var(--ink)}
+html[data-design] #ai-question{resize:vertical;max-height:100px}
+html[data-design] #ai-pane button{min-height:28px;padding:5px 8px;font:12px var(--font-ui);background:var(--panel);color:var(--ink);border-color:var(--control-border)}
+html[data-design] #ai-status{font:12px/1.5 var(--font-ui);margin:6px 0}
+html[data-design] #ai-context-options{font:12px/1.5 var(--font-ui);margin:5px 0}
+html[data-design] #ai-context-options label{display:flex;align-items:center;gap:6px;margin:6px 0}
+html[data-design] #ai-compose input[type=checkbox]{width:14px;min-height:14px;margin:0}
+html[data-design] .ai-actions,html[data-design] .ai-account-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+html[data-design] #ai-preview{font-size:12px;margin-top:8px}
+html[data-design] #ai-sources{white-space:pre-wrap}
+html[data-design] #ai-result{overflow:auto;max-height:40%;padding:10px}
+html[data-design] #ai-draft-text{width:100%;font:14px/1.7 var(--font-reader)}
+html[data-design] #ai-resizer{cursor:col-resize;touch-action:none;background:var(--panel);position:relative}
+html[data-design] #ai-resizer::before{content:'';position:absolute;inset:35% 5px;background:var(--control-border);border-radius:2px}
+html[data-design] #ai-resizer:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+html[data-design] #ai-settings,html[data-design] #ai-studies-dialog{width:min(760px,92vw);max-height:88vh;padding:26px;overflow:auto;background:var(--paper);color:var(--ink);font-family:var(--font-ui)}
+html[data-design] .ai-account{padding:16px;border:1px solid var(--line);margin:16px 0;background:var(--panel)}
+html[data-design] .ai-study-row{display:flex;align-items:center;gap:10px;margin:12px 0}
+html[data-design] .ai-study-row>button:first-child{flex:1;text-align:left}
+html[data-design] #ai-verse-ask{position:fixed;margin:0;inset:auto;background:var(--paper);color:var(--ink);border:1px solid var(--control-border);box-shadow:0 3px 12px #0003;z-index:100;padding:8px 14px}

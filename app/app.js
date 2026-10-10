@@ -7,7 +7,7 @@ const planCore = window.PlanCore;
 const appearanceCore=window.AppearanceCore;
 const paneCore=window.PaneLayoutCore;
 const STORE = 'biblioteca-biblica-v1';
-const initial = () => ({ version:1, position:{book:18,chapter:23,verse:1}, notes:{}, highlights:{}, devResponses:{}, planNotes:{}, prayers:[], prayerDrafts:{}, guideResponses:{}, privacyEnabled:false, privateLocked:false, music:{url:''}, devotionals:[], plans:[], font:20, night:false, appearance:appearanceCore.normalize() });
+const initial = () => ({ version:1, position:{book:18,chapter:23,verse:1}, notes:{}, highlights:{}, devResponses:{}, planNotes:{}, prayers:[], prayerDrafts:{}, guideResponses:{}, aiStudies:[], aiPrefs:{}, privacyEnabled:false, privateLocked:false, music:{url:''}, devotionals:[], plans:[], font:20, night:false, appearance:appearanceCore.normalize() });
 let state = initial(), activeView='read', activeDev=null, activeDay=0, toastTimer, searchTimer;
 const desktop=window.libraryDesktop;
 let uiReady=false, storageReady=false, saveQueue=Promise.resolve(), selectedVersion='rv1909', catalogData=null, readingGeneration=0, searchGeneration=0, studyGeneration=0, chapterData=null, savePending=0, saveFailed=false;
@@ -55,6 +55,7 @@ function validateState(candidate) {
   if(candidate.planNotes!==undefined){if(!candidate.planNotes||typeof candidate.planNotes!=='object'||Array.isArray(candidate.planNotes)||Object.keys(candidate.planNotes).length>35000)throw new Error('Notas de días no válidas.');for(const [key,note] of Object.entries(candidate.planNotes)){if(!/^plan-\d+(?:-[a-z0-9]+)?:day-[a-f0-9]{32}$/.test(key)||typeof note!=='string'||note.length>100000)throw new Error('Nota de día no válida.');result.planNotes[key]=note;}}
   result.guideResponses=GuideCore.responses(candidate.guideResponses||{});
   result.prayers=PrayerCore.validate(candidate.prayers||[]);for(const p of result.prayers)if(p.answer&&!validPosition(p.answer.reference))throw new Error('Versículo del testimonio fuera de rango.');result.prayerDrafts=PrayerCore.drafts(candidate.prayerDrafts||{});result.privacyEnabled=candidate.privacyEnabled===true;result.privateLocked=candidate.privateLocked===true;
+  result.aiStudies=StudyChatCore.validate(candidate.aiStudies);result.aiPrefs={provider:['openrouter','codex','claude','gemini-cli','gemini-api'].includes(candidate.aiPrefs?.provider)?candidate.aiPrefs.provider:'openrouter',width:Math.max(300,Math.min(600,Number(candidate.aiPrefs?.width)||350))};
   result.music=MusicCore.preference(candidate.music);
   result.font=Number.isInteger(candidate.font)?Math.max(16,Math.min(28,candidate.font)):20;
   result.night=candidate.night===true;
@@ -420,7 +421,7 @@ function queryFromReading(query,strong=false){
   $('#dictionary-query').value=query;syncDictionaryRef();consultDictionary();
 }
 function effectivePanes(){return document.body.classList.contains('focus')||comparisonExpanded?['biblia']:graphicsExpanded?['biblia','comentario']:state.appearance.views.visible;}
-function effectivePaneLayout(){return graphicsExpanded?'columns':state.appearance.views.layout;}
+function effectivePaneLayout(){return graphicsExpanded?'columns':typeof aiPaneOpen!=='undefined'&&aiPaneOpen&&$('#panes').clientWidth<730?'rows':state.appearance.views.layout;}
 function updateReadingMode(){
   state.appearance.views=paneCore.normalize(state.appearance.views,state.appearance.panes);
   const views={...state.appearance.views,layout:effectivePaneLayout()},visible=effectivePanes(),solo=visible.length===1,container=$('#panes');
