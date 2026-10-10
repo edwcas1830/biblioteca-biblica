@@ -213,7 +213,7 @@ async function esperarLista(app, etiqueta) {
   process.exitCode = 1;
 }).finally(() => {
   fs.writeFileSync(path.join(salida, 'informe.txt'), informe.join('\n') + '\n');
-  try { fs.writeFileSync(path.join(salida, 'logcat.txt'), adb('logcat', '-d', '-v', 'brief', 'Capacitor:V', 'Capacitor/Console:V', 'chromium:V', 'AndroidRuntime:E', 'TraspasoPaquete:V', '*:S')); } catch { /* sin logcat */ }
+  try { fs.writeFileSync(path.join(salida, 'logcat.txt'), adb('logcat', '-d', '-v', 'brief', 'Capacitor:V', 'Capacitor/Console:V', 'chromium:V', 'AndroidRuntime:E', 'TraspasoPaquete:V', 'DEBUG:V', 'libc:V', 'ActivityManager:I', '*:E')); } catch { /* sin logcat */ }
   // Salir siempre: un WebSocket o temporizador abierto no debe dejar colgado al emulador.
   process.exit(process.exitCode || 0);
 });
