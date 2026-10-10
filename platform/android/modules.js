@@ -40,7 +40,7 @@
           try{
             if(!m||typeof m.titulo!=='string'||m.titulo.length>400||!/^[a-z0-9-]{1,80}$/.test(m.id)||!['biblia','diccionario','comentario'].includes(m.tipo)||!['version','diccionario','comentario','apoyo'].includes(m.rol)||typeof m.archivo!=='string'||!/^[-a-zA-Z0-9_()[\] .\p{L}]+\.(bblx|cmtx|dctx)$/u.test(m.archivo)||m.archivo.startsWith('.')||!/^[a-f0-9]{64}$/.test(m.sha256)||!Number.isSafeInteger(m.bytes)||m.bytes<1||m.bytes>512*1024*1024||modules.has(m.id))fail('CORRUPT','Manifiesto de módulo no válido.');
             const extension={biblia:'.bblx',diccionario:'.dctx',comentario:'.cmtx'}[m.tipo];
-            if(!m.archivo.endsWith(extension)||!(m.tipo==='biblia'?['version','apoyo']:[m.tipo,'apoyo']).includes(m.rol))fail('CORRUPT','El tipo del módulo no coincide con su archivo o función.');
+            if(!m.archivo.endsWith(extension)||!(m.tipo==='biblia'?['version','apoyo']: [m.tipo,'apoyo']).includes(m.rol))fail('CORRUPT','El tipo del módulo no coincide con su archivo o función.');
             file=root+'/'+m.archivo;await snapshot(file);const stat=await files.stat(file);
             if(stat.type!=='file'||stat.size!==m.bytes||await files.sha256(file,m.bytes)!==m.sha256)fail('CORRUPT','La huella del módulo no coincide.');
             const coverage=await inspect(m,file),personal=directory.name==='personal'&&m.publico!==true;

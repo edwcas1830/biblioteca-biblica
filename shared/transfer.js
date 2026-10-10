@@ -121,7 +121,10 @@
         if(pending){await remove(pending.candidate);pending=null;}
         await files.mkdir(candidate);
         for(const entry of details.files){
-          const source=input.carpeta+'/'+entry.archivo;await verified(source,entry);
+          const source=input.carpeta+'/'+entry.archivo,stat=await files.stat(source);
+          if(stat.type!=='file'||stat.size!==entry.bytes)fail('CORRUPT','La copia de archivos está incompleta.');
+          // Hash the final staged bytes once; a separate source hash is redundant. A
+          // source change is still rejected against the original manifest SHA-256.
           await files.copy(source,candidate+'/'+entry.archivo);await verified(candidate+'/'+entry.archivo,entry);
         }
         const actual=await checkDatabase(candidate+'/'+DB);
