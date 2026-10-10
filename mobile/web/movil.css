@@ -276,3 +276,14 @@
 :root[data-telefono="true"] #library-controls #voice-select { flex: 1 1 100%; min-width: 0; }
 /* El «Preguntar» flotante de escritorio pasa a la barra del versículo. */
 :root[data-telefono="true"] #ai-verse-ask { display: none !important; }
+
+/* «Volver al principio»: botón redondo con flecha en el teléfono (no tapa el contenido). */
+:root[data-telefono="true"] #back-to-top {
+  width: 48px; height: 48px; min-height: 48px; padding: 0; border-radius: 50%;
+  font-size: 0; display: grid; place-items: center;
+}
+:root[data-telefono="true"] #back-to-top::before { content: "↑"; font-size: 1.3rem; line-height: 1; }
+:root[data-telefono="true"]:not([data-vista-movil="read-view"]) #back-to-top { bottom: calc(var(--pie) + 12px); }
+/* Más contraste en lo no seleccionado de la barra y la hoja. */
+#movil-nav button { opacity: .85; }
+.movil-hoja-pestanas button:not([aria-selected="true"]) { opacity: .8; }
