@@ -13,6 +13,7 @@
   "platform/web/library.js",
   "platform/web/documents.js",
   "platform/web/bridge.js",
+  "platform/android/personal-store.js",
   "platform/android/services.js",
   "platform/android/transfer.js",
   "platform/android/modules.js",
