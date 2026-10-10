@@ -10,6 +10,7 @@ async function fixture(t){
   await helpers.addModule(root,pack,'rv1960-strong','biblia','apoyo',"CREATE TABLE Bible(Book INT,Chapter INT,Verse INT,Scripture TEXT); INSERT INTO Bible VALUES(43,3,16,'Padre {\\super G3962} santo. {\\super G40}'),(43,3,17,'Otra redacción {\\super G1}');",{strong:true});
   await helpers.addModule(root,pack,'range-comment','comentario','comentario',"CREATE TABLE Books(Book INT,Comments TEXT); CREATE TABLE Chapters(Book INT,Chapter INT,Comments TEXT); CREATE TABLE Verses(Book INT,ChapterBegin INT,ChapterEnd INT,VerseBegin INT,VerseEnd INT,Comments TEXT); INSERT INTO Books VALUES(43,'Introducción inventada'); INSERT INTO Chapters VALUES(43,3,'Nota del capítulo'); INSERT INTO Verses VALUES(43,3,4,16,2,'Comentario inventado. Salmos 23:1. <script>texto</script>');");
   await helpers.addModule(root,pack,'strong-es','diccionario','diccionario',"CREATE TABLE Dictionary(Topic TEXT,Definition TEXT); INSERT INTO Dictionary VALUES('G3962','{\\f1 ἀγαπάω} Padre <img>'),('G40','Santo inventado');");
+  await helpers.addModule(root,pack,'hebreo-apoyo','diccionario','apoyo',"CREATE TABLE Dictionary(Topic TEXT,Definition TEXT); INSERT INTO Dictionary VALUES('H1','Definición hebrea inventada para pruebas');");
   for(let n=1;n<=3;n++)await helpers.addModule(root,pack,'drae-'+n,'diccionario','diccionario',"CREATE TABLE Dictionary(Topic TEXT,Definition TEXT); INSERT INTO Dictionary VALUES("+(n===1?"'amorío','Prefijo'":n===2?"'ámor(1)','Exacta primera'":"'amor(2)','Exacta segunda'")+");");
   await fsp.writeFile(path.join(root,'modulos/personal/manifest.json'),JSON.stringify(pack));const sql=helpers.sqlite(root);
   const service=await native.create({bible,manifest:{iaPermitida:true},filesystem:helpers.filesystem(root),sqlite:sql,resources:resources()});helpers.dispose(root,()=>service.close());return {root,pack,sql,service,api:service.handlers()};
@@ -21,6 +22,13 @@ test('Native NC factory reads real synthetic modules, preserves red only in NT a
   assert.match((await api.chapter({module:'rv1960',book:42,chapter:3,strong:true})).verses[0].html,/strong-number/);assert.doesNotMatch((await api.chapter({module:'rv1960',book:0,chapter:1})).verses[0].html,/jesus-words/);
   const entries=(await api.dictionary({group:'strong-es',query:'G3962'})).entries;assert.ok(entries[0].text.includes('ἀγαπάω'));assert.match(entries[0].html,/&lt;img&gt;/);assert.ok(sql.opened()>0);
 });
+test('Native dictionary with apoyo role remains in the catalog and can be read like on Windows',async t=>{
+  const {api}=await fixture(t),catalog=await api.catalog();
+  const entry=catalog.modules.find(m=>m.id==='hebreo-apoyo');assert.ok(entry);assert.equal(entry.tipo,'diccionario');assert.equal(entry.rol,'apoyo');
+  assert.equal((await api.dictionary({group:'hebreo-apoyo',query:'H1'})).entries[0].text,'Definición hebrea inventada para pruebas');
+  assert.ok(!catalog.warnings.some(w=>w.includes('hebreo-apoyo')));
+});
+
 test('Native FTS5 really matches accent folding, whole words, prefixes, Strong and persistent revision cache',async t=>{
   const {api,sql}=await fixture(t);assert.equal((await api.search({module:'rv1960',query:'corazon'})).count,1);assert.equal((await api.search({module:'rv1960',query:'coraz',mode:'word'})).count,0);assert.equal((await api.search({module:'rv1960',query:'coraz'})).count,1);
   const code=await api.search({module:'rv1960',query:'g03962',mode:'strong'});assert.equal(code.module,'rv1960-strong');assert.equal(code.results[0].reference,'b043:3:16');const batches=sql.batches();await api.search({module:'rv1960',query:'santo'});assert.equal(sql.batches(),batches);

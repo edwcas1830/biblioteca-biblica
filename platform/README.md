@@ -188,6 +188,8 @@ exclusive comparte la cola de bootstrap/guardado/restauración/lectura. revision
 
 Un error revierte base y módulos y recrea el catálogo anterior. Si falla esa recuperación, el diario se conserva, la base queda cerrada y storage cambia a none hasta reiniciar y recuperar antes de abrir. La marca de commit diferencia una instalación confirmada de un intercambio interrumpido; no se promete supervivencia a pérdida eléctrica sin validar en APK. FTS usa las transacciones oficiales del plugin, igual que el repositorio personal.
 
+El lector admite `rol: 'apoyo'` en biblias, diccionarios y comentarios, igual que Windows, conservando la validación de tipo/extensión. El traspaso verifica por SHA-256 los bytes de cada copia preparada: el escaneo hace una sola pasada de hash por archivo después de copiar, además de comprobar previamente tipo/tamaño. Al instalar vuelve a verificar el candidato completo; no sustituye integridad por fecha/tamaño. La activación sigue cotejando el catálogo instalado y revierte si un módulo no pasa la revisión. La reducción es de pasadas de hash del escaneo, no una promesa de tiempo total en un teléfono.
+
 ## PIN nativo compatible con Windows
 
 attach prepara el cifrado local y registra unlock/setPin/lockPrivate/disablePin únicamente si el Worker inicia correctamente. El repositorio admite bases con private-vault; bootstrap abre el estado público con privacyEnabled/privateLocked y campos privados vacíos. Sin Worker/WebCrypto, no anuncia controles de PIN ni inventa claves: permite conservar/leer el estado público cerrado y rechaza instalar una copia cifrada nueva que no podría abrir.

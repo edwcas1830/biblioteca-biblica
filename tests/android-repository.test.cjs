@@ -23,8 +23,11 @@ async function incoming(f,{invalidModule=false,pin=false}={}){
     const archivo=id+'.'+(tipo==='biblia'?'bblx':'cmtx'),db=new DatabaseSync(path.join(directory,archivo));db.exec(sql);db.close();const bytes=await fs.readFile(path.join(directory,archivo));
     pack.modulos.push({id,tipo,rol:tipo==='biblia'?'version':'comentario',archivo,titulo:id,bytes:bytes.length,sha256:helpers.digest(bytes),licencia:'CC0 · fixture inventado'});
   }
+  const dictionary='hebreo-apoyo.dctx',dictionaryDb=new DatabaseSync(path.join(directory,dictionary));
+  dictionaryDb.exec("CREATE TABLE Dictionary(Topic TEXT,Definition TEXT); INSERT INTO Dictionary VALUES('H1','Definición original inventada');");dictionaryDb.close();const dictionaryBytes=await fs.readFile(path.join(directory,dictionary));
+  pack.modulos.push({id:'hebreo-apoyo',tipo:'diccionario',rol:'apoyo',archivo:dictionary,titulo:'Diccionario sintético de apoyo',bytes:dictionaryBytes.length,sha256:helpers.digest(dictionaryBytes),licencia:'CC0 · fixture inventado'});
   await fs.writeFile(path.join(directory,'manifest.json'),JSON.stringify(pack));
-  const meta={formato:'biblioteca-biblica-traspaso',version:1,creado:new Date().toISOString(),origen:'Windows',paquete:{version:'5',modoPersonal:true,modulos:2},conteos:{diasPlan:1189,diasCompletados:329,devocionales:2,oraciones:0},archivos:[]};
+  const meta={formato:'biblioteca-biblica-traspaso',version:1,creado:new Date().toISOString(),origen:'Windows',paquete:{version:'5',modoPersonal:true,modulos:pack.modulos.length},conteos:{diasPlan:1189,diasCompletados:329,devocionales:2,oraciones:0},archivos:[]};
   for(const archivo of ['biblioteca-personal.sqlite','manifest.json',...pack.modulos.map(m=>m.archivo)]){const bytes=await fs.readFile(path.join(directory,archivo)),m=pack.modulos.find(m=>m.archivo===archivo);meta.archivos.push({archivo,tipo:m?'modulo':archivo==='manifest.json'?'manifiesto':'datos',...(m?{id:m.id}:{}),bytes:bytes.length,sha256:helpers.digest(bytes)});}
   await fs.writeFile(path.join(directory,'traspaso.json'),JSON.stringify(meta));
   return {saved,input:{carpeta:'traspaso-entrante',archivos:await Promise.all((await fs.readdir(directory)).map(async nombre=>({nombre,ruta:'traspaso-entrante/'+nombre,bytes:(await fs.stat(path.join(directory,nombre))).size})))}};
@@ -48,6 +51,7 @@ test('Real SQLite import replaces conformed DB, keeps durable backup, rebinds mo
   await assert.rejects(f.bridge.savePersonal(old),{code:'CONFLICT'});await assert.rejects(f.bridge.restoreBackup({state:old}),{code:'CONFLICT'});
   const loaded=(await f.bridge.bootstrap({initial:old})).state;assert.equal(loaded.notes['18:23:1'],'importada');assert.deepEqual(loaded.plans[0].dayIds,x.saved.plans[0].dayIds);assert.equal(loaded.plans[0].completed.length,329);assert.equal(loaded.devotionals.length,2);
   assert.ok((await f.bridge.catalog()).modules.some(m=>m.id==='comentario-inventado'));assert.equal((await f.bridge.comments({module:'comentario-inventado',book:18,chapter:23,verse:1})).entries[0].text,'Comentario nuevo original');
+  assert.equal((await f.bridge.catalog()).modules.find(m=>m.id==='hebreo-apoyo').rol,'apoyo');assert.equal((await f.bridge.dictionary({group:'hebreo-apoyo',query:'H1'})).entries[0].text,'Definición original inventada');
   assert.equal((await f.bridge.search({module:'texto-inventado',query:'corazon'})).count,1);loaded.notes['18:23:1']='nuevo móvil';await f.bridge.savePersonal(loaded);
   await f.registry.close();assert.equal(f.sqlite.opened(),0);assert.equal(f.sqlite.registered(),0);const reopened=new PersonalStore({sqlite:f.sqlite,books:bible.books});helpers.dispose(f.root,()=>reopened.close());assert.equal((await reopened.load()).notes['18:23:1'],'nuevo móvil');
 });

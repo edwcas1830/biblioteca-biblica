@@ -39,7 +39,7 @@ async function fixture(t,{pin=false}={}){
 }
 function filesystem(root,{interrupt=()=>{},chunkError=false,denyStat=false}={}){
   function resolve(p){const absolute=path.resolve(root,p);if(absolute!==root&&!absolute.startsWith(root+path.sep))throw Error('Outside synthetic fixture');return absolute;}
-  const metrics={largestChunk:0,chunks:0,textPaths:[],copies:0};
+  const metrics={largestChunk:0,chunks:0,textPaths:[],copies:0,hashPaths:[]};
   const stat=async({path:p})=>{
     if(denyStat)throw Object.assign(Error('Access denied'),{code:'EACCES'});
     const s=await fsp.lstat(resolve(p));return {type:s.isDirectory()?'directory':s.isFile()?'file':'symlink',size:s.size};
@@ -56,6 +56,7 @@ function filesystem(root,{interrupt=()=>{},chunkError=false,denyStat=false}={}){
     copy:async({from,to})=>{metrics.copies++;await fsp.copyFile(resolve(from),resolve(to));},
     getUri:async({path:p})=>({uri:require('node:url').pathToFileURL(resolve(p)).href}),
     readFileInChunks:async({path:p,chunkSize,encoding},callback)=>{
+      metrics.hashPaths.push(p);
       assert.equal(encoding,undefined);
       queueMicrotask(async()=>{try{
         if(chunkError)throw Object.assign(Error('Synthetic chunk error'),{code:'EIO'});
@@ -107,12 +108,32 @@ test('Native adapter verifies real synthetic SQLite, preserves 329/1189 and IDs,
   const service=native.create({filesystem:fsPlugin,sqlite:sql,books,repository:repo});const bridge=contract.createBridge({platform:'android',handlers:service.handlers()}).bridge;
   const review=await bridge.transferScan(await f.selected());assert.deepEqual(review.resumen.conteos,{diasPlan:1189,diasCompletados:329,devocionales:2,oraciones:0,estadoCifrado:false});
   await unchanged(f.root);assert.equal(sql.connections(),0);assert.ok(fsPlugin.metrics.largestChunk<=262144);assert.ok(fsPlugin.metrics.textPaths.every(p=>p.endsWith('.json')));
+  assert.equal(fsPlugin.metrics.hashPaths.length,f.meta.archivos.length);assert.ok(fsPlugin.metrics.hashPaths.every(p=>p.startsWith('traspaso-listo/')));
   const result=await bridge.transferInstall({token:review.token,confirmado:true});assert.equal(result.instalado,true);assert.equal(result.requiereRecarga,true);
   assert.equal(await fsp.readFile(path.join(f.root,result.respaldo,'biblioteca-personal.sqlite'),'utf8'),'OLD-DATABASE');
   assert.equal(await fsp.readFile(path.join(f.root,result.respaldo,'personal/old.txt'),'utf8'),'OLD-MODULE');
   const restored=new PersonalStore(f.root);const data=restored.load();restored.close();assert.equal(data.plans[0].completed.length,329);assert.deepEqual(data.plans[0].dayIds,f.originalIds);assert.equal(data.notes['18:23:1'],'Nota SOLO sintética');assert.equal(data.planNotes['plan-123:'+f.originalIds[0]],'Nota de día sintética');assert.equal(data.devotionals.length,2);
   assert.equal(JSON.parse(await fsp.readFile(path.join(f.root,'modulos/personal/manifest.json'),'utf8')).modoPersonal,true);
   await assert.rejects(bridge.transferInstall({token:review.token,confirmado:true}),{code:'CONFLICT'});
+});
+
+test('Scan rejects a same-size corruption introduced by the file copy before offering review',async t=>{
+  const f=await fixture(t);await oldLibrary(f.root);const fsPlugin=filesystem(f.root),copy=fsPlugin.copy;
+  fsPlugin.copy=async input=>{await copy(input);if(input.to.endsWith('.bblx')){const file=path.join(f.root,input.to),bytes=await fsp.readFile(file);bytes[bytes.length-1]^=1;await fsp.writeFile(file,bytes);}};
+  const service=native.create({filesystem:fsPlugin,sqlite:sqlite(),books,repository:repository(f.root)});
+  await assert.rejects(service.transferScan(await f.selected()),{code:'CORRUPT'});await unchanged(f.root);
+  assert.deepEqual(await fsp.readdir(path.join(f.root,'traspaso-listo')),[]);
+});
+
+test('Install still rejects candidate tampering even when its size and mtime are unchanged',async t=>{
+  const f=await fixture(t);await oldLibrary(f.root);const fsPlugin=filesystem(f.root),originalStat=fsPlugin.stat;
+  // A provider reporting unchanged timestamps must not defeat byte verification.
+  fsPlugin.stat=async input=>({...await originalStat(input),mtime:1234567});
+  const service=native.create({filesystem:fsPlugin,sqlite:sqlite(),books,repository:repository(f.root)});
+  const review=await service.transferScan(await f.selected()),file=path.join(f.root,'traspaso-listo',review.token.slice(9),'texto-sintetico.bblx'),stat=await fsp.stat(file),bytes=await fsp.readFile(file);bytes[bytes.length-1]^=1;
+  await fsp.writeFile(file,bytes);await fsp.utimes(file,stat.atime,stat.mtime);
+  assert.equal((await fsp.stat(file)).size,stat.size);
+  await assert.rejects(service.transferInstall({token:review.token,confirmado:true}),{code:'CORRUPT'});await unchanged(f.root);
 });
 
 test('Encrypted vault travels byte-for-byte, summary detects PIN despite exporter oraciones:0, Windows PIN still unlocks',async t=>{
