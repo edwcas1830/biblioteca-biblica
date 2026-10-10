@@ -7,9 +7,12 @@ async function browserWorker(){
   if(!profile||!path.basename(profile).startsWith('biblia-web-test-')||!path.resolve(profile).startsWith(path.resolve(os.tmpdir())+path.sep))throw Error('Se requiere un perfil temporal de prueba.');
   app.setPath('userData',profile);await app.whenReady();
   const root=path.resolve(__dirname,'..'),allowed=new Set(['/tests/browser/android-store.html','/tests/browser/android-store.js','/app/prayer-core.js','/app/guide-core.js','/app/study-chat-core.js','/platform/bridge-contract.js','/shared/references.js','/shared/personal-model.js','/shared/sha256-stream.js','/shared/transfer.js','/platform/android/transfer.js','/platform/web/personal-store.js','/platform/web/library.js','/platform/web/bridge.js']);
+  for(const file of ['/app/bible-data.js','/app/plan-core.js','/app/graphics-core.js','/shared/rtf.js','/shared/library.js','/shared/study-resources.js','/platform/web/resources.js','/platform/web/modules.js'])allowed.add(file);
+  // Only the known public bundled resources, never profiles/modules or arbitrary disk paths.
+  for(const directory of ['free-package','openbible','atlas','natural-earth','bibledata','theographic'])for(const file of fs.readdirSync(path.join(root,'app/data',directory)))if(/^[a-z0-9-]+\.json(?:\.gz)?$/.test(file))allowed.add('/app/data/'+directory+'/'+file);
   const server=http.createServer((req,res)=>{
     if(req.method!=='GET'||!allowed.has(req.url)){res.writeHead(404);res.end();return;}
-    res.writeHead(200,{'Content-Type':req.url.endsWith('.html')?'text/html; charset=utf-8':'text/javascript; charset=utf-8','Content-Security-Policy':"default-src 'none'; script-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'"});res.end(fs.readFileSync(path.join(root,req.url)));
+    res.writeHead(200,{'Content-Type':req.url.endsWith('.gz')?'application/gzip':req.url.endsWith('.json')?'application/json':req.url.endsWith('.html')?'text/html; charset=utf-8':'text/javascript; charset=utf-8','Content-Security-Policy':"default-src 'none'; script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'"});res.end(fs.readFileSync(path.join(root,req.url)));
   });await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   const win=new BrowserWindow({show:false,webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true}});
   const timer=setTimeout(()=>{console.error('Tiempo agotado en prueba web');app.exit(1);},55000);

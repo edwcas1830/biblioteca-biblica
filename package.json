@@ -31,7 +31,8 @@
       "!app/**/*.cmtx",
       "!app/**/*.dctx",
       "package.json",
-      "FUENTES.md"
+      "FUENTES.md",
+      "shared/**/*.js"
     ],
     "extraResources": [
       {

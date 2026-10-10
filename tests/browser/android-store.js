@@ -6,7 +6,7 @@ const ok=(value,message)=>{if(!value)throw Error(message);};
 async function rejects(work,code){try{await work();}catch(error){equal(error.code,code,'Código esperado '+code+', recibido '+error.code);return;}throw Error('La operación debía fallar: '+code);}
 window.testStorePhase1=async()=>{
   const names=[];const test=async(name,fn)=>{await fn();names.push(name);};
-  const adapter=LibraryWebBridge.create({bible:{books:fixtureBooks},dbName:'test-persistence'}),store=adapter.store,bridge=adapter.bridge;
+  const adapter=LibraryWebBridge.create({bible:window.BIBLE,resourceBase:'/app/data/',dbName:'test-persistence'}),store=adapter.store,bridge=adapter.bridge;
   let saved,ids;
   await test('SHA incremental en Chromium coincide con WebCrypto y carga las fábricas sin Node',async()=>{
     const bytes=Uint8Array.from({length:600007},(_,i)=>i%251),stream=LibrarySha256Stream.create();
@@ -26,7 +26,18 @@ window.testStorePhase1=async()=>{
   await test('Una segunda pestaña no sobrescribe una revisión antigua',async()=>{const second=new LibraryWebStore.PersonalStore({dbName:'test-persistence',books:fixtureBooks});const old=await second.readRecord(),newState=await second.load(),prepared=await second.model.encode(newState,newState);saved.notes['18:23:1']='Después de otra pestaña';saved=await bridge.savePersonal(saved);await rejects(()=>second.write(newState),'CONFLICT');await rejects(()=>second.commit(prepared,old),'CONFLICT');equal((await store.load()).notes['18:23:1'],saved.notes['18:23:1'],'Guardado más nuevo');await second.close();});
   await test('Copia antigua inválida no reemplaza una base válida',async()=>{const result=await bridge.bootstrap({legacy:'dañado',legacyValid:false,initial:fixtureState()});equal(result.state,saved,'Base válida prevalece');});
   await test('Migración abortada conserva copia original para reintentar',async()=>{const other=new LibraryWebStore.PersonalStore({dbName:'test-rollback',books:fixtureBooks}),raw=JSON.stringify(fixtureState());await rejects(()=>other.bootstrap({legacy:raw,initial:fixtureState()},{fail:true}),'STORAGE');equal(await other.load(),null,'Sin datos parciales');const backups=await other.listBackups();equal(backups.length,1,'Copia retenida');equal(await other.backup(backups[0].id),raw,'Copia exacta');const migrated=await other.bootstrap({legacy:raw,initial:fixtureState()});equal(migrated.state.plans[0].completed.length,329,'Reintento');await other.close();});
-  await test('Capacidades y catálogo nunca fingen módulos o funciones nativas',async()=>{const caps=await bridge.getCapabilities();equal(caps.storage,'indexeddb','Almacén');equal(caps.nativeVerified,false,'No es prueba nativa');equal(caps.operations.setPin.available,false,'PIN no disponible');equal(caps.operations.bootstrap.available,true,'Persistencia disponible');equal((await bridge.catalog()).versions,['rv1909'],'Solo fuente pública');await rejects(()=>bridge.chapter({module:'rv1960',book:42,chapter:3}),'NOT_FOUND');});
+  await test('Capacidades y catálogo nunca fingen módulos o funciones nativas',async()=>{const caps=await bridge.getCapabilities();equal(caps.storage,'indexeddb','Almacén');equal(caps.nativeVerified,false,'No es prueba nativa');equal(caps.operations.setPin.available,false,'PIN no disponible');equal(caps.operations.bootstrap.available,true,'Persistencia disponible');equal((await bridge.catalog()).versions,['rv1909','onbv2008'],'Solo versiones libres');await rejects(()=>bridge.chapter({module:'rv1960',book:42,chapter:3}),'NOT_FOUND');});
+  await test('Diccionario, comparación, referencias y gráficos se leen de archivos libres en Chromium',async()=>{
+    const lex=await bridge.dictionary({group:'step-hebrew',query:'H1'});ok(lex.entries[0].text.includes('אָב'),'Hebreo');
+    const compare=await bridge.compare({modules:['rv1909','onbv2008'],book:42,chapter:3,verse:16});equal(compare.rows.length,1,'Comparar');
+    ok((await bridge.connections({book:42,chapter:3,verse:16})).items.length,'Conexiones');
+    const map=await bridge.graphicsChapter({book:41,chapter:2});ok(map.places.some(p=>p.name.startsWith('Belén'))&&map.land.features.length,'Atlas');
+    const people=await bridge.graphicsPeople({query:'Abraham'}),family=await bridge.graphicsGenealogy({id:people.items[0].id});ok(family.groups.find(g=>g.kind==='children').items.some(p=>p.name==='Isaac'),'Familia');
+  });
+  await test('Comentario sintético en web conserva el rango y escapa HTML',async()=>{
+    const modules=LibraryJsonModules.create({resources:{manifest:async()=>({modulos:[{id:'fixture-comment',tipo:'comentario',rol:'comentario',titulo:'Fixture original CC0',registros:1,dataFile:'fixture-comment.json.gz',dataSha256:'a'.repeat(64)}]}),file:async()=>[[43,3,4,16,2,'Comentario inventado <script>literal</script>']]}});
+    const reader=LibraryReader.create({bible:window.BIBLE,source:modules});const result=await reader.comments({module:'fixture-comment',book:42,chapter:4,verse:2});equal(result.entries.length,1,'Rango cruzado');ok(result.entries[0].html.includes('&lt;script&gt;')&&!result.entries[0].html.includes('<script>'),'HTML seguro');
+  });
   // Put the expected snapshot in a second IDB record, not a JS global surviving reload.
   await store.transaction(['records'],'readwrite',tx=>tx.objectStore('records').put({key:'expected-test-snapshot',value:saved}));
   await store.close();return {phase:1,passed:names.length,names};

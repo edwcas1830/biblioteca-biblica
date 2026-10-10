@@ -105,3 +105,28 @@ El PIN no se solicita ni se guarda durante el traspaso: se conserva exactamente 
 Dos cuidados para `traspaso-pc.cjs`, propiedad de Claude: detectar `meta['private-vault']` para `estadoCifrado`, no inferirlo de un fallo al leer `meta.state`; dejar el snapshot en `PRAGMA journal_mode=DELETE` tras el backup y antes de las huellas. Una copia WAL abierta incluso en solo lectura puede crear `-wal`/`-shm`; esos archivos no forman parte del formato plano y se rechazan como extras. Esto se hace en la copia, nunca en el perfil real.
 
 `node --test tests/android-transfer.test.cjs` utiliza exclusivamente fixtures temporales inventados, con SQLite real y adaptadores de plugins que operan esos archivos en Node. Comprueba huellas, 329/1189, dos devocionales, notas/IDs, PIN, errores y recuperación. No usa la carpeta privada de OneDrive y **no equivale a ejecutar los plugins en un teléfono**. La conexión del repositorio nativo, selección SAF/OneDrive, almacenamiento lleno, PIN nativo, reinicio y APK siguen en la matriz pendiente.
+
+## Lectores y estudio (pieza 4)
+
+La lista ordenada actual es `platform/scripts-movil.json`; prevalece sobre la enumeración inicial de este documento. Web publica `catalog`, `metadata`, `chapter`, `search`, `comments`, `dictionary`, `compare`, `connections`, `graphicsChapter`, `graphicsChronology`, `graphicsPeople`, `graphicsGenealogy` y `studySources`. Los resultados conservan el contrato de escritorio y las referencias canónicas. `PlanCore` y `GraphicsCore` pueden seguir en sus etiquetas originales antes de app.js: el servicio de estudio los busca al usar cada operación.
+
+El adaptador web carga bajo demanda los JSON/gzip públicos de `app/data` (en móvil: `www/data`). `LibraryWebResources` comprueba SHA-256, limita bytes y descompresión y no permite rutas ajenas a esos recursos del mismo origen. Pasar `resourceBase` solo si el ensamblador cambia esa ubicación. Se usa DecompressionStream del navegador moderno; si falta, la operación rechaza UNAVAILABLE. Las revisiones públicas `revisionKind:'gzip-json'` identifican el recurso comprimido; no son la huella del SQLite original. Se conservan las licencias y atribuciones.
+
+**El paquete público actual no trae comentarios.** No se fabrica contenido para llenar el panel: el catálogo lo advierte. Comments está implementado y se ha probado con comentarios inventados CC0; en Android lee los comentarios del paquete que importe el usuario. El web preview busca cooperativamente; no anuncia FTS5. Diccionario, comparación y todos los gráficos sí usan los recursos públicos reales.
+
+Android recibe los plugins raw Filesystem y CapacitorSQLite:
+
+```js
+const lector = await LibraryAndroidReader.create({
+  bible: window.BIBLE, manifest: window.BibliaManifiestos.rv1909,
+  filesystem: Filesystem, sqlite: CapacitorSQLite
+});
+LibraryAndroidServices.register(lector.handlers());
+adapter.register(lector.handlers()); // si el puente ya estaba creado
+```
+
+El lector descubre DATA/modulos/<paquete>/manifest.json, verifica tamaño/huella/esquema y abre los bblx/cmtx/dctx mediante conexiones NC de solo lectura. Conserva rangos, introducciones, Strong, diccionarios repartidos y rojo únicamente NT. Un cambio del archivo invalida su lectura. Después de instalar o cambiar paquetes, cerrar `await lector.close()` y crear una instancia nueva: una sesión anterior no se debe reutilizar.
+
+FTS5 vive en una base derivada `biblioteca-indice` separada: nunca modifica los módulos. Construye por lotes un índice de versículos y otro de claves de diccionario; evita traer RAE entero a memoria. Las revisiones y la versión del parser invalidan cachés. Cada reemplazo es transaccional y un motor sin FTS5 falla explícitamente. Este lector **no** implementa el repositorio personal: no llamar setStorage('sqlite') solo por inicializarlo. La recuperación del traspaso debe preceder a la apertura del lector.
+
+RTF tiene una sola implementación en shared/rtf.js, usada también por Windows. Solo produce etiquetas controladas y texto escapado; no ejecuta HTML del módulo. Los enlaces palabra→Strong solo se crean al cotejar la redacción. No confundir las capacidades disponibles con nativeVerified: las pruebas Node usan SQLite real, pero adaptadores de plugin sintéticos; todavía falta ejecutar los plugins en APK.
