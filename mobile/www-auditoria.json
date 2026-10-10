@@ -1,7 +1,7 @@
 {
-  "fecha": "2026-10-10T09:38:07.980Z",
-  "archivos": 328,
-  "megabytes": 23.4,
+  "fecha": "2026-10-10T09:59:59.128Z",
+  "archivos": 354,
+  "megabytes": 23.7,
   "prohibidos": [],
   "modulosLibres": [
     "onbv2008",
@@ -12,6 +12,7 @@
     "platform/bridge-contract.js",
     "shared/references.js",
     "shared/personal-model.js",
+    "shared/private-vault.js",
     "shared/sha256-stream.js",
     "shared/transfer.js",
     "shared/rtf.js",
@@ -23,6 +24,7 @@
     "platform/web/library.js",
     "platform/web/documents.js",
     "platform/web/bridge.js",
+    "platform/android/private-vault.js",
     "platform/android/personal-store.js",
     "platform/android/repository.js",
     "platform/android/transfer.js",
@@ -33,5 +35,5 @@
     "platform/android/documents.js",
     "platform/android/bridge.js"
   ],
-  "huellaIndex": "7d33ace02a0fc62b"
+  "huellaIndex": "8ff8c6d6cb9f155a"
 }

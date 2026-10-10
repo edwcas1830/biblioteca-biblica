@@ -22,8 +22,11 @@
   }
   document.addEventListener('visibilitychange', () => { if (document.hidden) pausarMusica('oculta'); });
   if (App) {
-    App.addListener('appStateChange', ({ isActive }) => { if (!isActive) pausarMusica('segundo-plano'); });
-    App.addListener('pause', () => pausarMusica('pausa'));
+    // Al salir de la app: pausar la música y cerrar el cuaderno con PIN (closePrivate de app/privacy.js
+    // espera la cola de guardado antes de cerrar, así no se pierde lo último escrito).
+    const cerrarCuaderno = () => { try { if (typeof window.closePrivate === 'function') Promise.resolve(window.closePrivate()).catch(() => {}); } catch { /* sin PIN */ } };
+    App.addListener('appStateChange', ({ isActive }) => { if (!isActive) { pausarMusica('segundo-plano'); cerrarCuaderno(); } });
+    App.addListener('pause', () => { pausarMusica('pausa'); cerrarCuaderno(); });
     // ---------- Atrás: popover → hoja → vista → salir ----------
     App.addListener('backButton', () => {
       if (window.BibliaMovil && window.BibliaMovil.atras()) return;
