@@ -6,9 +6,9 @@ const helpers=require('./mobile-fixtures.cjs'),services=require('../platform/and
 const sandbox={window:{}};vm.runInNewContext(require('node:fs').readFileSync(path.join(__dirname,'../app/bible-data.js'),'utf8'),sandbox);const bible=JSON.parse(JSON.stringify(sandbox.window.BIBLE));
 const resources={manifest:async()=>({modulos:[]}),file:async()=>{throw Error('No external resources in fixture');}};
 const state=(label='original')=>({version:1,position:{book:18,chapter:23,verse:1},notes:{'18:23:1':label},highlights:{},plans:[{id:'plan-123',title:'Plan inventado',days:1189,entries:Array.from({length:1189},(_,i)=>({title:'Día '+i,readings:[{book:18,chapter:23}]})),completed:Array.from({length:329},(_,i)=>i)}],devotionals:['a','b'].map(x=>({id:'dev-sintetico-'+x,title:'Devocional original '+x,entries:[{title:'Día 1',body:'Texto inventado',book:18,chapter:23}],completed:[]})),prayers:[],prayerDrafts:{},guideResponses:{},aiStudies:[],devResponses:{},planNotes:{}});
-async function fixture(t,{readerFactory}={}){
+async function fixture(t,{readerFactory,privacyFactory}={}){
   const root=await helpers.root(t),data=path.join(root,'files'),databases=path.join(root,'databases');await fs.mkdir(data);await fs.mkdir(databases);
-  const sqlite=helpers.sqlite(databases),filesystem=helpers.filesystem(data,{absoluteRoot:root}),registry=services.create({readerFactory}),adapter=contract.createBridge({platform:'android'});
+  const sqlite=helpers.sqlite(databases),filesystem=helpers.filesystem(data,{absoluteRoot:root}),registry=services.create({readerFactory,privacyFactory}),adapter=contract.createBridge({platform:'android'});
   helpers.dispose(root,()=>registry.close());
   const attach=()=>registry.attach(adapter,{sqlite,filesystem,bible,manifest:{iaPermitida:true},resources});
   return {root,data,databases,sqlite,filesystem,registry,adapter,bridge:adapter.bridge,attach};
@@ -16,7 +16,7 @@ async function fixture(t,{readerFactory}={}){
 async function incoming(f,{invalidModule=false,pin=false}={}){
   const directory=path.join(f.data,'traspaso-entrante');await fs.mkdir(directory,{recursive:true});
   const source=path.join(f.root,'windows-synthetic'),windows=new WindowsStore(source),saved=windows.write(state('importada'));
-  if(pin)windows.setPin('123456');windows.db.exec('PRAGMA wal_checkpoint(TRUNCATE); PRAGMA journal_mode=DELETE;');windows.close();
+  if(pin){windows.setPin('123456');windows.db.exec("INSERT INTO meta VALUES('android-revision','3')");}windows.db.exec('PRAGMA wal_checkpoint(TRUNCATE); PRAGMA journal_mode=DELETE;');windows.close();
   await fs.copyFile(path.join(source,'biblioteca-personal.sqlite'),path.join(directory,'biblioteca-personal.sqlite'));
   const pack={paquete:'personal',version:'5',modoPersonal:true,modulos:[]};
   for(const [id,tipo,sql]of [['texto-inventado','biblia',"CREATE TABLE Bible(Book INT,Chapter INT,Verse INT,Scripture TEXT); INSERT INTO Bible VALUES(19,23,1,'El corazón recibió paz inventada.');"],['comentario-inventado','comentario',invalidModule?"CREATE TABLE Otro(texto TEXT);":"CREATE TABLE Verses(Book INT,ChapterBegin INT,ChapterEnd INT,VerseBegin INT,VerseEnd INT,Comments TEXT); INSERT INTO Verses VALUES(19,23,23,1,2,'Comentario nuevo original');"]]){
@@ -85,8 +85,18 @@ test('Failed rollback keeps native repository closed and storage absent until ne
   assert.equal((await adapter.bridge.bootstrap({initial:state()})).state.notes['18:23:1'],'original');await assert.rejects(fs.stat(path.join(f.data,'traspaso-journal.json')),{code:'ENOENT'});
 });
 test('Serialized background module load cannot replace the newly imported catalog afterwards',async t=>{
-  let gateRelease,entered;const gate=new Promise(r=>{gateRelease=r;}),began=new Promise(r=>{entered=r;});let first=true;
-  const factory={create:async options=>{if(first){first=false;entered();await gate;}return native.create(options);}};
+  let gateRelease,entered;const gate=new Promise(r=>{gateRelease=r;}),began=new Promise(r=>{entered=r;});let first=true,calls=0;
+  const factory={create:async options=>{calls++;if(first){first=false;entered();await gate;}return native.create(options);}};
   const f=await fixture(t,{readerFactory:factory});await f.attach();await f.bridge.bootstrap({initial:state()});const x=await incoming(f),r=await f.bridge.transferScan(x.input),loading=f.registry.loadReader();await began;
-  const installing=f.bridge.transferInstall({token:r.token,confirmado:true});gateRelease();await loading;await installing;assert.ok((await f.bridge.catalog()).modules.some(m=>m.id==='texto-inventado'));
+  let timer;try{await Promise.race([f.bridge.bootstrap({initial:state()}),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Background catalog blocks personal bootstrap')),1000);})]);assert.match((await f.bridge.chapter({book:18,chapter:23})).verses[0].text,/Jehov/i);}finally{clearTimeout(timer);}
+  const duplicate=f.registry.loadReader(),installing=f.bridge.transferInstall({token:r.token,confirmado:true});gateRelease();await loading;await duplicate;await installing;await f.registry.loadReader();assert.equal(calls,2);assert.ok((await f.bridge.catalog()).modules.some(m=>m.id==='texto-inventado'));
+});
+test('Native protected Windows transfer installs byte-identical vault, boots locked and unlocks through bridge PIN handlers',async t=>{
+  const {privacyFactory}=require('./vault-worker-fixture.cjs'),f=await fixture(t,{privacyFactory});await f.attach();await f.bridge.bootstrap({initial:state()});
+  const caps=await f.bridge.getCapabilities();for(const k of ['setPin','unlock','lockPrivate','disablePin'])assert.equal(caps.operations[k].available,true);
+  const x=await incoming(f,{pin:true}),source=new DatabaseSync(path.join(f.data,'traspaso-entrante/biblioteca-personal.sqlite'),{readOnly:true}),envelope=source.prepare("SELECT value FROM meta WHERE key='private-vault'").get().value;source.close();
+  const r=await f.bridge.transferScan(x.input);assert.equal(r.resumen.conservaPin,true);assert.ok(!JSON.stringify(r).includes('importada'));await f.bridge.transferInstall({token:r.token,confirmado:true});
+  const locked=(await f.bridge.bootstrap({initial:state()})).state;assert.equal(locked.privateLocked,true);assert.deepEqual(locked.notes,{});assert.deepEqual(locked.plans[0].dayIds,x.saved.plans[0].dayIds);assert.equal(locked.plans[0].completed.length,329);
+  const installed=new DatabaseSync(active(f),{readOnly:true});assert.equal(installed.prepare("SELECT value FROM meta WHERE key='private-vault'").get().value,envelope);installed.close();
+  assert.equal((await f.bridge.unlock('123456')).notes['18:23:1'],'importada');assert.ok(!(await f.bridge.exportBackup()).notes['18:23:1']);assert.equal((await f.bridge.lockPrivate()).privateLocked,true);
 });

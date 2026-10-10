@@ -47,11 +47,12 @@
         const rows=await query('PRAGMA table_info('+table+')');
         if(rows.map(r=>r.name).join(',')!==columns.join(','))fail('CORRUPT','La estructura de la base no es compatible.');
         const count=(await query('SELECT count(*) AS n FROM '+table))[0]?.n;
-        const max={meta:20,annotations:35000,plans:100,plan_days:400000}[table];
+        const max={meta:21,annotations:35000,plans:100,plan_days:400000}[table];
         if(!nonnegative(count)||count>max)fail('CORRUPT','La base supera los límites de la biblioteca.');
       }
       const meta=new Map((await query('SELECT key,value FROM meta')).map(r=>[r.key,r.value]));
-      if(meta.get('schema')!=='3'||!meta.has('state')||[...meta.keys()].some(k=>!['schema','state','private-vault','pin-attempts'].includes(k)))fail('CORRUPT','La versión de la base no es compatible.');
+      if(meta.get('schema')!=='3'||!meta.has('state')||[...meta.keys()].some(k=>!['schema','state','private-vault','pin-attempts','android-revision'].includes(k)))fail('CORRUPT','La versión de la base no es compatible.');
+      const revision=meta.get('android-revision');if(revision!==undefined&&(!/^[1-9]\d*$/.test(revision)||!Number.isSafeInteger(Number(revision))))fail('CORRUPT','La revisión de la base no es válida.');
       const state=json(meta.get('state'),12000000),vault=meta.has('private-vault')?json(meta.get('private-vault'),16001000):null;
       if(!object(state))fail('CORRUPT','El estado de lectura no es válido.');
       if(vault&&(!object(vault)||vault.v!==1||!/^[a-f0-9]{32}$/.test(vault.salt)||!/^[a-f0-9]{24}$/.test(vault.iv)||!/^[a-f0-9]{32}$/.test(vault.tag)||typeof vault.data!=='string'||vault.data.length>16000000||!vault.data.length||vault.data.length%4||!/^[A-Za-z0-9+/]*={0,2}$/.test(vault.data)))fail('CORRUPT','El cuaderno con PIN no es compatible.');

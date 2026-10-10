@@ -23,7 +23,7 @@ test('Restore retains prior state durably, failed restore preserves the active l
   const {store}=await fixture(t),saved=(await store.bootstrap({initial:state()})).state,next=structuredClone(saved);next.notes['18:23:1']='Restaurada';
   await assert.rejects(store.restoreBackup({state:next},{fail:true}),{code:'STORAGE'});assert.deepEqual(await store.load(),saved);
   const prior=(await store.listBackups()).find(b=>b.kind==='snapshot');assert.deepEqual(await store.backup(prior.id),saved);
-  assert.equal((await store.restoreBackup({state:next})).notes['18:23:1'],'Restaurada');const after=await store.load();await assert.rejects(store.restoreBackup({state:saved,privateVault:{v:1}}),{code:'UNAVAILABLE'});assert.deepEqual(await store.load(),after);
+  assert.equal((await store.restoreBackup({state:next})).notes['18:23:1'],'Restaurada');const after=await store.load();await assert.rejects(store.restoreBackup({state:saved,privateVault:{v:1}}),{code:'CORRUPT'});assert.deepEqual(await store.load(),after);
 });
 test('A stale independent session cannot overwrite newer progress or annotations',async t=>{
   const {root,store}=await fixture(t),saved=(await store.bootstrap({initial:state()})).state,second=new PersonalStore({sqlite:helpers.sqlite(root),books});helpers.dispose(root,()=>second.close());const old=await second.load();
@@ -46,7 +46,7 @@ test('Future/corrupt schemas and a vault never become a new empty library',async
   for(const kind of ['future','vault','ordinal']){
     const windows=new WindowsStore(root);windows.write(state());windows.db.exec('PRAGMA wal_checkpoint(TRUNCATE); PRAGMA journal_mode=DELETE;');windows.close();await fs.copyFile(path.join(root,'biblioteca-personal.sqlite'),file);
     const db=new DatabaseSync(file);if(kind==='future')db.exec("UPDATE meta SET value='4' WHERE key='schema'");else if(kind==='vault')db.exec("INSERT INTO meta VALUES('private-vault','{}')");else db.exec('UPDATE plan_days SET ordinal=4000 WHERE ordinal=0');db.close();
-    const before=await fs.readFile(file),sqlite=helpers.sqlite(root),store=new PersonalStore({sqlite,books});helpers.dispose(root,()=>store.close());await assert.rejects(store.open(),{code:kind==='vault'?'LOCKED':'CORRUPT'});assert.equal(sqlite.opened(),0);assert.equal(sqlite.registered(),0);assert.deepEqual(await fs.readFile(file),before);
+    const before=await fs.readFile(file),sqlite=helpers.sqlite(root),store=new PersonalStore({sqlite,books});helpers.dispose(root,()=>store.close());await assert.rejects(store.open(),{code:'CORRUPT'});assert.equal(sqlite.opened(),0);assert.equal(sqlite.registered(),0);assert.deepEqual(await fs.readFile(file),before);
   }
 });
 test('Async attach registers the public reader immediately, queues early bootstrap and announces SQLite only after opening',async t=>{
