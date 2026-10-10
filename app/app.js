@@ -372,6 +372,7 @@ function showDictionaryEntry(index){
   $('#dictionary-content').scrollTop=0;paneScrollPositions.set('diccionario',0);
 }
 async function consultDictionary(){
+  closeOriginal();
   const generation=++dictionaryGeneration,content=$('#dictionary-content');syncDictionaryRef();content.setAttribute('aria-busy','true');content.textContent='Buscando…';
   try{const result=await desktop.dictionary({group:$('#dictionary-select').value,query:$('#dictionary-query').value});if(generation!==dictionaryGeneration)return;dictionaryEntries=result.entries;if(dictionaryEntries.length)showDictionaryEntry(0);else content.innerHTML='<p class="empty-slot">No hay entradas para esta consulta. Prueba otra palabra.</p>';$('#dictionary-status').textContent=`${dictionaryEntries.length} resultados${$('#dictionary-select').value==='drae'?' · palabra exacta primero, después prefijos':''}.`;}
   catch(error){if(generation===dictionaryGeneration){content.textContent=error.message;$('#dictionary-status').textContent='No se pudo consultar esta fuente.';}}
@@ -417,7 +418,7 @@ function queryFromReading(query,strong=false){
   else if(!strong&&select.value==='strong-es')select.value=groups.includes('drae')?'drae':groups.includes('vine')?'vine':select.value;
   $('#dictionary-query').value=query;syncDictionaryRef();consultDictionary();
 }
-function effectivePanes(){return document.body.classList.contains('focus')?['biblia']:state.appearance.views.visible;}
+function effectivePanes(){return document.body.classList.contains('focus')||comparisonExpanded?['biblia']:state.appearance.views.visible;}
 function updateReadingMode(){
   state.appearance.views=paneCore.normalize(state.appearance.views,state.appearance.panes);
   const views=state.appearance.views,visible=effectivePanes(),solo=visible.length===1,container=$('#panes');
@@ -430,6 +431,7 @@ function updateReadingMode(){
   for(const button of document.querySelectorAll('[data-set-layout]'))button.setAttribute('aria-pressed',String(views.layout===button.dataset.setLayout));
   $('#study-open').textContent=solo?'Abrir estudio':'Solo lectura';$('#study-open').setAttribute('aria-pressed',String(!solo));
   $('#focus').textContent=document.body.classList.contains('focus')?'✦ Volver a mi biblioteca':'✦ Modo intimidad';
+  updateComparisonExpansion();
   applyPaneSizes();
   const primary=$('#pane-resizer-primary'),secondary=$('#pane-resizer-secondary');
   primary.hidden=solo;secondary.hidden=visible.length!==3;
@@ -451,6 +453,7 @@ function applyPaneSizes(){
   for(let i=0;i<2;i++)container.style.setProperty('--view-a'+(i+1),(config.aux?.[i]||50)+'fr');
 }
 function setPaneVisibility(id,show){
+  comparisonExpanded=false;
   const visible=effectivePanes();document.body.classList.remove('focus');
   state.appearance.views.visible=paneCore.panels.filter(p=>p==='biblia'||(p===id?show:visible.includes(p)));
   updateReadingMode();save();
@@ -521,7 +524,7 @@ function bindAppearance(){
   const updateTop=()=>{const visible=window.scrollY>600||scrollAreas().some(el=>el&&el.scrollTop>600);const button=$('#back-to-top');button.classList.toggle('is-visible',visible);button.setAttribute('aria-hidden',String(!visible));button.tabIndex=visible?0:-1;};
   document.addEventListener('scroll',updateTop,true);window.addEventListener('resize',updateTop);updateTop();
   $('#back-to-top').addEventListener('click',()=>{const behavior=matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth';window.scrollTo({top:0,behavior});for(const el of scrollAreas())el?.scrollTo({top:0,behavior});$('#book').focus({preventScroll:true});});
-  $('#study-open').addEventListener('click',()=>{const solo=effectivePanes().length===1;document.body.classList.remove('focus');state.appearance.views.visible=solo?[...paneCore.panels]:['biblia'];updateReadingMode();save();});
+  $('#study-open').addEventListener('click',()=>{if(comparisonExpanded){comparisonExpanded=false;updateReadingMode();return;}const solo=effectivePanes().length===1;document.body.classList.remove('focus');state.appearance.views.visible=solo?[...paneCore.panels]:['biblia'];updateReadingMode();save();});
   document.querySelectorAll('[data-toggle-pane]').forEach(button=>button.addEventListener('click',()=>setPaneVisibility(button.dataset.togglePane,!effectivePanes().includes(button.dataset.togglePane))));
   document.querySelectorAll('[data-hide-pane]').forEach(button=>button.addEventListener('click',()=>{setPaneVisibility(button.dataset.hidePane,false);$('#pane-'+(button.dataset.hidePane==='comentario'?'comment':'dictionary')+'-toggle').focus({preventScroll:true});}));
   document.querySelectorAll('[data-set-layout]').forEach(button=>button.addEventListener('click',()=>setPaneLayout(button.dataset.setLayout)));
