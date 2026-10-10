@@ -195,5 +195,16 @@
     borrar: async nombre => { if (Llavero) await Llavero.borrar({ nombre }); }
   });
 
-  window.BibliaPlataforma = { capacidades, compartir, pausarMusica, elegirArchivosTraspaso, desempacarPaquete };
+  // Imagen con versículos → caché de la app → menú «Compartir» de Android (WhatsApp, Galería, Drive…).
+  async function compartirImagen({ dataUrl, nombre, titulo } = {}) {
+    if (!Share || !Filesystem) throw Object.assign(new Error('Compartir imágenes solo funciona en el teléfono.'), { code: 'UNAVAILABLE' });
+    const datos = String(dataUrl || '').replace(/^data:image\/png;base64,/, '');
+    const archivo = 'imagenes/' + (String(nombre || 'versiculo.png').replace(/[^A-Za-z0-9._-]/g, '-') || 'versiculo.png');
+    await Filesystem.writeFile({ directory: 'CACHE', path: archivo, data: datos, recursive: true });
+    const { uri } = await Filesystem.getUri({ directory: 'CACHE', path: archivo });
+    try { await Share.share({ title: titulo || 'Versículo', dialogTitle: 'Compartir imagen', files: [uri] }); }
+    catch (e) { if (!/cancel/i.test((e && e.message) || '')) throw e; }
+  }
+
+  window.BibliaPlataforma = { capacidades, compartir, pausarMusica, elegirArchivosTraspaso, desempacarPaquete, ...(Share && Filesystem ? { compartirImagen } : {}) };
 })();

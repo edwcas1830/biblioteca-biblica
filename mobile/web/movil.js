@@ -220,6 +220,7 @@
       tintas,
       accion('Nota', () => { const n = $('.pane-notes'); if (n) { n.open = true; html.dataset.notas = 'abiertas'; $('#note')?.focus(); } ocultarBarra(); }),
       crear('button', { type: 'button', class: 'quiet', id: 'movil-preguntar', texto: 'Preguntar', 'aria-label': 'Preguntar a la IA sobre este versículo', onclick: () => { $('#ai-verse-ask')?.click(); ocultarBarra(); } }),
+      accion('🖼', () => { ocultarBarra(); window.BibliaImagen?.abrir(); }, 'Crear imagen con este versículo'),
       accion('↗', compartirVersiculo, 'Compartir versículo'),
       accion('⧉', copiarVersiculo, 'Copiar versículo')
     );

@@ -1,0 +1,19 @@
+/* Imagen con versículos: vista previa a la izquierda (arriba en el teléfono) y opciones al lado. */
+.imagen-abrir { margin-top: 8px; }
+#imagen-dialog { width: min(980px, 96vw); max-height: 94vh; padding: 20px 22px; }
+#imagen-dialog .imagen-cuerpo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 340px); gap: 22px; align-items: start; }
+#imagen-lienzo { width: 100%; height: auto; max-height: 76vh; object-fit: contain; border-radius: 6px; box-shadow: 0 6px 24px color-mix(in srgb, black 18%, transparent); background: transparent; justify-self: center; width: auto; max-width: 100%; }
+#imagen-dialog .imagen-opciones { display: grid; gap: 12px; min-width: 0; }
+#imagen-dialog .imagen-opciones label { display: grid; gap: 4px; font-size: .9rem; }
+#imagen-dialog .imagen-fila { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+#imagen-dialog .imagen-fila > label { flex: 1 1 120px; }
+#imagen-dialog .imagen-check { display: flex !important; align-items: center; gap: 8px; }
+#imagen-dialog .imagen-check input { width: auto; min-width: 0; margin: 0; flex: 0 0 auto; }
+#imagen-dialog textarea { resize: vertical; min-height: 5.5em; font: inherit; }
+#imagen-dialog .imagen-acciones { display: flex; gap: 10px; flex-wrap: wrap; }
+#imagen-dialog .imagen-acciones button { min-height: 44px; padding: 0 18px; }
+@media (max-width: 700px) {
+  #imagen-dialog { width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; margin: 0; border-radius: 0; padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px)); overflow-y: auto; }
+  #imagen-dialog .imagen-cuerpo { grid-template-columns: 1fr; gap: 14px; }
+  #imagen-lienzo { max-height: 46vh; }
+}

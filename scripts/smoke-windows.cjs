@@ -15,6 +15,7 @@ else if(args.phase==='personal-ai'){report.ai=await require('./smoke-personal-ai
 else if(args.phase==='book'){report.book=await require('./smoke-book.cjs')({evaluate,call,screenshot,wait,args});}
 else if(args.phase==='modules'){report.modules=await require('./smoke-modules.cjs')({evaluate,call,screenshot,wait,args});}
 else if(args.phase==='circle'){report.circle=await require('./smoke-circle.cjs')({evaluate,call,screenshot,wait,args});}
+else if(args.phase==='imagen'){report.imagen=await require('./smoke-imagen.cjs')({evaluate,call,screenshot,wait,args});}
 else if(args.phase==='enfoque'){report.enfoque=await require('./smoke-enfoque.cjs')({evaluate,call,screenshot,wait,args});}
 else if(args.phase==='graphics'){report.graphics=await require('./smoke-graphics.cjs')({evaluate,call,screenshot,wait,args});}
 else if(args.phase==='study'){report.study=await require('./smoke-study.cjs')({evaluate,call,screenshot,wait,args});}
