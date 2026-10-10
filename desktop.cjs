@@ -38,8 +38,13 @@ app.whenReady().then(async () => {
   win.on('minimize',()=>{win.webContents.setAudioMuted(true);win.webContents.send('library:music-pause');});win.on('restore',()=>win.webContents.setAudioMuted(false));
   win.webContents.session.webRequest.onBeforeSendHeaders({urls:['https://www.youtube.com/embed/*','https://www.youtube-nocookie.com/embed/*']},(details,callback)=>{const headers={...details.requestHeaders};if(details.webContentsId===win.webContents.id&&music.origin&&details.referrer?.startsWith(music.origin+'/'))headers.Referer='https://com.edward.bibliotecabiblica/';callback({requestHeaders:headers});});
   const trusted=event=>event.sender===win.webContents&&event.senderFrame===win.webContents.mainFrame;
-  ipcMain.handle('library:reader-fullscreen',(event,value)=>{if(!trusted(event)||value!==undefined&&typeof value!=='boolean')throw Error('Origen no autorizado.');const next=value??!win.isFullScreen();win.setFullScreen(next);win.webContents.send('library:fullscreen',next);return next;});
-  win.on('enter-full-screen',()=>win.webContents.send('library:fullscreen',true));win.on('leave-full-screen',()=>win.webContents.send('library:fullscreen',false));
+  let reviewPending=false,testReviewAnswer=null;
+  const confirmDevDiscard=()=>{if(hiddenTest&&testProfile&&typeof testReviewAnswer==='boolean'){const answer=testReviewAnswer;testReviewAnswer=null;return answer;}return dialog.showMessageBoxSync(win,{type:'warning',title:'Devocional sin guardar',message:'Aún no guardas este devocional',detail:'Puedes seguir revisándolo y guardarlo, o salir sin guardar.',buttons:['Seguir revisando','Salir sin guardar'],defaultId:0,cancelId:0,noLink:true})===1;};
+  ipcMain.handle('library:review-pending',(event,value)=>{if(!trusted(event)||typeof value!=='boolean')throw Error('Origen no autorizado.');reviewPending=value;return value;});
+  ipcMain.on('library:review-discard',event=>{event.returnValue=trusted(event)&&confirmDevDiscard();if(event.returnValue)reviewPending=false;});
+  win.webContents.on('will-prevent-unload',event=>{if(!reviewPending||confirmDevDiscard()){reviewPending=false;event.preventDefault();}});
+  if(hiddenTest&&testProfile)ipcMain.handle('library:test-review-answer',(event,value)=>{if(!trusted(event)||typeof value!=='boolean'&&value!==null)throw Error('Origen no autorizado.');testReviewAnswer=value;return true;});
+  if(hiddenTest&&testProfile)ipcMain.handle('library:test-review-close',event=>{if(!trusted(event))throw Error('Origen no autorizado.');setImmediate(()=>win.close());return true;});
   ipcMain.handle('library:music-player',(event,url)=>{if(!trusted(event))throw new Error('Origen no autorizado.');return music.player(url);});
   ipcMain.handle('library:music-external',(event,url)=>{if(!trusted(event))throw new Error('Origen no autorizado.');return shell.openExternal(musicCore.parse(url).url);});
   if(hiddenTest&&testProfile)ipcMain.handle('library:test-mute',(event,muted)=>{if(!trusted(event)||typeof muted!=='boolean')throw new Error('Origen no autorizado');win.webContents.setAudioMuted(muted);});
