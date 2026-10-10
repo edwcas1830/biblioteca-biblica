@@ -42,7 +42,7 @@
     return svg;
   }
   const DESTINOS = [
-    { id: 'leer', icono: '📖', texto: 'Leer', vista: 'read-view', accion: () => botonPorTexto('.compact-nav button', 'mi biblia')?.click() },
+    { id: 'leer', icono: '📖', texto: 'Leer', vista: 'read-view', accion: () => { if (vistaActiva() === 'read-view' && estado.hoja !== 'plegada') { ponerAltura('plegada'); return; } botonPorTexto('.compact-nav button', 'mi biblia')?.click(); } },
     { id: 'plan', icono: '✓', texto: 'Plan', vista: 'plan-view', accion: () => botonPorTexto('.compact-nav button', 'mi plan')?.click() },
     { id: 'devocional', icono: '❦', texto: 'Devocional', vista: 'dev-view', accion: () => botonPorTexto('.compact-nav button', 'devocional')?.click() },
     { id: 'oracion', icono: '🙏', texto: 'Oración', vista: 'prayer-view', accion: () => botonPorTexto('.library-menu-items button', 'oración')?.click() },
@@ -150,6 +150,8 @@
   function construirHoja() {
     cabeceraHoja = crear('div', { id: 'movil-hoja-cabecera', role: 'tablist', 'aria-label': 'Estudio' });
     const asa = crear('button', { type: 'button', class: 'movil-hoja-asa', 'aria-label': 'Ampliar o reducir el estudio', onclick: alternarAltura }, [crear('span')]);
+    // Con la hoja abierta, un botón con texto devuelve a la Biblia (el asa sola no se entiende).
+    const volver = crear('button', { type: 'button', class: 'movil-hoja-volver', 'aria-label': 'Volver a la Biblia', onclick: () => ponerAltura('plegada') }, [crear('span', { 'aria-hidden': 'true', texto: '⌄' }), crear('span', { texto: 'Biblia' })]);
     const pestanas = crear('div', { class: 'movil-hoja-pestanas' });
     for (const p of PESTANAS) {
       pestanas.append(crear('button', { type: 'button', role: 'tab', 'data-pestana': p.id, texto: p.texto, onclick: () => elegirPestana(p.id, true) }));
@@ -157,7 +159,7 @@
     const fijar = crear('button', { type: 'button', class: 'movil-hoja-fijar quiet', 'aria-pressed': 'false', title: 'Fijar: el estudio deja de seguir el versículo', texto: '📌', onclick: () => {
       estado.fijada = !estado.fijada; fijar.setAttribute('aria-pressed', String(estado.fijada)); html.dataset.hojaFijada = String(estado.fijada);
     } });
-    cabeceraHoja.append(asa, pestanas, fijar);
+    cabeceraHoja.append(crear('div', { class: 'movil-hoja-izquierda' }, [asa, volver]), pestanas, fijar);
     document.body.append(cabeceraHoja);
 
     // Arrastrar el asa: hacia arriba amplía, hacia abajo reduce.
@@ -316,9 +318,9 @@
   }
   function iniciarTraspaso() {
     pasoTraspaso('Traer desde la PC', [
-      'En el selector, abre tu OneDrive › FABRICA › biblia-estudio › traspaso-android y marca todos sus archivos (son 17).',
+      'En el selector, abre tu OneDrive › FABRICA › biblia-estudio y toca el archivo «Biblioteca-Biblica-traspaso.bbt». Es uno solo y trae todo.',
       'Se copian a la memoria privada de la app. Nada cambia hasta que confirmes.'
-    ], [['Elegir archivos', elegirTraspaso, true], ['Cancelar', () => dialogoTraspaso.close()]]);
+    ], [['Elegir el archivo', elegirTraspaso, true], ['Cancelar', () => dialogoTraspaso.close()]]);
   }
   async function elegirTraspaso() {
     const cuerpo = pasoTraspaso('Copiando…', ['Preparando.'], [], { progreso: 'porcentaje' });

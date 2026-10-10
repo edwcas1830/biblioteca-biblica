@@ -84,7 +84,8 @@ jobs:
       - name: Carpeta de traspaso sintética (datos inventados)
         run: |
           node mobile/scripts/fixture-traspaso.cjs "$RUNNER_TEMP/fixture-traspaso"
-          node mobile/scripts/probar-arranque-android.cjs "$GITHUB_WORKSPACE" "$RUNNER_TEMP/fixture-traspaso/traspaso"
+          node mobile/scripts/empaquetar-traspaso.cjs "$RUNNER_TEMP/fixture-traspaso/traspaso" "$RUNNER_TEMP/fixture-traspaso/prueba.bbt"
+          node mobile/scripts/probar-arranque-android.cjs "$GITHUB_WORKSPACE" "$RUNNER_TEMP/fixture-traspaso/prueba.bbt"
 
       - name: Habilitar KVM para el emulador
         run: |
@@ -103,7 +104,7 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
             echo "== prueba en emulador: inicio =="
-            node mobile/scripts/probar-en-emulador.cjs mobile/android/app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/fixture-traspaso/traspaso" "$GITHUB_WORKSPACE/prueba-emulador"
+            node mobile/scripts/probar-en-emulador.cjs mobile/android/app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/fixture-traspaso/traspaso" "$GITHUB_WORKSPACE/prueba-emulador" "$RUNNER_TEMP/fixture-traspaso/prueba.bbt"
             ls -la "$GITHUB_WORKSPACE/prueba-emulador"
 
       - name: Comprobar el informe del emulador (sin informe completo no hay APK)

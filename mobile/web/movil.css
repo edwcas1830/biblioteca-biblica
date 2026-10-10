@@ -120,7 +120,7 @@
 
 #movil-hoja-cabecera { display: none; }
 :root[data-telefono="true"][data-vista-movil="read-view"] #movil-hoja-cabecera {
-  display: grid; grid-template-columns: 44px 1fr 44px; align-items: center;
+  display: grid; grid-template-columns: auto minmax(0, 1fr) 40px; align-items: center; gap: 4px;
   position: fixed; left: 0; right: 0; z-index: 41;
   bottom: calc(var(--pie) + var(--hoja-alto) - var(--hoja-cab));
   height: var(--hoja-cab);
@@ -131,13 +131,23 @@
   padding: 0 4px;
   transition: bottom .22s ease;
 }
-.movil-hoja-asa { background: none; border: 0; display: grid; place-items: center; cursor: grab; color: inherit; }
+.movil-hoja-izquierda { display: flex; align-items: center; min-width: 44px; height: 100%; }
+.movil-hoja-asa { background: none; border: 0; display: grid; place-items: center; cursor: grab; color: inherit; width: 44px; height: 100%; }
+/* Hoja abierta: el asa cede su lugar a «⌄ Biblia», que siempre devuelve al texto. */
+.movil-hoja-volver { display: none; align-items: center; gap: 4px; height: 36px; padding: 0 12px; border-radius: 18px;
+  border: 1px solid var(--borde-hoja); background: none; color: inherit; font: inherit; font-size: .85rem; font-weight: 600; white-space: nowrap; }
+.movil-hoja-volver span:first-child { font-size: 1.1rem; line-height: 1; }
+:root:is([data-hoja="media"], [data-hoja="completa"]) .movil-hoja-volver { display: inline-flex; }
+:root:is([data-hoja="media"], [data-hoja="completa"]) .movil-hoja-asa { display: none; }
 .movil-hoja-asa span { width: 28px; height: 4px; border-radius: 2px; background: currentColor; opacity: .35; }
 .movil-hoja-pestanas { display: flex; justify-content: center; gap: 2px; }
 .movil-hoja-pestanas button {
   flex: 1 1 0; min-width: 0; border: 0; background: none; color: inherit;
-  font: inherit; font-size: .9rem; padding: 0 6px; border-bottom: 2px solid transparent; border-radius: 0;
+  font: inherit; font-size: .9rem; padding: 0 4px; border-bottom: 2px solid transparent; border-radius: 0;
+  height: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+/* Con letra grande del sistema, las pestañas se encogen en vez de pisarse. */
+@media (max-width: 400px) { .movil-hoja-pestanas button { font-size: .8rem; } }
 .movil-hoja-pestanas button[aria-selected="true"] { font-weight: 700; border-bottom-color: currentColor; }
 .movil-hoja-fijar { opacity: .5; }
 .movil-hoja-fijar[aria-pressed="true"] { opacity: 1; }

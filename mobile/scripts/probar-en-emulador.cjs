@@ -5,10 +5,10 @@
 //   4. una nota se guarda y sigue tras recargar;   5. traspaso SINTÉTICO completo (revisar e instalar);
 //   6. tras recargar: plan 1189/329, 2 devocionales y el módulo sintético legible.
 // Toma capturas en cada paso y guarda la consola. Sale con error si algo falla.
-// Uso: node probar-en-emulador.cjs <apk> <carpeta-traspaso-sintética> <carpeta-de-resultados>
+// Uso: node probar-en-emulador.cjs <apk> <carpeta-traspaso-sintética> <carpeta-de-resultados> <paquete.bbt>
 const { execFileSync } = require('node:child_process');
 const fs = require('node:fs'), path = require('node:path');
-const [apk, traspaso, salida] = process.argv.slice(2);
+const [apk, traspaso, salida, paquete] = process.argv.slice(2);
 const PKG = 'com.edward.bibliotecabiblica';
 fs.mkdirSync(salida, { recursive: true });
 console.log('prueba en emulador · apk:', apk, '· traspaso:', traspaso, '· resultados:', salida);
@@ -109,18 +109,29 @@ async function esperarLista(app, etiqueta) {
   app = await esperarLista(app, '2-tras-recargar');
   const nota = await app.evaluar(`const b=await window.libraryDesktop.bootstrap({initial:{version:1,position:{book:42,chapter:3,verse:16},notes:{},highlights:{},plans:[],devotionals:[],prayers:[],prayerDrafts:{},guideResponses:{},aiStudies:[],devResponses:{},planNotes:{},appearance:{design:'a'},font:20},legacy:null,legacyValid:true});return b.state.notes['42:3:16']||'';`);
   anotar(nota === 'Nota de prueba en el emulador', 'nota persistida tras recargar', nota);
-  // 5. Traspaso sintético: se colocan los archivos donde los deja el selector (files/traspaso-entrante)
-  const archivos = fs.readdirSync(traspaso);
-  adb('shell', 'run-as', PKG, 'mkdir', '-p', 'files/traspaso-entrante');
-  for (const a of archivos) {
-    // adb une los argumentos en UNA línea para el shell del teléfono: la redirección debe ir entre
-    // comillas dentro de «sh -c» para que la ejecute run-as (con permiso sobre files/) y no el shell.
-    execFileSync('adb', ['exec-in', `run-as ${PKG} sh -c 'cat > files/traspaso-entrante/${a}'`], { input: fs.readFileSync(path.join(traspaso, a)), maxBuffer: 64 * 1024 * 1024 });
-  }
+  // 5. Traspaso sintético en UN archivo, por el mismo camino que OneDrive: una URI content:// que la app
+  //    lee con su ContentResolver. El paquete se deja en la caché de la app y se entrega por su FileProvider.
+  if (!paquete) throw new Error('Falta el paquete .bbt sintético');
+  const bytesPaquete = fs.statSync(paquete).size;
+  execFileSync('adb', ['exec-in', `run-as ${PKG} sh -c 'cat > cache/prueba.bbt'`], { input: fs.readFileSync(paquete), maxBuffer: 64 * 1024 * 1024 });
+  const uriPaquete = `content://${PKG}.fileprovider/my_cache_images/prueba.bbt`;
+  // 5a. Lo que falló en el teléfono de Edward: FilePicker.copyFile hacia la carpeta de llegada.
+  const copia = await app.evaluar(`const fp=window.Capacitor.registerPlugin('FilePicker');const fsys=window.Capacitor.registerPlugin('Filesystem');try{await fsys.rmdir({directory:'DATA',path:'traspaso-entrante',recursive:true});}catch{}await fsys.mkdir({directory:'DATA',path:'traspaso-entrante',recursive:true});const {uri}=await fsys.getUri({directory:'DATA',path:'traspaso-entrante'});try{await fp.copyFile({from:${JSON.stringify(uriPaquete)},to:uri.replace(/^file:\/\//,'')+'/copia.bin',overwrite:true});const s=await fsys.stat({directory:'DATA',path:'traspaso-entrante/copia.bin'});return 'ok '+s.size;}catch(e){return 'ERROR '+e.message;}`);
+  anotar(copia === 'ok ' + bytesPaquete, 'copiar archivo elegido a la app (selector de archivos)', copia);
+  // 5b. Paquete único → desempacado nativo (TraspasoPaquetePlugin) con avisos de progreso.
+  const seleccion = await app.evaluar(`let avisos=0;const r=await window.BibliaPlataforma.desempacarPaquete({desde:${JSON.stringify(uriPaquete)},bytes:${bytesPaquete},alProgreso:()=>{avisos++;}});return {...r,avisos};`, 300000);
+  const esperados = fs.readdirSync(traspaso).sort();
+  anotar(JSON.stringify(seleccion.archivos.map(a => a.nombre).sort()) === JSON.stringify(esperados) && seleccion.avisos > 0, 'desempacar el paquete único (.bbt)', seleccion.archivos.length + ' archivos · avisos de progreso: ' + seleccion.avisos);
+  // 5c. Un paquete cortado (descarga incompleta) se rechaza con un mensaje claro y sin dejar restos.
+  const cortado = fs.readFileSync(paquete).subarray(0, Math.floor(bytesPaquete / 2));
+  execFileSync('adb', ['exec-in', `run-as ${PKG} sh -c 'cat > cache/cortado.bbt'`], { input: cortado, maxBuffer: 64 * 1024 * 1024 });
+  const rechazo = await app.evaluar(`try{await window.BibliaPlataforma.desempacarPaquete({desde:'content://${PKG}.fileprovider/my_cache_images/cortado.bbt'});return 'aceptado';}catch(e){return e.message;}`, 120000);
+  anotar(/incompleto/.test(rechazo), 'paquete incompleto rechazado', rechazo);
+  // Vuelve a dejar el paquete bueno desempacado para la revisión.
+  const seleccionBuena = await app.evaluar(`const r=await window.BibliaPlataforma.desempacarPaquete({desde:${JSON.stringify(uriPaquete)},bytes:${bytesPaquete}});return r;`, 300000);
   const copiados = adb('shell', 'run-as', PKG, 'ls', '-l', 'files/traspaso-entrante');
-  anotar(archivos.every(a => copiados.includes(a)), 'archivos de traspaso en la memoria de la app', archivos.length + ' archivos');
-  const seleccion = { carpeta: 'traspaso-entrante', archivos: archivos.map(nombre => ({ nombre, ruta: 'traspaso-entrante/' + nombre, bytes: fs.statSync(path.join(traspaso, nombre)).size })) };
-  const rev = await app.evaluar(`const r=await window.libraryDesktop.transferScan(${JSON.stringify(seleccion)});window.__rev=r;return r.resumen;`, 300000);
+  anotar(esperados.every(a => copiados.includes(a)), 'archivos de traspaso en la memoria de la app', esperados.length + ' archivos');
+  const rev = await app.evaluar(`const r=await window.libraryDesktop.transferScan(${JSON.stringify(seleccionBuena)});window.__rev=r;return r.resumen;`, 300000);
   anotar(rev && rev.conteos && rev.conteos.diasCompletados === 329 && rev.modulos.length === 1, 'revisión del traspaso', JSON.stringify(rev && rev.conteos));
   const inst = await app.evaluar(`const r=await window.libraryDesktop.transferInstall({token:window.__rev.token,confirmado:true});return r.instalado===true&&r.requiereRecarga===true;`, 300000);
   anotar(inst === true, 'instalación del traspaso');

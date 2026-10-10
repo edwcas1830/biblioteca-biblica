@@ -1,6 +1,6 @@
 {
   "name": "biblioteca-biblica-movil",
-  "version": "0.7.0-alpha.3",
+  "version": "0.7.0-alpha.4",
   "private": true,
   "description": "Biblioteca BÃ­blica para Android (Capacitor). Comparte app/ con la versiÃ³n de escritorio.",
   "scripts": {

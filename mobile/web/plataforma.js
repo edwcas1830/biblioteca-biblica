@@ -136,6 +136,12 @@
     if (!capacidades.traspaso) throw Object.assign(new Error('Elegir archivos solo funciona en el teléfono.'), { code: 'UNAVAILABLE' });
     const { files } = await FilePicker.pickFiles({ limit: 0, types: ['*/*'], readData: false });
     if (!files || !files.length) return { archivos: [], carpeta: CARPETA_ENTRANTE };
+    // Un solo archivo .bbt = el paquete completo que arma la PC: se desempaca de forma nativa.
+    const paquetes = files.filter(f => /\.bbt$/i.test(f.name || ''));
+    if (paquetes.length) {
+      if (files.length !== 1) throw Object.assign(new Error('Elige solo el archivo del paquete (.bbt), sin otros archivos.'), { code: 'VALIDATION' });
+      return desempacarPaquete({ desde: files[0].path, bytes: files[0].size || 0, alProgreso });
+    }
     // Antes de copiar: nombres válidos y sin duplicados (también ignorando mayúsculas).
     const vistos = new Set();
     for (const f of files) {
@@ -165,5 +171,20 @@
     return { archivos, carpeta: CARPETA_ENTRANTE };
   }
 
-  window.BibliaPlataforma = { capacidades, compartir, pausarMusica, elegirArchivosTraspaso };
+  // Paquete .bbt (tar) → files/traspaso-entrante, leído por bloques en Java (TraspasoPaquetePlugin).
+  async function desempacarPaquete({ desde, bytes = 0, alProgreso } = {}) {
+    if (!capacidades.traspaso) throw Object.assign(new Error('El paquete solo se abre en el teléfono.'), { code: 'UNAVAILABLE' });
+    const Paquete = plugin('TraspasoPaquete');
+    let oyente = null;
+    try {
+      if (alProgreso) {
+        alProgreso({ archivo: 'el paquete', copiados: 0, total: bytes });
+        oyente = await Paquete.addListener('progreso', p => alProgreso({ archivo: p.archivo, copiados: p.copiados || 0, total: p.total || bytes }));
+      }
+      const r = await Paquete.desempacar({ desde, bytes });
+      return { carpeta: r.carpeta, archivos: r.archivos.map(a => ({ nombre: a.nombre, ruta: a.ruta, bytes: Number(a.bytes) })) };
+    } finally { if (oyente) try { await oyente.remove(); } catch { /* ya quitado */ } }
+  }
+
+  window.BibliaPlataforma = { capacidades, compartir, pausarMusica, elegirArchivosTraspaso, desempacarPaquete };
 })();

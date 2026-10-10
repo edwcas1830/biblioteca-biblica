@@ -1,6 +1,7 @@
 'use strict';
-// Uso: node mobile/scripts/build-www.cjs && node mobile/scripts/probar-arranque-android.cjs [repo] [carpeta-traspaso-sintética]
-// Con la carpeta (la de fixture-traspaso.cjs) también revisa e instala el traspaso y comprueba lo traído.
+// Uso: node mobile/scripts/build-www.cjs && node mobile/scripts/probar-arranque-android.cjs [repo] [paquete.bbt]
+// Con el paquete (fixture-traspaso.cjs + empaquetar-traspaso.cjs) también lo desempaca, revisa e instala
+// el traspaso y comprueba lo traído. El desempacado imita a TraspasoPaquetePlugin.java.
 // Simula el arranque Android con los MISMOS scripts y el mismo orden que mobile/www/index.html,
 // con los dobles de plugins de Codex (SQLite real en carpeta temporal) y un puente nativo como el del
 // teléfono. Imita lo que el emulador descubrió de Android de verdad:
@@ -10,7 +11,7 @@
 // Datos inventados.
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
 const repo = process.argv[2] || path.resolve(__dirname, '..', '..');
-const carpetaTraspaso = process.argv[3] || '';
+const paqueteTraspaso = process.argv[3] || '';
 const www = path.join(repo, 'mobile', 'www');
 const helpers = require(path.join(repo, 'tests', 'mobile-fixtures.cjs'));
 const despues = [];
@@ -64,6 +65,41 @@ function sqliteComoAndroid(bases) {
   };
 }
 
+// Doble de TraspasoPaquetePlugin.java: mismas reglas (tar ustar, nombres planos, sin duplicados, completo).
+function paqueteComoAndroid(datos) {
+  const oyentes = [];
+  const NOMBRE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/;
+  return {
+    addListener: (o, cb) => { if (o && o.eventName === 'progreso') oyentes.push(cb); return 'oyente'; },
+    removeListener: async () => { oyentes.length = 0; },
+    desempacar: async ({ desde, bytes = 0 }) => {
+      const b = fs.readFileSync(desde.replace(/^file:\/\//, ''));
+      const destino = path.join(datos, 'traspaso-entrante');
+      fs.rmSync(destino, { recursive: true, force: true }); fs.mkdirSync(destino, { recursive: true });
+      const falla = m => { fs.rmSync(destino, { recursive: true, force: true }); throw Object.assign(new Error(m), { code: 'CORRUPT' }); };
+      const archivos = [], vistos = new Set(); let i = 0, fin = false;
+      while (i + 512 <= b.length) {
+        const h = b.subarray(i, i + 512); i += 512;
+        if (h.every(x => x === 0)) { fin = true; break; }
+        const texto = (d, l) => h.subarray(d, d + l).toString('ascii').replace(/\0.*$/s, '').trim();
+        if (texto(257, 5) !== 'ustar') falla('El archivo elegido no es un paquete de traspaso.');
+        let suma = 0; for (let k = 0; k < 512; k++) suma += k >= 148 && k < 156 ? 32 : h[k];
+        if (parseInt(texto(148, 8), 8) !== suma) falla('El paquete del traspaso está dañado (cabecera).');
+        const nombre = texto(0, 100), tam = parseInt(texto(124, 12), 8);
+        if (!NOMBRE.test(nombre) || nombre.includes('..') || vistos.has(nombre.toLowerCase())) falla('Nombre no permitido en el paquete: «' + nombre + '».');
+        vistos.add(nombre.toLowerCase());
+        if (i + tam > b.length) falla('El paquete del traspaso está incompleto (¿terminó de descargarse?).');
+        fs.writeFileSync(path.join(destino, nombre), b.subarray(i, i + tam));
+        i += tam + (512 - (tam % 512)) % 512;
+        for (const cb of oyentes) cb({ archivo: nombre, copiados: i, total: bytes || b.length });
+        archivos.push({ nombre, ruta: 'traspaso-entrante/' + nombre, bytes: tam });
+      }
+      if (!fin || !archivos.length) falla('El paquete del traspaso está incompleto (¿terminó de descargarse?).');
+      return { carpeta: 'traspaso-entrante', archivos };
+    }
+  };
+}
+
 function cargarPagina(plugins) {
   const eventos = {};
   const ventana = {
@@ -98,7 +134,7 @@ function cargarPagina(plugins) {
     App: { addListener: async () => ({ remove() {} }), exitApp: async () => {} },
     TextToSpeech: { getSupportedVoices: async () => ({ voices: [] }), speak: async () => {}, stop: async () => {} },
     Share: { share: async () => ({}) }, Browser: { open: async () => {} }, FilePicker: { pickFiles: async () => ({ files: [] }), copyFile: async () => {} },
-    SystemBars: { setStyle: async () => {} } };
+    SystemBars: { setStyle: async () => {} }, TraspasoPaquete: paqueteComoAndroid(datos) };
   const inicial = { version: 1, position: { book: 42, chapter: 3, verse: 1 }, notes: {}, highlights: {}, plans: [], devotionals: [], prayers: [], prayerDrafts: {}, guideResponses: {}, aiStudies: [], devResponses: {}, planNotes: {}, appearance: { design: 'a' }, font: 20 };
 
   // Primera sesión
@@ -133,14 +169,24 @@ function cargarPagina(plugins) {
   if (otra.state.notes['42:3:16'] !== 'Nota de prueba del arranque') throw new Error('La nota no sobrevivió a la recarga');
   await ventana.BibliaPreparacion.modulos;
 
-  if (carpetaTraspaso) {
-    // Como el selector de archivos: copia a DATA/traspaso-entrante y pasa la selección al puente.
-    const entrante = path.join(datos, 'traspaso-entrante');
-    fs.mkdirSync(entrante, { recursive: true });
-    const archivos = fs.readdirSync(carpetaTraspaso);
-    for (const a of archivos) fs.copyFileSync(path.join(carpetaTraspaso, a), path.join(entrante, a));
-    const seleccion = { carpeta: 'traspaso-entrante', archivos: archivos.map(nombre => ({ nombre, ruta: 'traspaso-entrante/' + nombre, bytes: fs.statSync(path.join(entrante, nombre)).size })) };
-    console.log('paso: transferScan (' + archivos.length + ' archivos)');
+  if (paqueteTraspaso) {
+    // Como en el teléfono: un solo archivo .bbt elegido → desempacado nativo → selección para el puente.
+    const bytes = fs.statSync(paqueteTraspaso).size;
+    let avisos = 0;
+    const seleccion = await ventana.BibliaPlataforma.desempacarPaquete({ desde: paqueteTraspaso, bytes, alProgreso: () => { avisos++; } });
+    const archivos = seleccion.archivos.map(a => a.nombre);
+    console.log('paquete desempacado:', archivos.length, 'archivos · avisos de progreso:', avisos);
+    if (!archivos.includes('traspaso.json') || avisos < 2) throw new Error('El paquete no se desempacó bien');
+    // Un paquete cortado se rechaza con mensaje claro.
+    const cortado = paqueteTraspaso + '.cortado.bbt';
+    fs.writeFileSync(cortado, fs.readFileSync(paqueteTraspaso).subarray(0, Math.floor(bytes / 2)));
+    let rechazo = 'aceptado';
+    try { await ventana.BibliaPlataforma.desempacarPaquete({ desde: cortado }); } catch (e) { rechazo = e.message; }
+    fs.rmSync(cortado, { force: true });
+    console.log('paquete cortado:', rechazo);
+    if (!/incompleto/.test(rechazo)) throw new Error('Un paquete cortado no se rechazó');
+    await ventana.BibliaPlataforma.desempacarPaquete({ desde: paqueteTraspaso, bytes });
+    console.log('paso: transferScan (' + seleccion.archivos.length + ' archivos)');
     const rev = await puente.transferScan(seleccion);
     console.log('revisión:', JSON.stringify(rev.resumen && rev.resumen.conteos), '· módulos:', rev.resumen && rev.resumen.modulos.length);
     if (!rev.resumen || rev.resumen.conteos.diasCompletados !== 329 || rev.resumen.modulos.length !== 1) throw new Error('La revisión del traspaso no cuadra');
