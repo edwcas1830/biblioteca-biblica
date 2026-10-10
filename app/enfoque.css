@@ -1,0 +1,47 @@
+/* Modo enfoque: un solo panel a pantalla completa (escritorio y teléfono). Usa los tokens de cada diseño.
+   Los selectores repiten el atributo para ganar a las reglas de diseño y de la capa móvil. */
+.enfoque-abrir { min-width: 36px; padding: 0 8px; font-size: 1.05rem; line-height: 1; }
+#enfoque-barra { display: none; }
+
+:root[data-enfoque][data-enfoque][data-enfoque] :is(.topbar, .reading-toolbar, .rail, .app-footer, .pane-notes, #ai-pane, #ai-resizer, .pane-resizer,
+  #library-controls, #pane-layout-notice, #movil-nav, #movil-hoja-cabecera, #movil-versiculo, #back-to-top, #comparison-controls, .enfoque-abrir) { display: none !important; }
+:root[data-enfoque="biblia"][data-enfoque][data-enfoque] :is(#pane-comentario, #pane-diccionario),
+:root[data-enfoque="comentario"][data-enfoque][data-enfoque] :is(#pane-biblia, #pane-diccionario),
+:root[data-enfoque="diccionario"][data-enfoque][data-enfoque] :is(#pane-biblia, #pane-comentario) { display: none !important; }
+
+:root[data-enfoque="biblia"][data-enfoque][data-enfoque] #pane-biblia,
+:root[data-enfoque="comentario"][data-enfoque][data-enfoque] #pane-comentario,
+:root[data-enfoque="diccionario"][data-enfoque][data-enfoque] #pane-diccionario {
+  display: flex !important; flex-direction: column;
+  position: fixed !important; inset: 0; z-index: 80;
+  width: auto !important; height: auto !important; max-width: none !important; max-height: none !important;
+  margin: 0 !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important;
+  background: var(--paper, Canvas); color: var(--ink, CanvasText);
+  padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+/* Columna de lectura cómoda (unos 46 caracteres de ancho por línea en pantalla grande). */
+:root[data-enfoque][data-enfoque][data-enfoque] #panes > .pane .pane-body {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; height: auto !important; max-height: none !important;
+  padding: 3.5rem max(1.25rem, calc((100vw - 46rem) / 2)) 4rem !important;
+}
+:root[data-enfoque][data-enfoque][data-enfoque] #panes > .pane .pane-head { padding-inline: max(1.25rem, calc((100vw - 46rem) / 2)) !important; padding-right: 9rem !important; }
+:root[data-enfoque][data-enfoque][data-enfoque] #panes > .pane .pane-close { display: none !important; }
+:root[data-enfoque][data-enfoque][data-enfoque] #panes > .pane .pane-foot { padding-inline: max(1.25rem, calc((100vw - 46rem) / 2)) !important; }
+
+:root[data-enfoque] #enfoque-barra:not([hidden]) {
+  display: flex; gap: 2px; position: fixed; z-index: 81;
+  top: calc(env(safe-area-inset-top, 0px) + 10px); right: 12px;
+  padding: 4px; border-radius: 999px;
+  background: color-mix(in srgb, var(--paper, Canvas) 88%, transparent);
+  border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+  opacity: .55; transition: opacity .2s;
+}
+:root[data-enfoque] #enfoque-barra:hover, :root[data-enfoque] #enfoque-barra:focus-within { opacity: 1; }
+#enfoque-barra button { min-height: 40px; min-width: 40px; padding: 0 10px; border-radius: 999px; }
+@media (prefers-reduced-motion: reduce) { #enfoque-barra { transition: none; } }
+/* Teléfono: la barra va abajo, al centro, para no tapar los selectores de la cabecera. */
+@media (max-width: 599px) {
+  :root[data-enfoque] #enfoque-barra:not([hidden]) { top: auto; right: auto; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); opacity: .8; }
+  :root[data-enfoque][data-enfoque][data-enfoque] #panes > .pane .pane-head { padding-right: 1.25rem !important; }
+  :root[data-enfoque][data-enfoque][data-enfoque] #panes > .pane .pane-body { padding: 1.25rem 1.25rem 5rem !important; }
+}

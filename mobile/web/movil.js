@@ -114,7 +114,8 @@
   // Lo que la plataforma aún no ofrece no se muestra (en vez de un botón que falla).
   const OPERACION_DE = [
     [/actualizaciones/i, 'checkForUpdates'], [/proteger/i, 'setPin'], [/inteligencia artificial|estudio con ia/i, 'aiStatus'],
-    [/música/i, 'musicPlayer'], [/guardar copia/i, 'exportBackup'], [/recuperar copia/i, 'restoreBackup'], [/fuentes/i, 'studySources']
+    [/música/i, 'musicPlayer'], [/guardar copia/i, 'exportBackup'], [/recuperar copia/i, 'restoreBackup'], [/fuentes/i, 'studySources'],
+    [/círculo/i, 'circleStatus']
   ];
   async function ocultarSinCapacidad(lista) {
     const puente = window.libraryDesktop;
@@ -273,6 +274,7 @@
 
   // ---------- Atrás (lo usa plataforma.js con el botón de Android) ----------
   function atras() {
+    if (window.BibliaEnfoque && window.BibliaEnfoque.salir()) return true; // primero sale de la pantalla completa
     const dialogoAbierto = $$('dialog[open]').pop();
     if (dialogoAbierto) { dialogoAbierto.close(); return true; }
     if (barra && !barra.hidden) { ocultarBarra(); return true; }
