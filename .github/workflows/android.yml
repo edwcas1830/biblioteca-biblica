@@ -25,7 +25,7 @@ permissions:
 jobs:
   apk:
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 60
     env:
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
     steps:
@@ -91,6 +91,7 @@ jobs:
           sudo udevadm trigger --name-match=kvm
 
       - name: Probar la app en Android 14 (emulador)
+        timeout-minutes: 20
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34

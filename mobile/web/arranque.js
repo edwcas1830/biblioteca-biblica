@@ -3,6 +3,23 @@
 // y registra las integraciones de plataforma (Claude: voz, compartir, ciclo de vida).
 // Se carga después del contrato y los adaptadores, y antes de los controladores de app/.
 (function () {
+  // Los recursos .gz se publican como .gz.bin (Android descomprime los .gz al empaquetar el APK):
+  // toda petición de la propia app a un .gz se reescribe ANTES de que nadie capture fetch.
+  if (typeof window.fetch === 'function' && !window.fetch.bibliaGz) {
+    const fetchOriginal = window.fetch.bind(window);
+    const conGz = (entrada, opciones) => {
+      try {
+        const url = new URL(typeof entrada === 'string' ? entrada : entrada.url, location.href);
+        if (url.origin === location.origin && url.pathname.endsWith('.gz')) {
+          url.pathname += '.bin';
+          return fetchOriginal(typeof entrada === 'string' ? url.href : new Request(url.href, entrada), opciones);
+        }
+      } catch { /* URL ajena o inválida: sin cambios */ }
+      return fetchOriginal(entrada, opciones);
+    };
+    conGz.bibliaGz = true;
+    window.fetch = conGz;
+  }
   const cap = window.Capacitor;
   const html = document.documentElement;
   const nativo = !!(cap && typeof cap.isNativePlatform === 'function' && cap.isNativePlatform());
@@ -125,7 +142,29 @@
     if (window.LibraryAndroidServices) window.LibraryAndroidServices.register(manejadores);
     else adaptador.register(manejadores);
   };
-  const plugins = cap.registerPlugin ? { filesystem: cap.registerPlugin('Filesystem'), sqlite: cap.registerPlugin('CapacitorSQLite') } : null;
+  // El plugin SQLite de Android separa las sentencias de execute() SOLO por «;» + salto de línea
+  // (UtilsSQLite.getStatementsArray) y ejecuta una por trozo: «A; B; C» en una línea creaba solo A.
+  // Se reescribe cada execute con una sentencia por línea, respetando el texto entre comillas.
+  const separarSql = texto => {
+    const partes = []; let actual = '', comilla = null;
+    for (let i = 0; i < texto.length; i++) {
+      const c = texto[i];
+      if (comilla) { actual += c; if (c === comilla) { if (texto[i + 1] === comilla) { actual += texto[++i]; } else comilla = null; } continue; }
+      if (c === "'" || c === '"') { comilla = c; actual += c; continue; }
+      if (c === ';') { if (actual.trim()) partes.push(actual.trim()); actual = ''; continue; }
+      actual += c;
+    }
+    if (actual.trim()) partes.push(actual.trim());
+    return partes;
+  };
+  const sqliteAndroid = original => new Proxy(original, {
+    get(objetivo, nombre) {
+      if (nombre !== 'execute') return objetivo[nombre];
+      return opciones => objetivo.execute(Object.assign({}, opciones, { statements: separarSql(String(opciones.statements || '')).map(s => s + ';').join('\n') }));
+    }
+  });
+  window.BibliaSeparadorSql = separarSql;
+  const plugins = cap.registerPlugin ? { filesystem: cap.registerPlugin('Filesystem'), sqlite: sqliteAndroid(cap.registerPlugin('CapacitorSQLite')) } : null;
   const fallos = [];
   const avisar = (estado, mensaje) => {
     html.dataset.preparacion = estado;

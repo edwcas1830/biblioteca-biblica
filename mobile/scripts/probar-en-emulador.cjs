@@ -72,6 +72,8 @@ async function esperarLista(app, etiqueta) {
   anotar(caps.faltan.length === 0, 'operaciones disponibles', caps.faltan.join(', ') || 'todas');
   const cap = await app.evaluar(`const c=await window.libraryDesktop.chapter({book:42,chapter:3});return c.verses.length;`);
   anotar(cap === 36, 'Juan 3 RV1909', cap + ' versículos');
+  const libres = await app.evaluar(`const r=await window.libraryDesktop.connections({book:42,chapter:3,verse:16});const c=await window.libraryDesktop.compare({book:42,chapter:3,verse:16,modules:['rv1909','onbv2008']});const f=(c.rows.find(x=>x.verse===16)||{cells:[]}).cells[1];return {refs:r.items.length,onbv:!!(f&&f.text)};`);
+  anotar(libres.refs > 0 && libres.onbv, 'recursos libres (referencias y ONBV)', JSON.stringify(libres));
   const voces = await app.evaluar(`try{const v=await window.libraryDesktop.voiceOptions();return 'voces en español: '+v.length;}catch(e){return 'voz: '+e.message;}`);
   anotar(true, 'voz del teléfono (informativo)', voces);
   // 4. Nota que sobrevive a la recarga
@@ -115,4 +117,6 @@ async function esperarLista(app, etiqueta) {
 }).finally(() => {
   fs.writeFileSync(path.join(salida, 'informe.txt'), informe.join('\n') + '\n');
   try { fs.writeFileSync(path.join(salida, 'logcat.txt'), adb('logcat', '-d', '-v', 'brief', 'Capacitor:V', 'Capacitor/Console:V', 'chromium:V', 'AndroidRuntime:E', '*:S')); } catch { /* sin logcat */ }
+  // Salir siempre: un WebSocket o temporizador abierto no debe dejar colgado al emulador.
+  process.exit(process.exitCode || 0);
 });

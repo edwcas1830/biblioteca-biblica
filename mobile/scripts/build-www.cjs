@@ -30,6 +30,18 @@ for (const capa of ['shared', 'platform']) {
 }
 copiar(path.join(mobile, 'web'), path.join(out, 'mobile'));
 
+// Android (AGP) DESCOMPRIME los assets .gz al empaquetar y les quita la extensión: «x.json.gz» llega
+// como «x.json» y la app no lo encuentra (ni coincide su huella). Se guardan como «.gz.bin», que nadie
+// toca, y arranque.js reescribe esas peticiones. Los bytes y las huellas son exactamente los mismos.
+const renombrados = [];
+(function renombrarGz(dir) {
+  for (const n of fs.readdirSync(dir)) {
+    const p = path.join(dir, n);
+    if (fs.statSync(p).isDirectory()) renombrarGz(p);
+    else if (n.endsWith('.gz')) { fs.renameSync(p, p + '.bin'); renombrados.push(path.relative(out, p).split(path.sep).join('/')); }
+  }
+})(out);
+
 // index.html: capa móvil antes de los scripts de la app y CSP del teléfono.
 const indexPath = path.join(out, 'index.html');
 let html = fs.readFileSync(indexPath, 'utf8');

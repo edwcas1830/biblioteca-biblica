@@ -26,7 +26,16 @@ function puenteNativo(impl) {
   const Clipboard = { write: async o => { if (!o || typeof o.string !== 'string') throw new Error('Clipboard.write exige {string}'); portapapeles.push(o.string); } };
   // Como Android/SQLCipher de verdad: al abrir una base escribible se crea sola la tabla android_metadata.
   const sqliteBase = helpers.sqlite(bases);
-  const sqliteAndroid = { ...sqliteBase, open: async o => { await sqliteBase.open(o); if (!o.readonly) await sqliteBase.execute({ database: o.database, statements: "CREATE TABLE IF NOT EXISTS android_metadata (locale TEXT); INSERT INTO android_metadata SELECT 'es_US' WHERE NOT EXISTS (SELECT 1 FROM android_metadata);" }); } };
+  // Y como el plugin de Android (UtilsSQLite.getStatementsArray): execute() solo separa por «;» + salto de
+  // línea y ejecuta UNA sentencia por trozo (execSQL); el resto de un trozo con varias se pierde.
+  const executeComoAndroid = async o => {
+    for (const trozo of String(o.statements).split(';\n')) {
+      const primera = trozo.split(';')[0].trim();
+      if (primera) await sqliteBase.execute({ ...o, statements: primera + ';' });
+    }
+    return { changes: { changes: 0 } };
+  };
+  const sqliteAndroid = { ...sqliteBase, execute: executeComoAndroid, open: async o => { await sqliteBase.open(o); if (!o.readonly) await sqliteBase.execute({ database: o.database, statements: "CREATE TABLE IF NOT EXISTS android_metadata (locale TEXT); INSERT INTO android_metadata SELECT 'es_US' WHERE NOT EXISTS (SELECT 1 FROM android_metadata);" }); } };
   const plugins = { CapacitorSQLite: sqliteAndroid, Filesystem: helpers.filesystem(datos, { absoluteRoot: root }), Clipboard,
     App: { addListener: async () => ({ remove() {} }), exitApp: async () => {} },
     TextToSpeech: { getSupportedVoices: async () => ({ voices: [] }), speak: async () => {}, stop: async () => {} },
@@ -65,6 +74,12 @@ function puenteNativo(impl) {
   console.log('storage:', caps.storage, '| catalog:', caps.operations.catalog.available, '| readPdf:', caps.operations.readPdf.available, '| transferScan:', caps.operations.transferScan.available, '| transferInstall:', caps.operations.transferInstall.available);
   console.log('paso: chapter'); const cap = await puente.chapter({ book: 42, chapter: 3 });
   console.log('Juan 3 versículos:', (cap.verses || cap.rows || []).length);
+  // Recursos libres empaquetados (.gz.bin): referencias cruzadas y la ONBV.
+  const refs = await puente.connections({ book: 42, chapter: 3, verse: 16 });
+  const comp = await puente.compare({ book: 42, chapter: 3, verse: 16, modules: ['rv1909', 'onbv2008'] });
+  const filaOnbv = (comp.rows.find(r => r.verse === 16) || { cells: [] }).cells[1];
+  console.log('referencias Juan 3:16:', refs.items.length, '| ONBV Juan 3:16:', !!(filaOnbv && filaOnbv.text));
+  if (!refs.items.length || !(filaOnbv && filaOnbv.text)) throw new Error('Los recursos libres no se abren');
   const otra = await puente.bootstrap({ initial: inicial, legacy: null, legacyValid: true });
   console.log('nota persistida en SQLite:', otra.state.notes['42:3:16']);
   await ventana.BibliaPreparacion.modulos;
