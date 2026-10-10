@@ -1,1 +1,440 @@
-/* Placeholder para diseño C. La base common.css permite evaluar los controles. */
+/* Diseño C · Gemini (gemini-3.1-pro-preview) — "Columna serena". Generado por Gemini sobre CONTRATO.md; integrado por Claude sin cambios de fondo. */
+
+html[data-design="c"] {
+  --font-ui: 'Inter', 'Source Sans 3', 'Segoe UI', sans-serif;
+  --font-reader: 'Literata', Georgia, serif;
+  --font-heading: 'Literata', Georgia, serif;
+}
+
+html[data-design="c"][data-theme="marfil"],
+html[data-design="c"][data-theme="auto"] {
+  --bg: #F5F4F1;
+  --paper: #FFFFFF;
+  --panel: #FAFAF8;
+  --ink: #2C2A28;
+  --muted: #736B62;
+  --line: #E2DDD5;
+  --control-border: #D6D1C9;
+  --accent: #8A7C6E;
+  --accent-ink: #FFFFFF;
+  --red: #9E332E;
+  --strong: #6B5C4E;
+  --highlight: #F2E3C6;
+  --focus: #8A7C6E;
+  color-scheme: light;
+}
+
+html[data-design="c"][data-theme="sepia"] {
+  --bg: #EFE6D5;
+  --paper: #FDF6E3;
+  --panel: #F5EEDC;
+  --ink: #4A3C31;
+  --muted: #8A7865;
+  --line: #D1C4AD;
+  --control-border: #C2B49D;
+  --accent: #A38363;
+  --accent-ink: #FFFFFF;
+  --red: #A8443B;
+  --strong: #80664D;
+  --highlight: #E8D4B4;
+  --focus: #A38363;
+  color-scheme: light;
+}
+
+html[data-design="c"][data-theme="noche"] {
+  --bg: #1A1A18;
+  --paper: #22211F;
+  --panel: #2A2927;
+  --ink: #E3DED7;
+  --muted: #9E9689;
+  --line: #3D3B38;
+  --control-border: #4D4A46;
+  --accent: #A39687;
+  --accent-ink: #1A1A18;
+  --red: #D66B63;
+  --strong: #C2B4A3;
+  --highlight: #4A4233;
+  --focus: #A39687;
+  color-scheme: dark;
+}
+
+html[data-design="c"] body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html[data-design="c"] ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+html[data-design="c"] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+html[data-design="c"] ::-webkit-scrollbar-thumb {
+  background: var(--control-border);
+  border-radius: 5px;
+  border: 2px solid var(--paper);
+}
+html[data-design="c"] ::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+html[data-design="c"] button,
+html[data-design="c"] input,
+html[data-design="c"] select,
+html[data-design="c"] textarea {
+  font-family: var(--font-ui);
+  border-radius: 8px;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+html[data-design="c"] .quiet,
+html[data-design="c"] .outline {
+  min-height: 34px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+}
+html[data-design="c"] .quiet:hover {
+  background: var(--line);
+}
+html[data-design="c"] .outline {
+  border-color: var(--control-border);
+}
+html[data-design="c"] .outline:hover {
+  border-color: var(--muted);
+}
+html[data-design="c"] .primary {
+  min-height: 36px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+html[data-design="c"] select,
+html[data-design="c"] input {
+  min-height: 34px;
+  padding: 6px 10px;
+  font-size: 14px;
+  border: 1px solid var(--control-border);
+  background: var(--paper);
+}
+html[data-design="c"] select:hover,
+html[data-design="c"] input:hover {
+  border-color: var(--muted);
+}
+
+html[data-design="c"] .rail {
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+  padding: 24px 16px;
+}
+html[data-design="c"] .rail .brand {
+  font-family: var(--font-heading);
+  font-weight: 500;
+}
+html[data-design="c"] .rail .nav {
+  border-radius: 8px;
+  font-weight: 500;
+  padding: 10px 12px;
+  margin-bottom: 4px;
+}
+html[data-design="c"] .rail .nav:hover:not(.active) {
+  background: var(--line);
+}
+
+html[data-design="c"] .topbar {
+  min-height: 56px;
+  padding: 12px 24px;
+  border-bottom: none;
+}
+html[data-design="c"] .topbar > span {
+  font-family: var(--font-heading);
+  font-size: 14px;
+  color: var(--muted);
+  letter-spacing: 0.5px;
+}
+
+html[data-design="c"] #read-view {
+  padding: 0 0 16px 0;
+  gap: 12px;
+}
+
+html[data-design="c"] .reading-toolbar,
+html[data-design="c"] #library-controls {
+  padding: 0 24px;
+  min-height: auto;
+  margin: 0;
+}
+html[data-design="c"] .reader-invitation {
+  display: none; 
+}
+html[data-design="c"] .reading-actions {
+  width: 100%;
+  justify-content: flex-end;
+}
+html[data-design="c"] #module-status {
+  padding: 0 24px;
+  margin-top: -4px;
+}
+
+html[data-design="c"] #panes {
+  display: grid;
+  grid-template-columns: var(--pane-biblia, 45fr) 12px var(--pane-comentario, 28fr) 12px var(--pane-diccionario, 27fr);
+  gap: 0;
+  padding: 0 24px;
+  flex: 1;
+  min-height: 0;
+}
+
+html[data-design="c"] .pane {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+  overflow: hidden;
+}
+
+html[data-design="c"] .pane-head {
+  height: auto !important; 
+  min-height: 0;
+  padding: 12px 16px;
+  gap: 10px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+
+html[data-design="c"] .pane[data-pane="biblia"] .pane-head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+}
+html[data-design="c"] .pane[data-pane="biblia"] .pane-heading {
+  display: none; 
+}
+html[data-design="c"] .passage-picker {
+  flex: 1;
+  min-width: 200px;
+}
+html[data-design="c"] #version-select {
+  width: auto;
+  min-width: 100px;
+}
+html[data-design="c"] .pane[data-pane="biblia"] .pane-ref {
+  display: none; 
+}
+
+html[data-design="c"] .pane[data-pane="comentario"] .pane-head,
+html[data-design="c"] .pane[data-pane="diccionario"] .pane-head {
+  display: flex;
+  flex-direction: column;
+}
+html[data-design="c"] .pane-heading {
+  min-height: auto;
+}
+html[data-design="c"] .pane-head h3 {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+}
+html[data-design="c"] .dictionary-query-row input {
+  flex: 1;
+}
+
+html[data-design="c"] .pane-body {
+  padding: 24px 32px;
+  font-family: var(--font-reader);
+  font-size: 16px; 
+  line-height: 1.65;
+}
+
+html[data-design="c"] .reading-space .verses {
+  column-count: auto;
+  column-width: auto;
+  padding: 32px 40px;
+}
+html[data-design="c"] .verse {
+  display: block;
+  text-indent: -1.5em;
+  padding-left: 1.5em;
+  margin-bottom: 0.8em;
+  border-radius: 6px;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+html[data-design="c"] .verse:hover {
+  background-color: var(--panel);
+}
+html[data-design="c"] .verse.selected {
+  background-color: var(--highlight);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+html[data-design="c"] .verse > sup:first-child {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 0.7em;
+  color: var(--accent);
+  margin-right: 8px;
+  user-select: none;
+}
+html[data-design="c"] .jesus-words {
+  color: var(--red);
+}
+html[data-design="c"] .strong-number {
+  font-family: var(--font-ui);
+  font-size: 0.8em;
+  color: var(--strong);
+  vertical-align: baseline;
+  margin-left: 4px;
+}
+html[data-design="c"] .module-heading {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 1.2em;
+  margin: 1.5em 0 0.5em 0;
+  color: var(--ink);
+  text-indent: 0;
+  padding-left: 0;
+}
+
+html[data-design="c"] .pane-foot {
+  min-height: auto;
+  padding: 8px 16px;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+}
+html[data-design="c"] .page-controls button {
+  background: var(--paper);
+  border: 1px solid var(--control-border);
+}
+
+html[data-design="c"] .pane-resizer {
+  --resize-axis: x;
+  cursor: col-resize;
+  width: 12px;
+  position: relative;
+}
+html[data-design="c"] .pane-resizer::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 32px;
+  background: var(--control-border);
+  border-radius: 2px;
+  transition: background-color 0.2s ease;
+}
+html[data-design="c"] .pane-resizer:hover::after,
+html[data-design="c"] .pane-resizer:focus-visible::after {
+  background: var(--focus);
+}
+
+html[data-design="c"] .pane-notes {
+  margin: 16px 24px 0;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+  overflow: hidden;
+}
+html[data-design="c"] .pane-notes > summary {
+  padding: 14px 24px;
+  background: var(--panel);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 14px;
+  outline: none;
+}
+html[data-design="c"] .pane-notes > summary:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--focus);
+}
+html[data-design="c"] .pane-notes[open] > summary {
+  border-bottom: 1px solid var(--line);
+}
+html[data-design="c"] .notes-content {
+  padding: 24px;
+}
+html[data-design="c"] #note {
+  border-radius: 8px;
+  padding: 16px;
+  background: var(--panel);
+  border: 1px solid var(--control-border);
+  font-family: var(--font-reader);
+  font-size: 16px;
+}
+
+html[data-design="c"] .dictionary-result {
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-weight: 500;
+}
+html[data-design="c"] .dictionary-entry h4 {
+  font-family: var(--font-heading);
+  font-size: 24px;
+  color: var(--ink);
+}
+
+html[data-design="c"] #back-to-top {
+  border-radius: 24px;
+  padding: 10px 20px;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--line);
+}
+
+html[data-design="c"] body.reading-only #panes,
+html[data-design="c"] body.focus #panes {
+  display: grid;
+  grid-template-columns: minmax(auto, 860px);
+  justify-content: center;
+}
+html[data-design="c"] body.reading-only .pane[data-pane="comentario"],
+html[data-design="c"] body.reading-only .pane[data-pane="diccionario"],
+html[data-design="c"] body.reading-only .pane-resizer,
+html[data-design="c"] body.focus .pane[data-pane="comentario"],
+html[data-design="c"] body.focus .pane[data-pane="diccionario"],
+html[data-design="c"] body.focus .pane-resizer,
+html[data-design="c"] body.focus .pane-notes {
+  display: none;
+}
+
+@media (max-width: 1200px) {
+  html[data-design="c"] .reading-space .verses {
+    padding: 24px;
+  }
+  html[data-design="c"] .pane-body {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 1050px) {
+  html[data-design="c"] .rail {
+    display: none;
+  }
+  html[data-design="c"] .compact-nav {
+    display: flex !important;
+  }
+  html[data-design="c"] .library-menu {
+    display: block !important;
+  }
+  html[data-design="c"] #panes {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    overflow-y: auto;
+    padding: 0 16px;
+    gap: 16px;
+  }
+  html[data-design="c"] .pane {
+    min-height: 400px;
+  }
+  html[data-design="c"] .pane-resizer {
+    display: none;
+  }
+}

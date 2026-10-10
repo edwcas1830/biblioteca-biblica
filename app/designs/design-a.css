@@ -1,1 +1,182 @@
-/* Placeholder para diseño A. La base common.css permite evaluar los controles. */
+/* Diseño A · Claude — "Libro abierto".
+   Una Biblia de cuero sobre una mesa de madera, con luz de lámpara: la página bíblica es el objeto principal
+   y el comentario y el diccionario son hojas al margen, abiertas a la vez. Grilla de 8 px.
+   Fuentes: Literata (lectura), Cormorant Garamond (títulos), Inter Tight (interfaz). */
+
+/* ---------- Tokens por tema ---------- */
+html[data-design="a"]{
+  --bg:#ECE6D8;--paper:#FBF8F0;--panel:#F4EEE2;--ink:#2A2721;--muted:#665F50;
+  --line:#E2D8C3;--control-border:#968A72;--accent:#7A3E2E;--accent-ink:#FFF8EE;
+  --red:#9E2B25;--strong:#7E6020;--highlight:#EFE2BE;--focus:#7A3E2E;
+  --font-ui:'Inter Tight','Inter','Segoe UI',sans-serif;
+  --font-reader:'Literata',Georgia,serif;
+  --font-heading:'Cormorant Garamond','Literata',Georgia,serif;
+  --a-shadow:0 1px 2px rgba(60,40,20,.06),0 18px 40px -22px rgba(60,40,20,.30);
+  --a-spine:rgba(80,55,30,.08);
+  color-scheme:light;
+}
+html[data-design="a"][data-theme="sepia"]{
+  --bg:#E3D5BC;--paper:#F4EAD5;--panel:#EDE1C8;--ink:#33291C;--muted:#5F5039;
+  --line:#D9C8A6;--control-border:#8C7756;--accent:#7A3E2E;--accent-ink:#FFF6EA;
+  --red:#93302A;--strong:#73561C;--highlight:#E6D09B;--focus:#7A3E2E;
+  --a-shadow:0 1px 2px rgba(60,40,20,.08),0 18px 40px -22px rgba(60,40,20,.34);
+  --a-spine:rgba(80,55,30,.10);
+  color-scheme:light;
+}
+html[data-design="a"][data-theme="noche"]{
+  --bg:#16140F;--paper:#1F1C16;--panel:#25211A;--ink:#E9E1CF;--muted:#ADA28B;
+  --line:#3A342A;--control-border:#80765F;--accent:#D59A7E;--accent-ink:#1F1C16;
+  --red:#EC9585;--strong:#D6B66E;--highlight:#4A3F28;--focus:#E0AE94;
+  --a-shadow:0 1px 2px rgba(0,0,0,.4),0 18px 40px -20px rgba(0,0,0,.65);
+  --a-spine:rgba(0,0,0,.25);
+  color-scheme:dark;
+}
+
+/* ---------- Mesa y cromo: una sola barra, sin barra lateral ---------- */
+html[data-design="a"] body{background:var(--bg);color:var(--ink)}
+html[data-design="a"] .rail{display:none}
+html[data-design="a"] .compact-nav{display:flex!important;gap:2px;margin-right:auto}
+html[data-design="a"] main{padding:0 24px}
+html[data-design="a"] .topbar{min-height:52px;padding:6px 0;border-bottom:1px solid var(--line)}
+html[data-design="a"] .topbar>.topbar-actions{justify-content:flex-start;gap:8px;align-items:center}
+html[data-design="a"] .compact-nav button{font:500 14px/1 var(--font-ui);color:var(--muted);min-height:40px;padding:0 12px;border-radius:4px;background:none}
+html[data-design="a"] .compact-nav button:hover{color:var(--ink);background:var(--panel)}
+html[data-design="a"] .library-menu summary,html[data-design="a"] .topbar .outline,html[data-design="a"] .topbar .quiet{font:500 13px/1.2 var(--font-ui);border-radius:4px;min-height:36px}
+html[data-design="a"] .topbar .outline,html[data-design="a"] .library-menu summary{border:1px solid var(--line);background:transparent;color:var(--ink);padding:8px 12px}
+html[data-design="a"] .appearance-control{font:13px var(--font-ui);color:var(--muted);gap:6px}
+html[data-design="a"] .appearance-control select{min-height:36px;padding:6px 10px;font:13px var(--font-ui);border-radius:4px;border-color:var(--line);background:var(--paper)}
+
+/* ---------- Área de lectura: herramientas en una fila ---------- */
+html[data-design="a"] #read-view{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;
+  grid-template-rows:auto auto auto minmax(0,1fr) auto;
+  column-gap:16px;row-gap:8px;padding:10px 0 8px;min-height:0;flex:1;
+}
+html[data-design="a"] #plan-reading-session{grid-column:1/-1;grid-row:1}
+html[data-design="a"] #library-controls{grid-column:1;grid-row:2;align-self:center;margin:0;gap:4px 16px;font:13px var(--font-ui)}
+html[data-design="a"] .reading-toolbar{grid-column:2;grid-row:2;align-self:center;min-height:40px}
+html[data-design="a"] .reader-invitation{display:none}
+html[data-design="a"] #module-status{grid-column:1/-1;grid-row:3}
+html[data-design="a"] #panes{grid-column:1/-1;grid-row:4}
+html[data-design="a"] .pane-notes{grid-column:1/-1;grid-row:5}
+html[data-design="a"] .reading-actions{gap:2px}
+html[data-design="a"] .reading-actions .quiet,html[data-design="a"] .voice-controls .quiet{font:13px var(--font-ui);color:var(--muted);padding:6px 10px;min-height:36px}
+html[data-design="a"] .reading-actions .quiet:hover,html[data-design="a"] .voice-controls .quiet:hover{color:var(--ink);background:var(--panel)}
+html[data-design="a"] #study-open{font:600 13px var(--font-ui);border:1px solid var(--accent);color:var(--accent);background:transparent;border-radius:4px;min-height:36px;padding:6px 14px}
+html[data-design="a"] #study-open[aria-pressed="false"]{background:var(--accent);color:var(--accent-ink)}
+html[data-design="a"] .voice-controls select{min-height:34px;padding:4px 8px;font:13px var(--font-ui);border-color:var(--line);max-width:200px}
+html[data-design="a"] .checkbox-label{display:flex;align-items:center;gap:8px;font:13px var(--font-ui);color:var(--ink)}
+html[data-design="a"] .checkbox-label input{accent-color:var(--accent);width:16px;height:16px;margin:0}
+
+/* ---------- Los tres paneles ---------- */
+html[data-design="a"] #panes{
+  grid-template-columns:var(--pane-biblia,42fr) 16px var(--pane-comentario,30fr) 16px var(--pane-diccionario,28fr);
+}
+html[data-design="a"] .pane,html[data-design="a"] .open-book.pane,html[data-design="a"] .night .open-book.pane{
+  background:var(--panel);border:1px solid var(--line);border-radius:3px;box-shadow:none;
+}
+/* La Biblia: la página principal, papel claro con lomo y sombra de libro */
+html[data-design="a"] .pane[data-pane="biblia"]{
+  background:linear-gradient(90deg,var(--a-spine) 0,transparent 18px),var(--paper);
+  border-color:var(--line);box-shadow:var(--a-shadow);border-radius:2px 4px 4px 2px;
+}
+
+/* Encabezados en una sola franja */
+html[data-design="a"] .pane-head{
+  height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px 10px;
+  padding:10px 16px;border-bottom:1px solid var(--line);background:transparent;
+}
+html[data-design="a"] .pane-heading{min-height:0;flex:0 0 auto}
+html[data-design="a"] .pane-head h2,html[data-design="a"] .pane-head h3{font:600 21px/1.1 var(--font-heading);letter-spacing:.01em;color:var(--ink)}
+html[data-design="a"] .pane[data-pane="biblia"] .pane-heading{display:none}
+html[data-design="a"] .pane-head select,html[data-design="a"] .dictionary-query-row input{
+  font:14px/1.3 var(--font-ui);min-height:36px;padding:6px 10px;border-radius:4px;border:1px solid var(--line);background:var(--paper);color:var(--ink);width:auto;
+}
+html[data-design="a"] .pane-head select:hover,html[data-design="a"] .dictionary-query-row input:hover{border-color:var(--control-border)}
+html[data-design="a"] .passage-picker{flex:1 1 220px;min-width:0;gap:8px}
+html[data-design="a"] .passage-picker #book{font:600 16px/1.2 var(--font-reader);flex:1;min-width:0}
+html[data-design="a"] .passage-picker #chapter{width:84px;font:600 16px/1.2 var(--font-reader)}
+html[data-design="a"] #version-select{flex:0 0 auto;max-width:150px;font-weight:600;color:var(--accent)}
+html[data-design="a"] #comment-select{flex:1 1 160px;min-width:0}
+html[data-design="a"] .pane-head .pane-ref{margin:0;flex:1 0 100%;font:600 13px/1.3 var(--font-ui);color:var(--accent);min-height:0}
+html[data-design="a"] .pane-head form{flex:1 1 100%;flex-direction:row;flex-wrap:wrap;gap:8px}
+html[data-design="a"] #dictionary-select{flex:0 1 150px;min-width:120px}
+html[data-design="a"] .dictionary-query-row{flex:1 1 160px;min-width:0;gap:6px}
+html[data-design="a"] .dictionary-query-row input{flex:1;min-width:0;width:100%}
+html[data-design="a"] .dictionary-query-row button{min-height:36px;padding:6px 12px;border-radius:4px;border:1px solid var(--accent);background:transparent;color:var(--accent);font:600 13px var(--font-ui)}
+html[data-design="a"] .dictionary-query-row button:hover{background:var(--accent);color:var(--accent-ink)}
+
+/* Cuerpos */
+html[data-design="a"] .pane-body,html[data-design="a"] .pane-body.module-content{
+  padding:20px 24px 24px;font:16px/1.7 var(--font-reader);color:var(--ink);scrollbar-width:thin;scrollbar-color:var(--line) transparent;
+}
+html[data-design="a"] .reading-space .verses{padding:28px 40px 32px 44px;font-family:var(--font-reader);font-size:var(--verse-size);line-height:1.72;color:var(--ink)}
+html[data-design="a"] .verse{padding:2px 6px;margin:0 0 10px;border-radius:2px}
+html[data-design="a"] .verse:hover{background:color-mix(in srgb,var(--highlight) 35%,transparent)}
+html[data-design="a"] .verse>sup:first-child{font:500 11px var(--font-ui);color:var(--muted);margin-right:6px}
+html[data-design="a"] .verse.selected{box-shadow:inset 3px 0 var(--accent);background:color-mix(in srgb,var(--highlight) 45%,transparent)}
+html[data-design="a"] .jesus-words,html[data-design="a"] .night .jesus-words{color:var(--red)}
+html[data-design="a"] .strong-number,html[data-design="a"] .night .verse .strong-number{font:500 11px/1 var(--font-ui);color:var(--strong);vertical-align:super;margin:0 2px}
+html[data-design="a"] .module-heading{display:block;font:600 13px/1.4 var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left;margin:20px 0 8px}
+html[data-design="a"] .reading-word:hover,html[data-design="a"] .strong-code:hover{text-decoration:underline;text-decoration-color:var(--accent);text-underline-offset:4px}
+
+/* Comentario: hoja de notas al margen */
+html[data-design="a"] .comment-entry h4{font:600 13px/1.4 var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin:0 0 10px}
+html[data-design="a"] .comment-entry+.comment-entry{border-top:1px solid var(--line);margin-top:24px;padding-top:20px}
+html[data-design="a"] #comment-content b,html[data-design="a"] #comment-content strong,html[data-design="a"] #comment-content .rtf-bold{font-weight:600}
+html[data-design="a"] .comment-introduction summary{font:600 14px var(--font-ui);color:var(--accent)}
+html[data-design="a"] .empty-slot{font:italic 16px/1.6 var(--font-reader);color:var(--muted)}
+
+/* Diccionario */
+html[data-design="a"] .dictionary-results{gap:6px;margin:0 0 16px;max-height:84px;overflow:auto;padding:2px 2px 8px;border-bottom:1px solid var(--line);scrollbar-width:thin}
+html[data-design="a"] .dictionary-result{font:14px/1.3 var(--font-ui);border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:999px;padding:6px 12px;min-height:34px}
+html[data-design="a"] .dictionary-result:hover{border-color:var(--control-border)}
+html[data-design="a"] .dictionary-result[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+html[data-design="a"] .dictionary-entry h4{font:600 26px/1.2 var(--font-heading);margin:4px 0 4px}
+html[data-design="a"] .dictionary-entry .source-caption{font:13px var(--font-ui);color:var(--muted);margin-bottom:14px}
+
+/* Pies discretos */
+html[data-design="a"] .pane-foot{min-height:36px;padding:4px 12px;border-top:1px solid var(--line);font:13px var(--font-ui);color:var(--muted);display:flex;align-items:center}
+html[data-design="a"] .pane-foot .page-controls{width:100%}
+html[data-design="a"] .pane-foot .page-controls button{font:500 13px var(--font-ui);color:var(--accent);min-height:30px}
+
+/* Separadores: hilo fino que se ilumina */
+html[data-design="a"] .pane-resizer{min-width:16px}
+html[data-design="a"] .pane-resizer::after{left:7px;top:44%;height:12%;width:2px;background:var(--line)}
+html[data-design="a"] .pane-resizer:hover::after,html[data-design="a"] .pane-resizer:focus-visible::after{background:var(--accent);height:24%;top:38%}
+
+/* Mis notas: cinta inferior plegable */
+html[data-design="a"] .pane-notes{background:var(--panel);border:1px solid var(--line);border-radius:3px}
+html[data-design="a"] .pane-notes>summary{font:600 14px/1.2 var(--font-ui);padding:10px 16px;color:var(--ink)}
+html[data-design="a"] .pane-notes>summary span{color:var(--muted)}
+html[data-design="a"] #note{font:17px/1.6 var(--font-reader);background:var(--paper);border-color:var(--line)}
+
+/* Pie de la app: una línea mínima */
+html[data-design="a"] .app-footer{padding:4px 0;font:12px var(--font-ui);border-top:0;color:var(--muted)}
+html[data-design="a"] .app-footer span:nth-child(2){font:italic 13px var(--font-heading)}
+
+/* Volver al principio: sello de cuero */
+html[data-design="a"] #back-to-top{right:32px;bottom:14px;border-radius:999px;border:0;background:var(--accent);color:var(--accent-ink);font:600 13px var(--font-ui);padding:10px 16px;min-height:40px;box-shadow:0 8px 24px rgba(60,30,20,.28)}
+html[data-design="a"] #back-to-top:hover{filter:brightness(1.08)}
+
+/* ---------- Modos ---------- */
+html[data-design="a"] body.reading-only .pane[data-pane="biblia"],html[data-design="a"] body.focus .pane[data-pane="biblia"]{max-width:920px}
+html[data-design="a"] body.reading-only .reading-space .verses,html[data-design="a"] body.focus .reading-space .verses{padding:40px 72px 48px}
+html[data-design="a"] body.focus #library-controls{display:none}
+
+/* ---------- Diálogos y menú ---------- */
+html[data-design="a"] dialog{background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:6px;box-shadow:var(--a-shadow)}
+html[data-design="a"] dialog h3{font:600 26px var(--font-heading)}
+html[data-design="a"] .library-menu-items{background:var(--paper);border:1px solid var(--line);border-radius:4px}
+
+/* ---------- Pantallas medianas ---------- */
+@media (max-width:1400px){
+  html[data-design="a"] main{padding:0 16px}
+  html[data-design="a"] .reading-space .verses{padding:20px 24px 24px 28px}
+  html[data-design="a"] .pane-body,html[data-design="a"] .pane-body.module-content{padding:16px 18px 20px}
+  html[data-design="a"] .voice-controls select{max-width:150px}
+  html[data-design="a"] #voice-status{display:none}
+}
+@media (max-width:1200px){
+  html[data-design="a"] .reading-actions #dictionary-from-selection{display:none}
+}
