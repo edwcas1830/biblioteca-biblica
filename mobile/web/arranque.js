@@ -101,10 +101,10 @@
   if (!nativo) { window.libraryDesktop = adaptador.bridge; return; }
 
   // ---------- Android: servicios nativos de Codex, en este orden ----------
-  // 1. recuperar un traspaso interrumpido (antes de abrir SQLite);
-  // 2. attach: lector público, documentos y repositorio personal SQLite (bootstrap/savePersonal esperan
-  //    por dentro a que abra la base) — mientras tanto se ve «Preparando tu biblioteca…»;
-  // 3. lector de módulos e-Sword (paquete personal) con FTS5: no frena el arranque más de unos segundos.
+  // 1. attach: ubicación real de SQLite, recuperación de un traspaso interrumpido, base personal,
+  //    lector público, documentos y traspaso (bootstrap/savePersonal esperan por dentro);
+  //    mientras tanto se ve «Preparando tu biblioteca…»;
+  // 2. loadReader: módulos e-Sword con FTS5, administrado por el repositorio; no frena el arranque más de 8 s.
   const registrar = manejadores => {
     if (window.LibraryAndroidServices) window.LibraryAndroidServices.register(manejadores);
     else adaptador.register(manejadores);
@@ -130,41 +130,28 @@
   });
   avisar('preparando', 'Preparando tu biblioteca…');
 
-  const recuperado = (async () => {
-    if (!plugins || !window.LibraryAndroidTransfer) return;
-    try {
-      const traspaso = window.LibraryAndroidTransfer.create({ ...plugins, books: window.BIBLE && window.BIBLE.books, repository: window.LibraryAndroidRepository || undefined });
-      await traspaso.recover();
-      registrar(traspaso.handlers());
-    } catch (e) { fallos.push(['traspaso', e]); }
-  })();
-
-  const biblioteca = recuperado.then(() => {
+  // attach (Codex) hace todo en orden: conoce la ubicación real de SQLite, recupera un traspaso
+  // interrumpido, abre la base personal y registra lector público, documentos y traspaso.
+  const biblioteca = (async () => {
     if (!plugins || !window.LibraryAndroidServices || !window.LibraryAndroidServices.attach) throw new Error('Faltan los servicios de Android.');
-    return window.LibraryAndroidServices.attach(adaptador, { sqlite: plugins.sqlite, bible: window.BIBLE, manifest: manifiesto });
-  });
+    return window.LibraryAndroidServices.attach(adaptador, { sqlite: plugins.sqlite, filesystem: plugins.filesystem, bible: window.BIBLE, manifest: manifiesto });
+  })();
   biblioteca.then(() => avisar('lista', ''))
     .catch(e => avisar('fallo', (e && e.message) || 'No se pudo abrir tu biblioteca. Tus datos se conservan.'));
 
-  // Módulos e-Sword: se registran cuando terminan de verificarse (sus operaciones reemplazan a las del lector público).
-  const modulos = biblioteca.catch(() => {}).then(async () => {
-    if (!plugins || !window.LibraryAndroidReader) return false;
-    try {
-      const lector = await window.LibraryAndroidReader.create({ ...plugins, bible: window.BIBLE, manifest: manifiesto });
-      registrar(lector.handlers());
-      window.BibliaLector = lector; // se cierra y se recrea tras un traspaso
-      return true;
-    } catch (e) { fallos.push(['módulos', e]); return false; }
-  });
+  // Módulos e-Sword: solo si la biblioteca abrió; el lector lo administra el repositorio (loadReader).
+  const modulos = biblioteca.then(() => window.LibraryAndroidServices.loadReader()).then(() => true, e => { fallos.push(['módulos', e]); return false; });
   modulos.then(ok => {
     html.dataset.serviciosNativos = fallos.length ? 'con-fallos' : 'listos';
     if (fallos.length) html.dataset.serviciosFallos = fallos.map(([n, e]) => n + ': ' + ((e && e.message) || e)).join(' · ');
     window.dispatchEvent(new CustomEvent('biblioteca:capacidades', { detail: { modulos: ok } }));
   });
+  // Cuando la base abre, el botón «Traer desde la PC» ya puede ofrecer instalar.
+  biblioteca.then(() => window.dispatchEvent(new CustomEvent('biblioteca:capacidades')), () => {});
 
-  // Las operaciones esperan a la recuperación del traspaso y a attach (registros rápidos); a los módulos,
+  // Las operaciones esperan a attach (recuperación y apertura); a los módulos,
   // como mucho 8 s: si tardan más (primer índice FTS5), la app arranca con el lector público y luego avisa.
-  const espera = Promise.all([recuperado, biblioteca.catch(() => {}), Promise.race([modulos, new Promise(r => setTimeout(r, 8000))])]);
+  const espera = Promise.all([biblioteca.catch(() => {}), Promise.race([modulos, new Promise(r => setTimeout(r, 8000))])]);
   const real = adaptador.bridge;
   const EVENTOS_CONTRATO = new Set(['onFullscreen', 'onAiProgress', 'onAiState', 'onMusicPause', 'onUpdateState']);
   const puente = {};

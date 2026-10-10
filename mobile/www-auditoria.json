@@ -1,6 +1,6 @@
 {
-  "fecha": "2026-10-10T09:17:16.126Z",
-  "archivos": 327,
+  "fecha": "2026-10-10T09:38:07.980Z",
+  "archivos": 328,
   "megabytes": 23.4,
   "prohibidos": [],
   "modulosLibres": [
@@ -24,13 +24,14 @@
     "platform/web/documents.js",
     "platform/web/bridge.js",
     "platform/android/personal-store.js",
-    "platform/android/services.js",
+    "platform/android/repository.js",
     "platform/android/transfer.js",
+    "platform/android/services.js",
     "platform/android/modules.js",
     "platform/android/fts.js",
     "platform/android/library.js",
     "platform/android/documents.js",
     "platform/android/bridge.js"
   ],
-  "huellaIndex": "ea65149dc0cd4b62"
+  "huellaIndex": "7d33ace02a0fc62b"
 }

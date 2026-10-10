@@ -11,7 +11,10 @@ const t = { after: fn => despues.push(fn) };
 
 (async () => {
   const root = await helpers.root(t);
-  const plugins = { CapacitorSQLite: helpers.sqlite(root), Filesystem: helpers.filesystem(root) };
+  // Diseño de Android: DATA/files y databases/ separados (igual que las pruebas de Codex).
+  const datos = path.join(root, 'files'), bases = path.join(root, 'databases');
+  fs.mkdirSync(datos, { recursive: true }); fs.mkdirSync(bases, { recursive: true });
+  const plugins = { CapacitorSQLite: helpers.sqlite(bases), Filesystem: helpers.filesystem(datos, { absoluteRoot: root }) };
   const eventos = [];
   const ventana = {
     Capacitor: { isNativePlatform: () => true, registerPlugin: n => plugins[n] || { getSupportedVoices: async () => ({ voices: [] }), speak: async () => {}, stop: async () => {}, addListener() {} } },
@@ -21,7 +24,7 @@ const t = { after: fn => despues.push(fn) };
     navigator: {}, location: { href: 'https://localhost/', origin: 'https://localhost', reload() {} }, URL, crypto: globalThis.crypto,
     TextEncoder, TextDecoder, setTimeout, clearTimeout, queueMicrotask, structuredClone, DecompressionStream: globalThis.DecompressionStream,
     fetch: async u => { const p = new URL(u, 'https://localhost/').pathname; return new Response(fs.readFileSync(path.join(www, decodeURIComponent(p)))); }, Response, Request, Headers, Blob,
-    MutationObserver: class { observe() {} disconnect() {} }, matchMedia: () => ({ matches: true, addEventListener() {} })
+    atob, btoa, MutationObserver: class { observe() {} disconnect() {} }, matchMedia: () => ({ matches: true, addEventListener() {} })
   };
   const nodo = () => ({ id: '', dataset: {}, hidden: false, innerHTML: '', textContent: '', append() {}, setAttribute() {}, addEventListener() {}, querySelector: () => nodo(), classList: { toggle() {}, contains: () => false, remove() {} } });
   ventana.window = ventana; ventana.globalThis = ventana; ventana.self = ventana;
@@ -48,6 +51,5 @@ const t = { after: fn => despues.push(fn) };
   await ventana.BibliaPreparacion.modulos;
   console.log('servicios nativos:', ventana.document.documentElement.dataset.serviciosNativos, ventana.document.documentElement.dataset.serviciosFallos || '');
   await ventana.LibraryAndroidServices.close();
-  if (ventana.BibliaLector) await ventana.BibliaLector.close();
 })().catch(e => { console.error('FALLÓ', e && (e.code || ''), e && e.message); process.exitCode = 1; })
   .finally(async () => { for (const fn of despues.reverse()) await fn(); });
