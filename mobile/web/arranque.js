@@ -101,49 +101,78 @@
   if (!nativo) { window.libraryDesktop = adaptador.bridge; return; }
 
   // ---------- Android: servicios nativos de Codex, en este orden ----------
-  // 1. recuperar un traspaso interrumpido (antes de abrir nada); 2. repositorio personal, si existe;
-  // 3. lector de módulos y estudio. Mientras tanto, las operaciones del puente ESPERAN a que termine
-  // la preparación (no responden «no disponible» por llegar antes de tiempo). Los eventos se suscriben ya.
+  // 1. recuperar un traspaso interrumpido (antes de abrir SQLite);
+  // 2. attach: lector público, documentos y repositorio personal SQLite (bootstrap/savePersonal esperan
+  //    por dentro a que abra la base) — mientras tanto se ve «Preparando tu biblioteca…»;
+  // 3. lector de módulos e-Sword (paquete personal) con FTS5: no frena el arranque más de unos segundos.
   const registrar = manejadores => {
     if (window.LibraryAndroidServices) window.LibraryAndroidServices.register(manejadores);
-    adaptador.register(manejadores);
+    else adaptador.register(manejadores);
   };
   const plugins = cap.registerPlugin ? { filesystem: cap.registerPlugin('Filesystem'), sqlite: cap.registerPlugin('CapacitorSQLite') } : null;
   const fallos = [];
-  const preparado = (async () => {
-    if (!plugins) return;
-    if (window.LibraryAndroidTransfer) {
-      try {
-        const traspaso = window.LibraryAndroidTransfer.create({ ...plugins, books: window.BIBLE && window.BIBLE.books, repository: window.LibraryAndroidRepository || undefined });
-        await traspaso.recover();
-        registrar(traspaso.handlers());
-      } catch (e) { fallos.push(['traspaso', e]); }
-    }
-    if (window.LibraryAndroidDocuments) {
-      try { const documentos = window.LibraryAndroidDocuments.create(); registrar(documentos.handlers()); window.BibliaDocumentos = documentos; }
-      catch (e) { fallos.push(['documentos', e]); }
-    }
-    if (window.LibraryAndroidReader) {
-      try {
-        const lector = await window.LibraryAndroidReader.create({ ...plugins, bible: window.BIBLE, manifest: manifiesto });
-        registrar(lector.handlers());
-        window.BibliaLector = lector; // para cerrarlo y recrearlo tras un traspaso
-      } catch (e) { fallos.push(['lector', e]); }
-    }
+  const avisar = (estado, mensaje) => {
+    html.dataset.preparacion = estado;
+    window.dispatchEvent(new CustomEvent('biblioteca:preparacion', { detail: { estado, mensaje } }));
+  };
+  // Aviso visible mientras abre la base; si falla, explica y ofrece reintentar (nunca una biblioteca vacía).
+  const aviso = document.createElement('div');
+  aviso.id = 'preparacion-biblioteca';
+  aviso.setAttribute('role', 'status');
+  aviso.innerHTML = '<div class="preparacion-caja"><div class="preparacion-icono" aria-hidden="true"></div><p class="preparacion-texto"></p><button type="button" class="primary preparacion-reintentar" hidden>Reintentar</button></div>';
+  aviso.querySelector('.preparacion-reintentar').addEventListener('click', () => location.reload());
+  (document.body || document.documentElement).append(aviso);
+  window.addEventListener('biblioteca:preparacion', e => {
+    const { estado, mensaje } = e.detail;
+    aviso.dataset.estado = estado;
+    aviso.querySelector('.preparacion-texto').textContent = estado === 'fallo' ? mensaje + ' Tus datos no se tocaron.' : mensaje;
+    aviso.querySelector('.preparacion-reintentar').hidden = estado !== 'fallo';
+  });
+  avisar('preparando', 'Preparando tu biblioteca…');
+
+  const recuperado = (async () => {
+    if (!plugins || !window.LibraryAndroidTransfer) return;
+    try {
+      const traspaso = window.LibraryAndroidTransfer.create({ ...plugins, books: window.BIBLE && window.BIBLE.books, repository: window.LibraryAndroidRepository || undefined });
+      await traspaso.recover();
+      registrar(traspaso.handlers());
+    } catch (e) { fallos.push(['traspaso', e]); }
   })();
-  preparado.finally(() => {
+
+  const biblioteca = recuperado.then(() => {
+    if (!plugins || !window.LibraryAndroidServices || !window.LibraryAndroidServices.attach) throw new Error('Faltan los servicios de Android.');
+    return window.LibraryAndroidServices.attach(adaptador, { sqlite: plugins.sqlite, bible: window.BIBLE, manifest: manifiesto });
+  });
+  biblioteca.then(() => avisar('lista', ''))
+    .catch(e => avisar('fallo', (e && e.message) || 'No se pudo abrir tu biblioteca. Tus datos se conservan.'));
+
+  // Módulos e-Sword: se registran cuando terminan de verificarse (sus operaciones reemplazan a las del lector público).
+  const modulos = biblioteca.catch(() => {}).then(async () => {
+    if (!plugins || !window.LibraryAndroidReader) return false;
+    try {
+      const lector = await window.LibraryAndroidReader.create({ ...plugins, bible: window.BIBLE, manifest: manifiesto });
+      registrar(lector.handlers());
+      window.BibliaLector = lector; // se cierra y se recrea tras un traspaso
+      return true;
+    } catch (e) { fallos.push(['módulos', e]); return false; }
+  });
+  modulos.then(ok => {
     html.dataset.serviciosNativos = fallos.length ? 'con-fallos' : 'listos';
     if (fallos.length) html.dataset.serviciosFallos = fallos.map(([n, e]) => n + ': ' + ((e && e.message) || e)).join(' · ');
-    window.dispatchEvent(new CustomEvent('biblioteca:capacidades'));
+    window.dispatchEvent(new CustomEvent('biblioteca:capacidades', { detail: { modulos: ok } }));
   });
 
+  // Las operaciones esperan a la recuperación del traspaso y a attach (registros rápidos); a los módulos,
+  // como mucho 8 s: si tardan más (primer índice FTS5), la app arranca con el lector público y luego avisa.
+  const espera = Promise.all([recuperado, biblioteca.catch(() => {}), Promise.race([modulos, new Promise(r => setTimeout(r, 8000))])]);
   const real = adaptador.bridge;
   const EVENTOS_CONTRATO = new Set(['onFullscreen', 'onAiProgress', 'onAiState', 'onMusicPause', 'onUpdateState']);
   const puente = {};
   for (const nombre of Object.keys(real)) {
     const op = real[nombre];
     if (typeof op !== 'function') { puente[nombre] = op; continue; }
-    puente[nombre] = EVENTOS_CONTRATO.has(nombre) ? op : async (...args) => { await preparado.catch(() => {}); return real[nombre](...args); };
+    puente[nombre] = EVENTOS_CONTRATO.has(nombre) ? op : async (...args) => { await espera; return real[nombre](...args); };
   }
   window.libraryDesktop = Object.freeze(puente);
+  window.BibliaPreparacion = { biblioteca, modulos };
 })();

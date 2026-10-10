@@ -309,3 +309,18 @@
 :root[data-telefono="true"] #dictionary-form .dictionary-query-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
 :root[data-telefono="true"] #pane-comentario .pane-foot,
 :root[data-telefono="true"] #pane-diccionario .pane-foot { padding: 4px 14px; font-size: .75rem; }
+
+/* ---------- Preparando tu biblioteca (Android) ---------- */
+#preparacion-biblioteca { display: none; }
+#preparacion-biblioteca[data-estado="preparando"],
+#preparacion-biblioteca[data-estado="fallo"] {
+  display: grid; place-items: center; position: fixed; inset: 0; z-index: 90;
+  background: var(--paper, Canvas); color: var(--ink, CanvasText); padding: 24px;
+}
+#preparacion-biblioteca .preparacion-caja { display: grid; gap: 14px; justify-items: center; max-width: 22rem; text-align: center; }
+#preparacion-biblioteca .preparacion-texto { margin: 0; font-size: 1.05rem; line-height: 1.5; }
+#preparacion-biblioteca .preparacion-icono { width: 36px; height: 36px; border-radius: 50%; border: 3px solid color-mix(in srgb, currentColor 20%, transparent); border-top-color: currentColor; animation: girar-preparacion 1s linear infinite; }
+#preparacion-biblioteca[data-estado="fallo"] .preparacion-icono { animation: none; border-color: currentColor; }
+#preparacion-biblioteca .preparacion-reintentar { min-height: 48px; padding: 0 22px; }
+@keyframes girar-preparacion { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { #preparacion-biblioteca .preparacion-icono { animation: none; } }

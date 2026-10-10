@@ -90,7 +90,7 @@
     const SystemBars = plugin('SystemBars');
     if (!SystemBars) return;
     const oscuro = /noche|night|oscuro|dark/i.test(html.dataset.theme || '');
-    SystemBars.setStyle({ style: oscuro ? 'DARK' : 'LIGHT' }).catch(() => {});
+    try { Promise.resolve(SystemBars.setStyle({ style: oscuro ? 'DARK' : 'LIGHT' })).catch(() => {}); } catch { /* sin barras nativas */ }
   }
   new MutationObserver(ajustarBarras).observe(html, { attributes: true, attributeFilter: ['data-theme'] });
   ajustarBarras();
