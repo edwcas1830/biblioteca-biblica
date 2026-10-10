@@ -86,7 +86,7 @@ export interface LibraryBridge {
   onUpdateState(callback:(value:UpdateState)=>void):Unsubscribe;
   /** Mobile additions. Available only when registered by the platform integration. */
   playVoice(data:{text:string; lang?:string; voice?:string; rate?:number}):Promise<void>;
-  stopVoice():Promise<void>; voiceOptions():Promise<{id:string; name:string; lang:string}[]>;
+  stopVoice():Promise<void>; voiceOptions():Promise<{id:string; name:string; lang:string; localService?:boolean}[]>;
   shareText(data:{text:string; title?:string}):Promise<{completed:boolean}>;
 }
 declare global { interface Window { libraryDesktop:LibraryBridge; } }
