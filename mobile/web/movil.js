@@ -292,6 +292,19 @@
     html.style.setProperty('--alto-libro', Math.max(320, window.innerHeight - arriba - pie - cab) + 'px');
   }
 
+  // Strong y voz (#library-controls) se pliegan tras un botón «Lectura» para no quitar alto al texto.
+  function construirControlesLectura() {
+    const acciones = $('.reading-actions');
+    if (!acciones || $('#movil-lectura')) return;
+    const boton = crear('button', { type: 'button', id: 'movil-lectura', class: 'quiet', 'aria-expanded': 'false', 'aria-controls': 'library-controls', texto: 'Lectura ▾', onclick: () => {
+      const abiertos = html.dataset.controlesLectura !== 'abiertos';
+      html.dataset.controlesLectura = abiertos ? 'abiertos' : 'cerrados';
+      boton.setAttribute('aria-expanded', String(abiertos));
+      setTimeout(ajustarAltoLectura, 0);
+    } });
+    acciones.insertBefore(boton, $('#smaller', acciones) || null);
+  }
+
   function activar() {
     html.dataset.telefono = String(consulta.matches);
     if (estado.construida) { moverAjustes(consulta.matches); if (consulta.matches) { marcarDestino(); ajustarAltoLectura(); } else cerrarMas(); return; }
@@ -301,6 +314,7 @@
     construirMas();
     construirHoja();
     construirBarraVersiculo();
+    construirControlesLectura();
     vigilarOriginal();
     $('#verses')?.addEventListener('scroll', ocultarBarra, { passive: true });
     asegurarPanelesVisibles();

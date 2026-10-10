@@ -264,3 +264,13 @@
 :root.lectura-inmersiva #movil-hoja-cabecera,
 :root.lectura-inmersiva #movil-versiculo { display: none !important; }
 :root.lectura-inmersiva body { padding-bottom: var(--seguro-abajo); }
+
+/* Strong y voz plegados tras «Lectura ▾». */
+#movil-lectura { display: none; }
+:root[data-telefono="true"] #movil-lectura { display: inline-flex; align-items: center; }
+:root[data-telefono="true"]:not([data-controles-lectura="abiertos"]) #library-controls { display: none !important; }
+:root[data-telefono="true"][data-controles-lectura="abiertos"] #library-controls {
+  display: flex !important; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 6px 12px; margin: 0;
+}
+:root[data-telefono="true"] #library-controls .voice-controls { display: flex; flex-wrap: wrap; gap: 4px; width: 100%; }
+:root[data-telefono="true"] #library-controls #voice-select { flex: 1 1 100%; min-width: 0; }
