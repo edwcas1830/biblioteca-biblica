@@ -33,7 +33,14 @@ async function conectar() {
   adb('forward', 'tcp:9222', 'localabstract:' + socket);
   let pagina;
   for (let i = 0; i < 30 && !pagina; i++) {
-    try { pagina = (await (await fetch('http://127.0.0.1:9222/json/list')).json()).find(p => p.type === 'page' && /localhost/.test(p.url)); } catch { /* aún no */ }
+    try {
+      // El WebView puede tener más de una página (Android a veces carga la app dos veces): se usa la
+      // visible y, si ninguna lo dice, la más reciente.
+      const paginas = (await (await fetch('http://127.0.0.1:9222/json/list')).json()).filter(p => p.type === 'page' && /localhost/.test(p.url));
+      const visible = p => { try { const d = JSON.parse(p.description || '{}'); return d.visible === true && d.attached !== false; } catch { return false; } };
+      pagina = paginas.find(visible) || paginas[paginas.length - 1];
+      if (pagina) console.log('  (páginas en el WebView: ' + paginas.length + ', uso ' + (visible(pagina) ? 'la visible' : 'la última') + ')');
+    } catch { /* aún no */ }
     if (!pagina) await espera(1000);
   }
   if (!pagina) throw new Error('No encontré la página de la app en el WebView');
@@ -60,11 +67,13 @@ async function conectar() {
 // Espera «lista» consultando cada 2 s. Si la página se recarga o se reemplaza (al arrancar, Android puede
 // cargarla dos veces), la sesión de depuración vieja deja de responder: se reconecta a la página actual.
 async function esperarLista(app, etiqueta) {
-  const limite = Date.now() + 150000; let reconexiones = 0, r = null;
+  const limite = Date.now() + 150000; let reconexiones = 0, sinCambio = 0, r = null;
   while (Date.now() < limite) {
     try {
       r = await app.evaluar("const e=document.documentElement.dataset.preparacion;return {estado:e||'',texto:document.querySelector('#preparacion-biblioteca .preparacion-texto')?.textContent||'',url:location.href};", 5000);
       if (r && (r.estado === 'lista' || r.estado === 'fallo')) break;
+      // Si el estado no avanza, puede que esta sesión mire una copia vieja de la página: reconectar.
+      if (++sinCambio % 5 === 0) throw new Error('reconectar');
     } catch {
       try { app.cerrar(); } catch { /* ya cerrada */ }
       reconexiones++;
