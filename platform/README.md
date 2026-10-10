@@ -117,15 +117,14 @@ El adaptador web carga bajo demanda los JSON/gzip públicos de `app/data` (en m�
 Android recibe los plugins raw Filesystem y CapacitorSQLite:
 
 ```js
-const lector = await LibraryAndroidReader.create({
+await LibraryAndroidServices.attach(adapter, {
   bible: window.BIBLE, manifest: window.BibliaManifiestos.rv1909,
   filesystem: Filesystem, sqlite: CapacitorSQLite
 });
-LibraryAndroidServices.register(lector.handlers());
-adapter.register(lector.handlers()); // si el puente ya estaba creado
+await LibraryAndroidServices.loadReader(); // carga administrada; puede correr en segundo plano
 ```
 
-El lector descubre DATA/modulos/<paquete>/manifest.json, verifica tamaño/huella/esquema y abre los bblx/cmtx/dctx mediante conexiones NC de solo lectura. Conserva rangos, introducciones, Strong, diccionarios repartidos y rojo únicamente NT. Un cambio del archivo invalida su lectura. Después de instalar o cambiar paquetes, cerrar `await lector.close()` y crear una instancia nueva: una sesión anterior no se debe reutilizar.
+El lector descubre DATA/modulos/<paquete>/manifest.json, verifica tamaño/huella/esquema y abre los bblx/cmtx/dctx mediante conexiones NC de solo lectura. Conserva rangos, introducciones, Strong, diccionarios repartidos y rojo únicamente NT. Un cambio del archivo invalida su lectura. Services ahora administra su cierre y recreación durante el traspaso: no crear otra instancia por fuera de loadReader(), porque sus conexiones quedarían fuera del bloqueo de sustitución.
 
 FTS5 vive en una base derivada `biblioteca-indice` separada: nunca modifica los módulos. Construye por lotes un índice de versículos y otro de claves de diccionario; evita traer RAE entero a memoria. Las revisiones y la versión del parser invalidan cachés. Cada reemplazo es transaccional y un motor sin FTS5 falla explícitamente. Este lector **no** implementa el repositorio personal: no llamar setStorage('sqlite') solo por inicializarlo. La recuperación del traspaso debe preceder a la apertura del lector.
 
@@ -158,8 +157,9 @@ El registro ya puede inicializar la biblioteca desde arranque.js. Crear el adapt
 
 ```js
 const sqlite = Capacitor.registerPlugin('CapacitorSQLite'); // plugin raw, no SQLiteConnection wrapper
+const filesystem = Capacitor.registerPlugin('Filesystem');
 const lista = LibraryAndroidServices.attach(adaptador, {
-  sqlite, bible: window.BIBLE, manifest: window.BibliaManifiestos.rv1909
+  sqlite, filesystem, bible: window.BIBLE, manifest: window.BibliaManifiestos.rv1909
 });
 // Tu interfaz muestra «Preparando tu biblioteca…» mientras espera lista.
 try { await lista; /* retirar el aviso; bootstrap del controlador ya puede terminar */ }
@@ -174,6 +174,18 @@ LibraryAndroidStore.PersonalStore usa las operaciones raw beginTransaction/commi
 
 Base principal conformada del plugin: biblioteca-personal → databases/biblioteca-personalSQLite.db. Respaldos en una segunda base biblioteca-respaldos, abierta bajo demanda; los snapshots y el texto legacy se quedan locales. El respaldo previo puede quedar guardado si luego falla la restauración: la biblioteca activa se revierte. No se afirma atomicidad distribuida entre las dos bases ni durabilidad ante pérdida eléctrica sin APK. La base principal usa journal_mode DELETE verificado por query y secure_delete, sin escribir sobre esquemas futuros/dañados.
 
-El traspaso preparado sigue usando el destino lógico DATA/files/biblioteca-personal.sqlite. **No habilitar transferInstall todavía:** hace falta mapear ese destino a la base conformada real, recuperarlo antes de abrir SQLite y cerrar/reabrir catálogo. Respaldar solo el snapshot de files dejaría fuera la biblioteca activa. Es la pieza siguiente. Las copias JSON sin PIN sí pueden restaurarse ya por restoreBackup.
+## Traspaso sobre la base activa (pieza 7 nativa)
+
+attach({sqlite,filesystem,bible,manifest}) prepara el repositorio administrativo y publica window.LibraryAndroidRepository (en Node: services.repository()). Incluye revision/exclusive/quiesce/activate/resume y mapFilesystem. attach resuelve getUrl del plugin sin abrir ni crear una base vacía, recupera el diario pendiente y solo entonces abre la base principal. Scripts-movil.json coloca repository.js y transfer.js antes de services.js.
+
+El destino lógico biblioteca-personal.sqlite se mapea a la URI real del plugin databases/biblioteca-personalSQLite.db, incluidos -wal/-shm/-journal. Candidatos, diario, respaldos y módulos siguen dentro de DATA. Movimientos entre ambas carpetas usan URI absolutas sin directory (requisito del Filesystem Android). El respaldo respalda **la base activa del plugin**, no otra copia en files. Nunca se lee la carpeta privada de Windows desde Android.
+
+attach registra transferScan/transferInstall y ejecuta recover() internamente. **Eliminar el recover() previo y la creación externa de LibraryAndroidTransfer del arranque anterior**: no recuperar antes de conocer la URI de SQLite, ni capturar un fallo para continuar abriendo. La interfaz conserva su revisión/progreso y usa libraryDesktop.transferScan/transferInstall. No registrar una segunda instancia: cada escáner conserva su propio token.
+
+Para los módulos, sustituir la creación externa por `const modulos = lista.then(() => LibraryAndroidServices.loadReader())`. No capturar el rechazo de lista para iniciar el lector igualmente. loadReader y sus operaciones quedan en la cola del repositorio: se cierra antes de mover, se recrea y se cotejan los IDs/huellas del catálogo con el manifiesto instalado. Una carga en segundo plano anterior no puede volver a registrar el catálogo viejo después del traspaso. La UI sigue emitiendo biblioteca:capacidades cuando termine; estos servicios no modifican mobile/ ni sus avisos.
+
+exclusive comparte la cola de bootstrap/guardado/restauración/lectura. revision comprueba el estado canónico y su revisión; un guardado posterior al resumen obliga a revisarlo otra vez. Tras instalar, guardados y restauraciones rechazan CONFLICT hasta un bootstrap exitoso. Los guardados que ya esperaban en cola quedan invalidados por generación aunque bootstrap ocurra después. transferInstall devuelve requiereRecarga:true: la UI debe recargar para usar el estado nuevo. No regenerar IDs.
+
+Un error revierte base y módulos y recrea el catálogo anterior. Si falla esa recuperación, el diario se conserva, la base queda cerrada y storage cambia a none hasta reiniciar y recuperar antes de abrir. La marca de commit diferencia una instalación confirmada de un intercambio interrumpido; no se promete supervivencia a pérdida eléctrica sin validar en APK. FTS usa las transacciones oficiales del plugin, igual que el repositorio personal.
 
 PIN todavía ausente: una base con private-vault se conserva y rechaza LOCKED; no se abre una biblioteca vacía encima. Los respaldos cifrados no se degradan a texto. Al desmontar, await LibraryAndroidServices.close(). Validación del plugin/dispositivo, migración real, falta de espacio y reconexión de traspaso/PIN quedan en la matriz APK.

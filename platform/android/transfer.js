@@ -63,6 +63,7 @@
   }
   function create({filesystem,sqlite,books,repository}={}){
     if(!filesystem||!sqlite||typeof filesystem.readFileInChunks!=='function')fail('UNAVAILABLE','El traspaso requiere archivos nativos y SQLite.');
+    filesystem=repository?.mapFilesystem?repository.mapFilesystem(filesystem):filesystem;
     const files=createFiles(filesystem);
     const openDatabase=async relative=>{
       const {uri}=await filesystem.getUri({directory:'DATA',path:relative});

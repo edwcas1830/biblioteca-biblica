@@ -4,8 +4,8 @@ const digest=b=>crypto.createHash('sha256').update(b).digest('hex');
 const disposals=new Map();
 const dispose=(root,fn)=>disposals.get(root).push(fn);
 async function root(t){const dir=await fsp.mkdtemp(path.join(os.tmpdir(),'biblioteca-mobile-fixture-'));disposals.set(dir,[]);t.after(async()=>{for(const fn of disposals.get(dir).reverse())await fn();disposals.delete(dir);if(path.dirname(path.resolve(dir))!==path.resolve(os.tmpdir())||!path.basename(dir).startsWith('biblioteca-mobile-fixture-'))throw Error('Unsafe cleanup');await fsp.rm(dir,{recursive:true,force:true});});return dir;}
-function filesystem(root){
-  const absolute=p=>{const result=path.resolve(root,p);if(result!==root&&!result.startsWith(root+path.sep))throw Error('Fixture path escaped');return result;};
+function filesystem(root,{absoluteRoot=root}={}){
+  const absolute=p=>{const result=p.startsWith('file:')?require('node:url').fileURLToPath(p):path.resolve(root,p);if(result!==absoluteRoot&&!result.startsWith(absoluteRoot+path.sep))throw Error('Fixture path escaped');return result;};
   const stat=async({path:p})=>{const s=await fsp.lstat(absolute(p));return {size:s.size,type:s.isDirectory()?'directory':s.isFile()?'file':'symlink',mtime:s.mtimeMs};};
   return {
     stat,readdir:async({path:p})=>({files:await Promise.all((await fsp.readdir(absolute(p))).map(async name=>({name,...await stat({path:p+'/'+name})})))}),
@@ -23,6 +23,7 @@ function sqlite(root,{noFts=false,failInsert=false}={}){
   function db(options){const handle=handles.get(options.database);if(!handle)throw Error('Connection is closed');return handle;}
   return {
     createConnection:async({database,readonly})=>{if(definitions.has(database))throw Error('Duplicate connection');definitions.set(database,{readonly,file:path.join(root,database+'SQLite.db')});},
+    getUrl:async({database})=>{const spec=definitions.get(database);if(!spec)throw Error('Undefined connection');return {url:require('node:url').pathToFileURL(spec.file).href};},
     createNCConnection:async({databasePath})=>{if(definitions.has(databasePath))throw Error('Duplicate connection');definitions.set(databasePath,{readonly:true,file:databasePath});},
     open:async({database,readonly})=>{const spec=definitions.get(database);if(!spec||spec.readonly!==readonly)throw Error('Invalid connection');handles.set(database,new DatabaseSync(spec.file,{readOnly:readonly,allowExtension:false}));},
     close:async({database})=>{handles.get(database)?.close();handles.delete(database);},

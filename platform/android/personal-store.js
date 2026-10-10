@@ -12,7 +12,7 @@
     constructor({sqlite,books,database='biblioteca-personal',backupDatabase='biblioteca-respaldos'}={}){
       if(!sqlite||!['createConnection','open','close','closeConnection','query','execute','run','executeSet','beginTransaction','commitTransaction','rollbackTransaction'].every(k=>typeof sqlite[k]==='function'))fail('UNAVAILABLE','Falta inicializar el plugin SQLite nativo.');
       if(!/^[a-z0-9-]{1,80}$/.test(database)||!/^[a-z0-9-]{1,80}$/.test(backupDatabase)||database===backupDatabase)fail('VALIDATION','Nombre de biblioteca SQLite no válido.');
-      this.sqlite=sqlite;this.database=database;this.backupDatabase=backupDatabase;this.model=models.create({books});this.queue=Promise.resolve();this.opening=null;this.connections=new Map();this.closed=false;this.observedRevision=null;
+      this.sqlite=sqlite;this.database=database;this.backupDatabase=backupDatabase;this.model=models.create({books});this.queue=Promise.resolve();this.opening=null;this.connections=new Map();this.closed=false;this.observedRevision=null;this.paused=false;this.writeBlocked=false;this.generation=0;
     }
     options(database=this.database){return {database,readonly:false};}
     async query(statement,values=[],database=this.database){return (await this.sqlite.query({...this.options(database),statement,values})).values||[];}
@@ -22,7 +22,8 @@
     commitTransaction(){return this.sqlite.commitTransaction(this.options());}
     rollback(){return this.sqlite.rollbackTransaction(this.options());}
     async batch(set){for(let i=0;i<set.length;i+=100)await this.sqlite.executeSet({...this.options(),set:set.slice(i,i+100),transaction:false,returnMode:'no'});}
-    serial(fn){const work=this.queue.catch(()=>{}).then(async()=>{if(this.closed)fail('STORAGE','La biblioteca está cerrada. Abre una sesión nueva.');try{return await fn();}catch(e){throw normalize(e);}});this.queue=work;return work;}
+    serial(fn,{maintenance=false}={}){const work=this.queue.catch(()=>{}).then(async()=>{if(this.closed)fail('STORAGE','La biblioteca está cerrada. Abre una sesión nueva.');if(this.paused&&!maintenance)fail('LOCKED','Reinicia para recuperar el traspaso antes de abrir la biblioteca.');try{return await fn();}catch(e){throw normalize(e);}});this.queue=work;return work;}
+    guardWrite(generation){if(this.writeBlocked||generation!==this.generation)fail('CONFLICT','Se instaló otra biblioteca. Recarga antes de guardar.');}
     async connect(database){
       if(this.connections.has(database))return;
       let created=false;
@@ -116,20 +117,20 @@
     bootstrap({legacy=null,initial,legacyValid=true},options={}){
       const snapshot=structuredClone(initial);
       return this.serial(async()=>{
-        const previous=await this.readConsistent();if(previous){this.observedRevision=previous.revision;return {state:this.model.decode(previous),migrated:false};}
+        const previous=await this.readConsistent();if(previous){this.observedRevision=previous.revision;this.writeBlocked=false;return {state:this.model.decode(previous),migrated:false};}
         if(!legacyValid)fail('CORRUPT','La copia anterior necesita recuperación. No se reemplazará.');
         let state=snapshot,backup=null;
         if(legacy!==null){if(typeof legacy!=='string'||legacy.length>12000000)fail('VALIDATION','Copia anterior no válida.');backup=await this.retain('legacy-v1-'+(await refs.digest(legacy)).slice(0,16)+'.json','legacy',legacy);try{state=JSON.parse(legacy);}catch{fail('CORRUPT','La copia anterior no se puede leer. Se conservó para recuperación.');}}
         const prepared=await this.model.encode(state);return {state:await this.commit(prepared,null,options),migrated:legacy!==null,backup};
       });
     }
-    write(input,options={}){const snapshot=structuredClone(input);return this.serial(async()=>{const previous=await this.readConsistent();if(!previous||this.observedRevision===null)fail('STORAGE','Abre la biblioteca antes de guardar.');this.checkRevision(previous);return this.commit(await this.model.encode(snapshot,this.model.decode(previous)),previous,options);});}
+    write(input,options={}){const snapshot=structuredClone(input),generation=this.generation;return this.serial(async()=>{this.guardWrite(generation);const previous=await this.readConsistent();if(!previous||this.observedRevision===null)fail('STORAGE','Abre la biblioteca antes de guardar.');this.checkRevision(previous);return this.commit(await this.model.encode(snapshot,this.model.decode(previous)),previous,options);});}
     exportBackup(){return this.serial(async()=>this.model.decode(await this.readConsistent()));}
-    restoreBackup({state,privateVault},options={}){const snapshot=structuredClone(state);return this.serial(async()=>{if(privateVault||snapshot?.privateVault||snapshot?.privacyEnabled||snapshot?.privateLocked)fail('UNAVAILABLE','Conserva esta copia cifrada: falta habilitar el PIN compatible. No se importaron datos.');const previous=await this.readConsistent();this.checkRevision(previous);return this.commit(await this.model.encode(snapshot,this.model.decode(previous)),previous,{...options,backup:true});});}
+    restoreBackup({state,privateVault},options={}){const snapshot=structuredClone(state),generation=this.generation;return this.serial(async()=>{this.guardWrite(generation);if(privateVault||snapshot?.privateVault||snapshot?.privacyEnabled||snapshot?.privateLocked)fail('UNAVAILABLE','Conserva esta copia cifrada: falta habilitar el PIN compatible. No se importaron datos.');const previous=await this.readConsistent();this.checkRevision(previous);return this.commit(await this.model.encode(snapshot,this.model.decode(previous)),previous,{...options,backup:true});});}
     privacyStatus(){return this.serial(async()=>{await this.readConsistent();return {enabled:false,locked:false,retryAt:0};});}
     listBackups(){return this.serial(async()=>{await this.openBackups();return this.query('SELECT id,kind,at FROM backups ORDER BY rowid',[],this.backupDatabase);});}
     backup(id){return this.serial(async()=>{await this.openBackups();const row=(await this.query('SELECT kind,payload FROM backups WHERE id=?',[id],this.backupDatabase))[0];if(!row)fail('NOT_FOUND','No se encontró ese respaldo.');return row.kind==='legacy'?row.payload:this.model.decode(json(row.payload));});}
-    close(){if(this.closed)return Promise.resolve();if(this.closing)return this.closing;this.closing=this.serial(async()=>{await this.opening;for(const database of [...this.connections.keys()])await this.release(database);this.closed=true;}).finally(()=>{this.closing=null;});return this.closing;}
+    close(){if(this.closed)return Promise.resolve();if(this.closing)return this.closing;this.closing=this.serial(async()=>{await this.opening;for(const database of [...this.connections.keys()])await this.release(database);this.closed=true;},{maintenance:true}).finally(()=>{this.closing=null;});return this.closing;}
   }
   return Object.freeze({PersonalStore});
 });
