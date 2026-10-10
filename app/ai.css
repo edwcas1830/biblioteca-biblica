@@ -1,0 +1,16 @@
+html[data-design] #ai-dialog{width:min(960px,92vw);max-height:88vh;background:var(--paper);color:var(--ink);border:1px solid var(--control-border);padding:28px;border-radius:12px;overflow:auto;font-family:var(--font-ui)}
+html[data-design] #ai-dialog h2{font:30px var(--font-heading);margin:0;color:var(--ink)}
+html[data-design] #ai-dialog h3{font:21px var(--font-heading);color:var(--ink)}
+html[data-design] .ai-account{padding:18px;background:var(--panel);border:1px solid var(--line);border-radius:8px;margin:20px 0}
+html[data-design] .ai-account-row,html[data-design] .ai-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+html[data-design] #ai-dialog button{min-height:36px;color:var(--ink);background:var(--panel);border-color:var(--control-border)}
+html[data-design] #ai-dialog label{display:block;color:var(--ink);font-size:14px}
+html[data-design] #ai-dialog label.checkbox-label{display:flex;margin:12px 0}
+html[data-design] #ai-dialog select,html[data-design] #ai-dialog textarea{color:var(--ink);background:var(--panel);font:16px/1.6 var(--font-ui)}
+html[data-design] #ai-context{font-size:14px;max-height:240px}
+html[data-design] #ai-sources{white-space:pre-wrap;font:13px/1.7 var(--font-ui);color:var(--ink)}
+html[data-design] #ai-preview,html[data-design] #ai-result{border-top:1px solid var(--line);margin-top:22px;padding-top:22px}
+html[data-design] #ai-result-text{white-space:pre-wrap;font:18px/1.8 var(--font-reader);color:var(--ink)}
+html[data-design] #ai-citations section{padding:16px;border-left:3px solid var(--focus);background:var(--panel);margin:16px 0}
+html[data-design] #ai-citations p{font:18px/1.75 var(--font-reader);color:var(--ink)}
+html[data-design] #ai-citations small,html[data-design] #ai-result-source,html[data-design] #ai-status,html[data-design] #ai-comment-permission{font:14px/1.6 var(--font-ui);color:var(--ink)}

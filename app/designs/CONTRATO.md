@@ -97,3 +97,8 @@ Desde v0.5, `#journey-view` presenta devocionales y planes: `.journey-index` con
 Texto principal de estudio mínimo 16 px a los dos tamaños objetivo; auxiliares mínimo 13 px. Biblia conserva el ajuste personal. Contraste AA: 4,5:1 texto normal; 3:1 texto grande y elementos de foco/controles. Foco visible, títulos/labels existentes, `.sr-only` accesible, regiones desplazables navegables con teclado. No sobrescribir `[hidden]`, `aria-*`, ni `prefers-reduced-motion`. No quitar advertencias de cobertura/fuentes. Si se oculta rail, mostrar `.compact-nav` **y** `.library-menu` para conservar planes, devocionales, copias y fuentes.
 
 No nuevas funciones de datos, IA, música, imágenes, oración, ni nueva migración. No tocar perfil real ni `biblioteca-biblica-prueba-v03`. Pruebas: `work/v04-design-profile` separado. Sin release/main. El código público contiene solamente fuentes tipográficas OFL y la base libre ya existente; los módulos personales siguen excluidos.
+# IA v0.5
+
+`app/ai.js` presenta la cuenta y el contexto; `app/ai-core.js` prepara consultas. El proceso principal conserva vistas previas con caducidad; `lib/ai-service.cjs` gestiona OAuth PKCE S256 con callback aleatorio en loopback, credenciales cifradas con safeStorage y precios máximos cero. No entrega tokens al renderer ni al respaldo personal.
+
+El contexto pasa por `Library.aiContext` y vuelve a comprobar revisión y permiso antes de copiar o enviar. RV1909 es el texto público ofrecido para consultas; los comentarios requieren `iaPermitida: true` en su manifiesto, tras comprobar el permiso de la licencia. No lee notas, respuestas ni oraciones. Las citas estructuradas se verifican y presentan desde la biblioteca local. Las respuestas son texto, nunca HTML del proveedor.

@@ -1,9 +1,12 @@
-const { app, BrowserWindow, Menu, ipcMain } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, safeStorage, shell, clipboard } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const {autoUpdater}=require('electron-updater');
 const {createUpdateService}=require('./update-service.cjs');
 const {Worker}=require('node:worker_threads');
+const crypto=require('node:crypto');
+const {AiService}=require('./lib/ai-service.cjs');
+const aiCore=require('./app/ai-core.js');
 app.setName('Biblioteca Bíblica');
 const hiddenTest = process.env.BIBLIOTECA_TEST_HIDDEN === '1';
 const testProfile=process.env.BIBLIOTECA_TEST_PROFILE;
@@ -31,6 +34,24 @@ app.whenReady().then(() => {
   try{channel=JSON.parse(fs.readFileSync(path.join(app.isPackaged?process.resourcesPath:__dirname,'update-channel.json'),'utf8'));}catch{}
   const updates=createUpdateService({app,updater:autoUpdater,enabled:channel.enabled===true,testing:hiddenTest||!!testProfile,notify:state=>{if(!win.isDestroyed())win.webContents.send('library:update-state-event',state);}});
   const trusted=event=>event.sender===win.webContents&&event.senderFrame===win.webContents.mainFrame;
+  const ai=new AiService({root:app.getPath('userData'),safeStorage,openExternal:url=>shell.openExternal(url),notify:status=>{if(!win.isDestroyed())win.webContents.send('library:ai-state',status);}}),prepared=new Map();
+  app.on('before-quit',()=>ai.stop());
+  for(const [name,action] of [['status','status'],['connect','connect'],['disconnect','disconnect'],['models','listModels']])ipcMain.handle('library:ai-'+name,event=>{if(!trusted(event))throw new Error('Origen no autorizado.');return ai[action]();});
+  ipcMain.handle('library:ai-prepare',async(event,data)=>{
+    if(!trusted(event)||!data||JSON.stringify(data).length>10000)throw new Error('Consulta no válida.');
+    const context=await request('aiContext',data),preview=aiCore.prepare({task:data.task,question:data.question,context}),id=crypto.randomBytes(24).toString('hex');
+    if(prepared.size>=5)prepared.delete(prepared.keys().next().value);prepared.set(id,{...preview,context,createdAt:Date.now(),module:data.module});
+    return {id,...preview,notices:context.notices};
+  });
+  const getPrepared=id=>{const item=prepared.get(id);if(!item||Date.now()-item.createdAt>30*60*1000)throw new Error('Prepara de nuevo la consulta.');return item;};
+  ipcMain.handle('library:ai-ask',async(event,data)=>{
+    if(!trusted(event)||!data)throw new Error('Origen no autorizado.');const item=getPrepared(data.id);await request('verifyAiSources',item.sources);const response=await ai.ask({prompt:item.prompt,model:data.model,allowData:data.allowData});
+    const citations=[];for(const ref of response.citations){try{const result=await request('chapter',{module:item.module||'rv1909',book:ref.book,chapter:ref.chapter}),verse=result.verses.find(v=>v.verse===ref.verse);if(verse)citations.push({...ref,title:result.title,text:verse.text,revision:result.revision});}catch{}}
+    return {...response,citations,sources:item.sources};
+  });
+  ipcMain.handle('library:ai-copy',async(event,{id,provider})=>{
+    if(!trusted(event))throw new Error('Origen no autorizado.');const item=getPrepared(id);await request('verifyAiSources',item.sources);const url=provider?aiCore.external(provider,item.prompt):null;clipboard.writeText(item.prompt);if(url)await shell.openExternal(url);return {copied:true,opened:!!url};
+  });
   let documentBusy=false;
   ipcMain.handle('library:read-pdf',async(event,bytes)=>{
     if(!trusted(event)||!(bytes instanceof Uint8Array)||!bytes.length||bytes.length>10000000)throw new Error('PDF no autorizado o demasiado grande.');

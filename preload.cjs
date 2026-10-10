@@ -1,6 +1,9 @@
 const {contextBridge,ipcRenderer}=require('electron');
 if(process.argv.includes('--biblioteca-test'))contextBridge.exposeInMainWorld('libraryTest',{capture:()=>ipcRenderer.invoke('library:test-capture'),resize:(width,height)=>ipcRenderer.invoke('library:test-resize',{width,height})});
 contextBridge.exposeInMainWorld('libraryDesktop',{
+  aiStatus:()=>ipcRenderer.invoke('library:ai-status'),aiConnect:()=>ipcRenderer.invoke('library:ai-connect'),aiDisconnect:()=>ipcRenderer.invoke('library:ai-disconnect'),aiModels:()=>ipcRenderer.invoke('library:ai-models'),
+  aiPrepare:data=>ipcRenderer.invoke('library:ai-prepare',data),aiAsk:data=>ipcRenderer.invoke('library:ai-ask',data),aiCopy:data=>ipcRenderer.invoke('library:ai-copy',data),
+  onAiState:callback=>{if(typeof callback!=='function')return;const listener=(_event,state)=>callback(state);ipcRenderer.on('library:ai-state',listener);return()=>ipcRenderer.removeListener('library:ai-state',listener);},
   readPdf:bytes=>ipcRenderer.invoke('library:read-pdf',bytes),
   bootstrap:data=>ipcRenderer.invoke('library:data-bootstrap',data),
   savePersonal:data=>ipcRenderer.invoke('library:data-save',data),
