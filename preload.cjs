@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld('libraryDesktop',{
   aiStatus:()=>ipcRenderer.invoke('library:ai-status'),aiConnect:()=>ipcRenderer.invoke('library:ai-connect'),aiDisconnect:()=>ipcRenderer.invoke('library:ai-disconnect'),aiModels:()=>ipcRenderer.invoke('library:ai-models'),
   aiPrepare:data=>ipcRenderer.invoke('library:ai-prepare',data),aiAsk:data=>ipcRenderer.invoke('library:ai-ask',data),aiCopy:data=>ipcRenderer.invoke('library:ai-copy',data),
   onAiState:callback=>{if(typeof callback!=='function')return;const listener=(_event,state)=>callback(state);ipcRenderer.on('library:ai-state',listener);return()=>ipcRenderer.removeListener('library:ai-state',listener);},
+  privacyStatus:()=>ipcRenderer.invoke('library:private-privacyStatus'),unlock:pin=>ipcRenderer.invoke('library:private-unlock',{pin}),lockPrivate:()=>ipcRenderer.invoke('library:private-lock'),setPin:pin=>ipcRenderer.invoke('library:private-setPin',{pin}),disablePin:()=>ipcRenderer.invoke('library:private-disablePin'),exportBackup:()=>ipcRenderer.invoke('library:private-exportBackup'),restoreBackup:data=>ipcRenderer.invoke('library:private-restoreBackup',data),
   readPdf:bytes=>ipcRenderer.invoke('library:read-pdf',bytes),
   bootstrap:data=>ipcRenderer.invoke('library:data-bootstrap',data),
   savePersonal:data=>ipcRenderer.invoke('library:data-save',data),

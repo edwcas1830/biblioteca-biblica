@@ -29,8 +29,8 @@ function renderJourney(){
   $('#journey-warnings').textContent=entry.warnings?.join(' ')||'';
   $('#journey-complete').textContent=done?'✓ Leído · desmarcar':'Marcar como leído';$('#journey-complete').setAttribute('aria-pressed',String(done));
   $('#journey-prev').disabled=index===0;$('#journey-next').disabled=index===total-1;
-  $('#journey-note').value=(plan?state.planNotes?.[noteKey]:state.devResponses[noteKey])||'';$('#journey-note').disabled=plan&&!item.dayIds?.[index];
-  $('#journey-save-status').textContent='Tu nota permanece en este equipo.';
+  $('#journey-note').value=(plan?state.planNotes?.[noteKey]:state.devResponses[noteKey])||'';$('#journey-note').disabled=!!state.privateLocked||plan&&!item.dayIds?.[index];
+  $('#journey-save-status').textContent=state.privateLocked?'Abre el candado para ver tu reflexión.':'Tu nota permanece en este equipo.';
   $('#journey-body').scrollTop=0;
 }
 async function importDevFile(file){
@@ -57,7 +57,7 @@ function bindJourneys(){
   $('#journey-passages').addEventListener('click',event=>{const b=event.target.closest('[data-journey-reading]'),d=journeyData();if(!b||!d)return;const ref=d.readings[Number(b.dataset.journeyReading)];if(activeJourney.kind==='plan')readPlanDay(d.item.id,d.index,Number(b.dataset.journeyReading));else go(ref.book,ref.chapter,ref.verse||1,ref.endVerse);$('#journey-return').hidden=false;});
   document.addEventListener('click',event=>{const b=event.target.closest('[data-document-ref]');if(!b)return;const [book,chapter,verse,end]=b.dataset.documentRef.split(':').map(Number);go(book,chapter,verse,end);$('#journey-return').hidden=!activeJourney;});
   $('#journey-complete').addEventListener('click',()=>{const d=journeyData();if(!d)return;d.item.completed=d.done?d.item.completed.filter(i=>i!==d.index):[...(d.item.completed||[]),d.index];save();renderJourney();});
-  $('#journey-note').addEventListener('input',event=>{const d=journeyData();if(!d||activeJourney.kind==='plan'&&!d.item.dayIds?.[d.index])return;const target=activeJourney.kind==='plan'?(state.planNotes??={}):state.devResponses;target[d.noteKey]=event.target.value;$('#journey-save-status').textContent=save()?'Guardando tu nota…':'No se pudo guardar. Exporta una copia.';saveQueue.then(()=>$('#journey-save-status').textContent=saveFailed?'No se pudo guardar. Exporta una copia.':'Nota guardada en este equipo.');});
+  $('#journey-note').addEventListener('input',event=>{const d=journeyData();if(!d||state.privateLocked||activeJourney.kind==='plan'&&!d.item.dayIds?.[d.index])return;const target=activeJourney.kind==='plan'?(state.planNotes??={}):state.devResponses;target[d.noteKey]=event.target.value;$('#journey-save-status').textContent=save()?'Guardando tu nota…':'No se pudo guardar. Exporta una copia.';saveQueue.then(()=>$('#journey-save-status').textContent=saveFailed?'No se pudo guardar. Exporta una copia.':'Nota guardada en este equipo.');});
   $('#dev-review-days').addEventListener('input',event=>{const el=event.target;
     if(el.matches('[data-dev-review-title]'))pendingDev.entries[Number(el.dataset.devReviewTitle)].title=el.value;
     if(el.matches('[data-dev-review-body]')){const d=pendingDev.entries[Number(el.dataset.devReviewBody)];d.body=el.value;d.blocks=contentCore.fromText(el.value);d.readings=planCore.parseReferences(el.value,books).refs;el.closest('.dev-review-day').querySelector('.dev-preview').innerHTML=contentCore.render(d.blocks,books,planCore);}

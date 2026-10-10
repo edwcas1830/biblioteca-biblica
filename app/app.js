@@ -7,7 +7,7 @@ const planCore = window.PlanCore;
 const appearanceCore=window.AppearanceCore;
 const paneCore=window.PaneLayoutCore;
 const STORE = 'biblioteca-biblica-v1';
-const initial = () => ({ version:1, position:{book:18,chapter:23,verse:1}, notes:{}, highlights:{}, devResponses:{}, planNotes:{}, devotionals:[], plans:[], font:20, night:false, appearance:appearanceCore.normalize() });
+const initial = () => ({ version:1, position:{book:18,chapter:23,verse:1}, notes:{}, highlights:{}, devResponses:{}, planNotes:{}, prayers:[], prayerDrafts:{}, guideResponses:{}, privacyEnabled:false, privateLocked:false, devotionals:[], plans:[], font:20, night:false, appearance:appearanceCore.normalize() });
 let state = initial(), activeView='read', activeDev=null, activeDay=0, toastTimer, searchTimer;
 const desktop=window.libraryDesktop;
 let storageReady=false, saveQueue=Promise.resolve(), selectedVersion='rv1909', catalogData=null, readingGeneration=0, searchGeneration=0, studyGeneration=0, chapterData=null, savePending=0, saveFailed=false;
@@ -53,6 +53,7 @@ function validateState(candidate) {
     return {...validated,id:plan.id,dayIds:Array.isArray(plan.dayIds)?plan.dayIds:undefined,completed:[...new Set(plan.completed)]};
   });
   if(candidate.planNotes!==undefined){if(!candidate.planNotes||typeof candidate.planNotes!=='object'||Array.isArray(candidate.planNotes)||Object.keys(candidate.planNotes).length>35000)throw new Error('Notas de días no válidas.');for(const [key,note] of Object.entries(candidate.planNotes)){if(!/^plan-\d+(?:-[a-z0-9]+)?:day-[a-f0-9]{32}$/.test(key)||typeof note!=='string'||note.length>100000)throw new Error('Nota de día no válida.');result.planNotes[key]=note;}}
+  result.prayers=PrayerCore.validate(candidate.prayers||[]);for(const p of result.prayers)if(p.answer&&!validPosition(p.answer.reference))throw new Error('Versículo del testimonio fuera de rango.');result.prayerDrafts=PrayerCore.drafts(candidate.prayerDrafts||{});result.privacyEnabled=candidate.privacyEnabled===true;result.privateLocked=candidate.privateLocked===true;
   result.font=Number.isInteger(candidate.font)?Math.max(16,Math.min(28,candidate.font)):20;
   result.night=candidate.night===true;
   result.appearance=appearanceCore.normalize(candidate.appearance);
@@ -94,7 +95,7 @@ function showView(view) {
   if(view!=='read') { document.body.classList.remove('focus');updateReadingMode(); }
   if(view==='dev') renderDevList();
   if(view==='plan') renderPlans();
-  if(view==='journey')renderJourney();
+  if(view==='journey')renderJourney();if(view==='prayer')renderPrayer();
 }
 async function renderReader() {
   const p=state.position, book=books[p.book], chapter=book.chapters[p.chapter-1];
@@ -123,7 +124,7 @@ async function renderReader() {
 }
 function renderNote() {
   const p=state.position;document.documentElement.dataset.studyScope=studySelection;$('#selected-ref').textContent=studySelection==='chapter'?`${books[p.book].name} ${p.chapter}`:studySelection==='range'&&readerRange?`${books[p.book].name} ${p.chapter}:${readerRange.start}–${readerRange.end}`:reference();$('#bible-ref').textContent=$('#selected-ref').textContent;syncDictionaryRef();$('#note-reference').textContent=reference()+' · '+($('#version-select option:checked')?.textContent||selectedVersion);
-  $('#note').value=state.notes[key()] || '';
+  $('#note').value=state.notes[key()] || '';$('#note').disabled=!!state.privateLocked;
   $('#save-status').textContent=saveFailed?'No se pudo guardar. Exporta una copia.':selectedVersion!=='rv1909'&&Object.keys(state.notes).some(k=>!k.includes('@'))?'Notas de esta versión. Tus notas anteriores siguen en RV1909.':'Las notas se guardan en este equipo, vinculadas a esta versión.';
   renderComment();
 }
@@ -277,7 +278,7 @@ function bind() {
     const strong=event.target.closest('[data-strong]'),word=event.target.closest('[data-word]');
     if(strong)queryFromReading(strong.dataset.strong,true);else if(word)queryFromReading(word.dataset.word);
   });
-  $('#note').addEventListener('input',()=>{ if($('#note').value) state.notes[key()]=$('#note').value; else delete state.notes[key()]; save(); });
+  $('#note').addEventListener('input',()=>{if(state.privateLocked)return; if($('#note').value) state.notes[key()]=$('#note').value; else delete state.notes[key()]; save(); });
   document.querySelectorAll('[data-ink]').forEach(button=>button.addEventListener('click',()=>{
     if(button.dataset.ink==='none')delete state.highlights[key()];else state.highlights[key()]=button.dataset.ink;
     renderReader();save();
@@ -319,15 +320,16 @@ function bind() {
     const scroll=event.target.closest('.plan-days').scrollTop;save();renderPlans();
     $('#plan-list').querySelector(`[data-plan="${plan.id}"]`)?.closest('.plan-days').scrollTo({top:scroll});
   });
-  $('#backup').addEventListener('click',()=>{
-    const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;
+  $('#backup').addEventListener('click',async()=>{
+    await saveQueue;if(saveFailed){toast('Guarda los cambios antes de hacer la copia.');return;}let exported;try{exported=desktop?.exportBackup?await desktop.exportBackup():state;}catch(e){toast(e.message);return;}
+    const blob=new Blob([JSON.stringify(exported,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;
     const date=new Date();const stamp=[date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-');
     a.download=`mi-biblioteca-${stamp}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);toast('Copia preparada: notas, subrayados, devocionales y planes.');
   });
   $('#restore').addEventListener('click',()=>$('#restore-file').click());
   $('#restore-file').addEventListener('change',async event=>{
     const file=event.target.files[0];if(!file)return;
-    try {if(file.size>10000000)throw new Error('La copia supera los 10 MB.');const incoming=validateState(JSON.parse(await file.text()));if(!window.confirm('Recuperar esta copia reemplazará tus notas, devocionales y planes actuales. ¿Continuar?'))return;state=incoming;activeDev=null;activeJourney=null;$('#journey-return').hidden=true;showView('read');if(desktop?.catalog)await loadCatalog();save();settings();renderReader();renderDevList();renderDev();renderPlans();toast('Tu biblioteca ha sido recuperada.');}catch(error){toast(error instanceof SyntaxError?'La copia no es un archivo JSON válido.':error.message);}finally{event.target.value='';}
+    try {await restoreLibrary(file);}catch(error){toast(error instanceof SyntaxError?'La copia no es un archivo JSON válido.':error.message);}finally{event.target.value='';}
   });
 }
 async function start() {
@@ -337,7 +339,7 @@ async function start() {
   $('#books-grid').innerHTML=books.map((book,i)=>`<button data-book="${i}">${esc(book.name)}</button>`).join('');
   $('#note').maxLength=100000;
   settings();renderReader();renderDevList();renderPlans();bind();bindPlanImport();
-  bindLibrary();bindAppearance();bindJourneys();bindAi();
+  bindLibrary();bindAppearance();bindJourneys();bindAi();bindPrayer();bindPrivacy();
 }
 async function loadCatalog(){catalogData=await desktop.catalog();const versions=catalogData.modules.filter(m=>m.tipo==='biblia'&&m.rol==='version');selectedVersion=versions.some(m=>m.id===state.selectedVersion)?state.selectedVersion:versions.some(m=>m.id==='rv1960')?'rv1960':'rv1909';$('#version-select').innerHTML=versions.map(m=>`<option value="${esc(m.id)}">${esc(m.abreviatura||m.titulo)}</option>`).join('');$('#version-select').value=selectedVersion;const comments=catalogData.modules.filter(m=>m.rol==='comentario');$('#comment-select').innerHTML='<option value="">Elegir comentario</option>'+comments.map(m=>`<option value="${esc(m.id)}">${esc(m.titulo)}</option>`).join('');const options=[['strong-es','Strong español'],['vine','Vine · AT y NT'],['drae','RAE · Diccionario español']].filter(([id])=>id==='vine'?catalogData.modules.some(m=>m.id==='vine-at'||m.id==='vine-nt'):id==='drae'?catalogData.modules.some(m=>/^drae-[123]$/.test(m.id)):catalogData.modules.some(m=>m.id===id));$('#dictionary-select').innerHTML=options.map(([id,title])=>`<option value="${id}">${title}</option>`).join('');$('#show-strong').disabled=selectedVersion!=='rv1960'||!catalogData.modules.some(m=>m.id==='rv1960-strong');if($('#show-strong').disabled)$('#show-strong').checked=false;$('#comment-select').disabled=!comments.length;if(comments.length)$('#comment-select').value=(['diario-vivir','mundo-hispano'].find(id=>comments.some(m=>m.id===id))||comments[0].id);for(const id of ['dictionary-select','dictionary-query','dictionary-submit'])$('#'+id).disabled=!options.length;renderSources();}
 function renderSources(){if(!catalogData)return;$('#sources-list').innerHTML=catalogData.modules.map(m=>`<section class="source-card"><h4>${esc(m.titulo)}</h4><p>${esc(m.origen)} · ${esc(m.rol)}</p><p>${esc(m.licencia)}</p><p class="fine-print">${esc(m.versificacion)} · Revisión ${esc(m.sha256.slice(0,16))}</p>${m.sourceNotice?`<details><summary>Aviso incluido en la fuente</summary><p class="source-notice">${esc(m.sourceNotice)}</p></details>`:''}</section>`).join('');$('#sources-warning').textContent=catalogData.warnings.join('\n');}
