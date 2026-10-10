@@ -1,5 +1,6 @@
 'use strict';
-// Uso: node mobile/scripts/build-www.cjs && node mobile/scripts/probar-arranque-android.cjs
+// Uso: node mobile/scripts/build-www.cjs && node mobile/scripts/probar-arranque-android.cjs [repo] [carpeta-traspaso-sintética]
+// Con la carpeta (la de fixture-traspaso.cjs) también revisa e instala el traspaso y comprueba lo traído.
 // Simula el arranque Android con los MISMOS scripts y el mismo orden que mobile/www/index.html,
 // con los dobles de plugins de Codex (SQLite real en carpeta temporal) y un puente nativo como el del
 // teléfono. Imita lo que el emulador descubrió de Android de verdad:
@@ -9,6 +10,7 @@
 // Datos inventados.
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
 const repo = process.argv[2] || path.resolve(__dirname, '..', '..');
+const carpetaTraspaso = process.argv[3] || '';
 const www = path.join(repo, 'mobile', 'www');
 const helpers = require(path.join(repo, 'tests', 'mobile-fixtures.cjs'));
 const despues = [];
@@ -130,6 +132,32 @@ function cargarPagina(plugins) {
   console.log('tras recargar · preparación:', ventana.document.documentElement.dataset.preparacion, '· nota persistida en SQLite:', otra.state.notes['42:3:16']);
   if (otra.state.notes['42:3:16'] !== 'Nota de prueba del arranque') throw new Error('La nota no sobrevivió a la recarga');
   await ventana.BibliaPreparacion.modulos;
+
+  if (carpetaTraspaso) {
+    // Como el selector de archivos: copia a DATA/traspaso-entrante y pasa la selección al puente.
+    const entrante = path.join(datos, 'traspaso-entrante');
+    fs.mkdirSync(entrante, { recursive: true });
+    const archivos = fs.readdirSync(carpetaTraspaso);
+    for (const a of archivos) fs.copyFileSync(path.join(carpetaTraspaso, a), path.join(entrante, a));
+    const seleccion = { carpeta: 'traspaso-entrante', archivos: archivos.map(nombre => ({ nombre, ruta: 'traspaso-entrante/' + nombre, bytes: fs.statSync(path.join(entrante, nombre)).size })) };
+    console.log('paso: transferScan (' + archivos.length + ' archivos)');
+    const rev = await puente.transferScan(seleccion);
+    console.log('revisión:', JSON.stringify(rev.resumen && rev.resumen.conteos), '· módulos:', rev.resumen && rev.resumen.modulos.length);
+    if (!rev.resumen || rev.resumen.conteos.diasCompletados !== 329 || rev.resumen.modulos.length !== 1) throw new Error('La revisión del traspaso no cuadra');
+    console.log('paso: transferInstall');
+    const inst = await puente.transferInstall({ token: rev.token, confirmado: true });
+    if (!(inst.instalado === true && inst.requiereRecarga === true)) throw new Error('El traspaso no se instaló: ' + JSON.stringify(inst));
+    ventana = cargarPagina(plugins);
+    puente = ventana.libraryDesktop;
+    await ventana.BibliaPreparacion.modulos;
+    const tras = await puente.bootstrap({ initial: { ...inicial, position: { book: 18, chapter: 23, verse: 1 } }, legacy: null, legacyValid: true });
+    const plan = tras.state.plans[0] || {};
+    const cat = await puente.catalog();
+    const c = await puente.chapter({ book: 18, chapter: 23, module: 'texto-sintetico' });
+    const verso = (c.verses[0] || {}).text || '';
+    console.log('tras el traspaso · plan:', (plan.entries || []).length + '/' + (plan.completed || []).length, '· devocionales:', tras.state.devotionals.length, '· nota:', !!tras.state.notes['18:23:1'], '· módulo:', cat.modules.some(m => m.id === 'texto-sintetico'), '· verso:', verso.slice(0, 40));
+    if ((plan.entries || []).length !== 1189 || (plan.completed || []).length !== 329 || tras.state.devotionals.length !== 2 || !/Texto inventado/.test(verso)) throw new Error('Los datos traídos no cuadran');
+  }
   await ventana.LibraryAndroidServices.close();
 })().catch(e => { console.error('FALLÓ', e && (e.code || ''), e && e.message); process.exitCode = 1; })
   .finally(async () => { for (const fn of despues.reverse()) { try { await fn(); } catch { /* limpieza */ } } });

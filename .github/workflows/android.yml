@@ -82,7 +82,9 @@ jobs:
 
       # ---------- Prueba del APK real en un emulador Android, antes de entregarlo ----------
       - name: Carpeta de traspaso sintética (datos inventados)
-        run: node mobile/scripts/fixture-traspaso.cjs "$RUNNER_TEMP/fixture-traspaso"
+        run: |
+          node mobile/scripts/fixture-traspaso.cjs "$RUNNER_TEMP/fixture-traspaso"
+          node mobile/scripts/probar-arranque-android.cjs "$GITHUB_WORKSPACE" "$RUNNER_TEMP/fixture-traspaso/traspaso"
 
       - name: Habilitar KVM para el emulador
         run: |
