@@ -72,7 +72,7 @@
       if(!readerLoad)readerLoad=reloadReader().finally(()=>{readerLoad=null;});
       await readerLoad;return attached.bridge.getCapabilities();
     };
-    const close=async()=>{ai?.close();docs?.close();try{await started;}catch{}if(store&&!store.closed)await store.serial(quiesceReader,{maintenance:true});await store?.close();setStorage('none');phase='closed';};
+    const close=async()=>{await ai?.close();docs?.close();try{await started;}catch{}if(store&&!store.closed)await store.serial(quiesceReader,{maintenance:true});await store?.close();setStorage('none');phase='closed';};
     return Object.freeze({register,handlers:()=>Object.freeze(Object.fromEntries(installed)),storage:()=>storage,setStorage,attach,loadReader,repository:()=>repository,close,status:()=>({state:phase,...(failure?{error:{code:failure.code,message:failure.message}}:{})})});
   }
   return Object.freeze({create});

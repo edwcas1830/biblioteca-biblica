@@ -13,6 +13,20 @@ async function fixture(t,{readerFactory,privacyFactory,aiOptions}={}){
   const attach=()=>registry.attach(adapter,{sqlite,filesystem,bible,manifest:{iaPermitida:true},resources,aiOptions});
   return {root,data,databases,sqlite,filesystem,registry,adapter,bridge:adapter.bridge,attach};
 }
+
+test('Native secure AI survives service restart, discovers personal Gemini after reader load and keeps credential names independent',async t=>{
+  const keys=new Map([['openrouter','sk-or-v1-'+ 'a'.repeat(64)],['gemini','AIza-synthetic-'+ 'b'.repeat(30)]]),credentialStore={leer:async n=>keys.get(n)??null,guardar:async(n,v)=>{keys.set(n,v);return true;},borrar:async n=>{keys.delete(n);return true;}},response=v=>new Response(JSON.stringify(v));
+  const aiOptions={credentialStore,fetchImpl:async url=>url.includes('/models?')?response({models:[{name:'models/gemini-fixture-flash',supportedGenerationMethods:['generateContent']}]}):response({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify({text:'Respuesta inventada',sections:{brief:'Breve'},citations:[{book:18,chapter:23,verse:1}]})}]}}]})};
+  const f=await fixture(t,{aiOptions});await f.attach();await f.bridge.bootstrap({initial:state()});assert.equal((await f.bridge.aiStatus()).credentialStorage,'device-secure');assert.equal((await f.bridge.aiPersonalStatus()).available,false);
+  const selected=await incoming(f),review=await f.bridge.transferScan(selected.input);await f.bridge.transferInstall({token:review.token,confirmado:true});await f.bridge.bootstrap({initial:state()});assert.equal((await f.bridge.aiPersonalStatus()).providers[0].connected,true);
+  const p=await f.bridge.aiPrepare({module:'texto-inventado',book:18,chapter:23,verse:1,task:'explain',question:'Pregunta original',study:true,includeBible:false,includeComment:false});const result=await f.bridge.aiAsk({id:p.id,provider:'gemini-api',model:'gemini-fixture-flash'});assert.equal(result.citations[0].text,'El corazón recibió paz inventada.');await f.registry.close();
+  const next=services.create(),adapter=contract.createBridge({platform:'android'});helpers.dispose(f.root,()=>next.close());await next.attach(adapter,{sqlite:f.sqlite,filesystem:f.filesystem,bible,manifest:{iaPermitida:true},resources,aiOptions});await next.loadReader();assert.equal((await adapter.bridge.aiStatus()).connected,true);assert.equal((await adapter.bridge.aiPersonalStatus()).providers[0].connected,true);
+  await adapter.bridge.aiGeminiKey(null);assert.equal(keys.has('gemini'),false);assert.equal(keys.has('openrouter'),true);assert.equal((await adapter.bridge.bootstrap({initial:state()})).state.plans[0].completed.length,329);
+});
+
+test('Native credential read failure does not block SQLite startup or pretend a connected account',async t=>{
+  const f=await fixture(t,{aiOptions:{credentialStore:{leer:async()=>{throw Error('SYNTHETIC SECRET');},guardar:async()=>true,borrar:async()=>true}}});await f.attach();const loaded=await f.bridge.bootstrap({initial:state()});assert.equal(loaded.state.plans[0].completed.length,329);const status=await f.bridge.aiStatus();assert.equal(status.connected,false);assert.equal(status.credentialError.code,'STORAGE');assert.ok(!JSON.stringify(status).includes('SYNTHETIC SECRET'));
+});
 async function incoming(f,{invalidModule=false,pin=false}={}){
   const directory=path.join(f.data,'traspaso-entrante');await fs.mkdir(directory,{recursive:true});
   const source=path.join(f.root,'windows-synthetic'),windows=new WindowsStore(source),saved=windows.write(state('importada'));

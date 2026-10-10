@@ -14,7 +14,7 @@
     // Keep maintenance (backups and close) out of renderer's privileged API.
     const ai=aiFactory?.create({...aiOptions,call:(name,value)=>adapter.bridge[name](value),emit:(name,value)=>{try{adapter.emit(name,value);}catch(e){if(e?.code!=='UNAVAILABLE')throw e;}}});
     if(ai)adapter.register(ai.handlers());
-    return Object.freeze({...adapter,store,documents:docs,ai,close:async()=>{ai?.close();docs?.close();await store.close();}});
+    return Object.freeze({...adapter,store,documents:docs,ai,close:async()=>{await ai?.close();docs?.close();await store.close();}});
   }
   return Object.freeze({create});
 });

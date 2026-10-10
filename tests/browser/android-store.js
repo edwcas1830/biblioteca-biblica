@@ -57,6 +57,16 @@ window.testStorePhase1=async()=>{
     equal((await api.aiReport({reason:'incorrecta',text:result.text,confirmed:true})).sent,false,'Sin canal no simular envío');await ai.close();
     const restarted=LibraryWebBridge.create({bible:window.BIBLE,resourceBase:'/app/data/',dbName:'test-ai-session'});equal((await restarted.bridge.aiStatus()).connected,false,'Credencial no persistida');await restarted.close();
   });
+  await test('OpenRouter restaura desde el puerto de llavero y desconectar borra sin exponer la clave',async()=>{
+    const savedKeys=new Map(),credentialStore={leer:async n=>savedKeys.get(n)??null,guardar:async(n,v)=>{savedKeys.set(n,v);return true;},borrar:async n=>{savedKeys.delete(n);return true;}};
+    const first=LibraryOpenRouter.create({credentialStore,fetchImpl:async()=>new Response(JSON.stringify({key:'sk-or-v1-'+ 'a'.repeat(64)}))});await first.connect();await first.connect({code:'codigo-inventado'});await first.close();
+    const second=LibraryOpenRouter.create({credentialStore});await second.ready;ok(second.status().connected,'Cuenta recuperada');equal(second.status().credentialStorage,'device-secure','Puerto seguro');ok(!JSON.stringify(second.status()).includes('sk-or-'),'Sin secreto');await second.disconnect();ok(!savedKeys.has('openrouter'),'Clave borrada');await second.close();
+  });
+  await test('Gemini UMD sin Node usa header, modelos reales del doble y seis secciones sin pensamientos',async()=>{
+    const key='AIza-inventada-'+ 'b'.repeat(30),calls=[],credentialStore={leer:async n=>n==='gemini'?key:null,guardar:async()=>true,borrar:async()=>true};
+    const provider=LibraryGemini.create({credentialStore,fetchImpl:async(url,input)=>{calls.push({url,input});return new Response(JSON.stringify(url.includes('/models?')?{models:[{name:'models/gemini-fixture-flash',supportedGenerationMethods:['generateContent']}]}:{candidates:[{finishReason:'STOP',content:{parts:[{thought:true,text:'PENSAMIENTO NO MOSTRAR'},{text:JSON.stringify({text:'Explicación sintética',sections:{brief:'Breve'},citations:[]})}]}}]}));}});
+    const result=await provider.ask({prompt:'Contexto inventado',model:'gemini-fixture-flash',study:true});equal(Object.keys(result.sections).length,6,'Secciones C');ok(!JSON.stringify(result).includes('PENSAMIENTO'),'Sin razonamiento interno');equal(calls[1].input.headers['x-goog-api-key'],key,'Header');ok(!calls[1].url.includes(key),'Clave fuera de URL');await provider.close();
+  });
   // Put the expected snapshot in a second IDB record, not a JS global surviving reload.
   await store.transaction(['records'],'readwrite',tx=>tx.objectStore('records').put({key:'expected-test-snapshot',value:saved}));
   await store.close();return {phase:1,passed:names.length,names};

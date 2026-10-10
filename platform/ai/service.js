@@ -1,11 +1,15 @@
 (function(root,factory){
-  if(typeof module==='object'&&module.exports)module.exports=factory(require('../bridge-contract.js'),require('../../shared/ai-context.js'),require('./openrouter.js'),require('../../app/ai-core.js'),require('../../app/study-chat-core.js'));
-  else root.LibraryMobileAi=factory(root.LibraryBridgeContract,root.LibraryAiContext,root.LibraryOpenRouter,root.AiCore,root.StudyChatCore);
-})(typeof globalThis!=='undefined'?globalThis:this,function(contract,contexts,providers,core,chat){
+  if(typeof module==='object'&&module.exports)module.exports=factory(require('../bridge-contract.js'),require('../../shared/ai-context.js'),require('./openrouter.js'),require('../../app/ai-core.js'),require('../../app/study-chat-core.js'),require('./gemini.js'),require('./credentials.js'));
+  else root.LibraryMobileAi=factory(root.LibraryBridgeContract,root.LibraryAiContext,root.LibraryOpenRouter,root.AiCore,root.StudyChatCore,root.LibraryGemini,root.LibraryAiCredentials);
+})(typeof globalThis!=='undefined'?globalThis:this,function(contract,contexts,providers,core,chat,geminis,credentials){
   'use strict';
   const fail=(code,message)=>{throw new contract.BridgeError(code,message);};
-  function create({call,emit=()=>{},epoch=()=>0,crypto=globalThis.crypto,fetchImpl,now=()=>Date.now(),openExternal,reporter}={}){
-    const reporting=reporter?'developer-channel':'not-configured',context=contexts.create({call}),prepared=new Map(),provider=providers.create({fetchImpl,crypto,now,notify:s=>emit('onAiState',{...s,reporting})});let closed=false,busy=false,generation=0;
+  function create({call,emit=()=>{},epoch=()=>0,crypto=globalThis.crypto,fetchImpl,now=()=>Date.now(),openExternal,reporter,credentialStore}={}){
+    const reporting=reporter?'developer-channel':'not-configured',context=contexts.create({call}),prepared=new Map(),provider=providers.create({fetchImpl,crypto,now,credentialStore,notify:s=>emit('onAiState',{...s,reporting})});let closed=false,busy=false,generation=0,personalEnabled=true;
+    const gemini=credentials.supported(credentialStore)?geminis.create({fetchImpl,now,credentialStore,notify:s=>emit('onAiState',{...provider.status(),gemini:s,reporting})}):null;
+    const personalMode=async()=>!!gemini&&(await call('catalog')).modules.some(m=>m.personalDefault===true);
+    const personalStatus=async()=>{if(gemini)await gemini.ready;const available=await personalMode();return {available,enabled:available&&personalEnabled,providers:available&&personalEnabled?[{id:'gemini-api',installed:true,connected:gemini.status().connected,session:'key',credentialStorage:'device-secure',retryAt:gemini.status().retryAt,...(gemini.status().credentialError?{credentialError:gemini.status().credentialError}:{})}]:[]};};
+    const requireGemini=async()=>{if(!gemini)fail('UNAVAILABLE','El llavero seguro del dispositivo no está disponible.');if(!await personalMode()||!personalEnabled)fail('UNAVAILABLE','Gemini API requiere el modo personal de tu biblioteca.');};
     const id=()=>Array.from(crypto.getRandomValues(new Uint8Array(24)),n=>n.toString(16).padStart(2,'0')).join('');
     async function guard(expected){
       if(closed)fail('UNAVAILABLE','La sesión de IA está cerrada.');
@@ -13,7 +17,7 @@
       if((await call('privacyStatus')).locked)fail('LOCKED','Abre tu cuaderno antes de consultar o compartir tu estudio.');
       if(expected!==undefined&&expected!==epoch())fail('CONFLICT','La sesión de tu biblioteca cambió. Prepara otra vez la pregunta.');
     }
-    const cancel=()=>{generation++;provider.cancel();return true;};
+    const cancel=()=>{generation++;provider.cancel();gemini?.cancel();return true;};
     async function getPrepared(key){const item=prepared.get(key);if(!item||now()-item.createdAt>30*60*1000)fail('CONFLICT','Prepara de nuevo la pregunta.');await guard(item.epoch);await context.verify(item.context.sources);await guard(item.epoch);return item;}
     async function prepare(input){
       if(!input||JSON.stringify(input).length>15000)fail('VALIDATION','Consulta no válida o demasiado grande.');const at=epoch();await guard(at);
@@ -24,11 +28,18 @@
       return {id:key,...preview,notices:chosen.notices};
     }
     async function ask(input){
-      if(input.provider!==undefined&&input.provider!=='openrouter')fail('UNAVAILABLE','En el teléfono usa OpenRouter o Copiar/Compartir pregunta. Las sesiones CLI de Windows no se importan.');
+      if(input.provider!==undefined&&!['openrouter','gemini-api'].includes(input.provider))fail('UNAVAILABLE','En el teléfono usa OpenRouter, Gemini API o Copiar/Compartir pregunta. Las sesiones CLI de Windows no se importan.');
       if(busy)fail('CONFLICT','Espera a que termine la consulta anterior.');busy=true;const at=generation;
       try{
+        const selected=input.provider==='gemini-api'?gemini:provider;
+        if(!selected)fail('UNAVAILABLE','El llavero seguro del dispositivo no está disponible.');
+        await selected.ready;
         const item=await getPrepared(input.id);if(at!==generation)fail('CANCELLED','La consulta se canceló.');
-        const response=await provider.ask({prompt:item.prompt,model:input.model,allowData:input.allowData===true,study:item.study,allowLiving:item.allowLiving});
+        if(input.provider==='gemini-api')await requireGemini();
+        if(at!==generation)fail('CANCELLED','La consulta se canceló.');
+        const beforeSend=async()=>{await getPrepared(input.id);if(input.provider==='gemini-api')await requireGemini();if(at!==generation)fail('CANCELLED','La consulta se canceló.');};
+        const response=await selected.ask({prompt:item.prompt,model:input.model,allowData:input.allowData===true,study:item.study,allowLiving:item.allowLiving,beforeSend});
+        if(input.provider==='gemini-api')await requireGemini();
         await guard(item.epoch);await context.verify(item.context.sources);if(at!==generation)fail('CANCELLED','La consulta se canceló.');
         const citations=[];
         for(const ref of response.citations){try{const result=await call('chapter',{module:item.module,book:ref.book,chapter:ref.chapter}),v=result.verses.find(v=>v.verse===ref.verse||(v.verse<ref.verse&&v.endVerse>=ref.verse));if(v)citations.push({...ref,title:result.title,text:v.text,module:item.module,revision:result.revision});}catch(e){if(e?.code==='LOCKED'||e?.code==='CONFLICT')throw e;}}
@@ -59,9 +70,15 @@
       if(result?.accepted!==true)fail('UNAVAILABLE','El canal no confirmó el reporte. No se marca como enviado.');
       return {sent:true,status:'enviado',id:report.id};
     }
-    const handlers={aiStatus:()=>({...provider.status(),reporting}),aiConnect:input=>provider.connect(input),aiDisconnect:()=>{cancel();prepared.clear();return provider.disconnect();},aiModels:()=>provider.listModels(),aiQuota:()=>provider.refreshQuota(),aiCancel:cancel,aiPrepare:prepare,aiAsk:ask,aiCopy:copy,aiShare:share,aiReport:report,aiPersonalStatus:()=>({available:false,enabled:false,providers:[]})};
+    const handlers={aiStatus:async()=>{await provider.ready;return {...provider.status(),reporting};},aiConnect:input=>provider.connect(input),aiDisconnect:()=>{cancel();prepared.clear();return provider.disconnect();},aiModels:()=>provider.listModels(),aiQuota:()=>provider.refreshQuota(),aiCancel:cancel,aiPrepare:prepare,aiAsk:ask,aiCopy:copy,aiShare:share,aiReport:report,aiPersonalStatus:personalStatus};
+    if(gemini)Object.assign(handlers,{
+      aiGeminiKey:async value=>{if(value!==null)await requireGemini();cancel();prepared.clear();await gemini.storeKey(value);return personalStatus();},
+      aiGeminiModels:async()=>{await requireGemini();return gemini.listModels();},
+      aiPersonalEnable:async value=>{if(typeof value!=='boolean')fail('VALIDATION','Elige activar o desactivar el modo personal.');if(!await personalMode())fail('UNAVAILABLE','Esta biblioteca no tiene un paquete personal activo.');cancel();prepared.clear();personalEnabled=value;return personalStatus();},
+      aiPersonalLogin:async id=>{if(id!=='gemini-api')fail('UNAVAILABLE','Las sesiones CLI de Windows no están disponibles en Android.');await requireGemini();if(!openExternal)fail('UNAVAILABLE','Falta conectar el navegador del dispositivo.');await openExternal('https://aistudio.google.com/apikey');return {instructions:true};}
+    });
     for(const [name,fn]of Object.entries(handlers))handlers[name]=value=>{if(closed)fail('UNAVAILABLE','La sesión de IA está cerrada.');return fn(value);};
-    return Object.freeze({handlers:()=>handlers,invalidate:()=>{cancel();prepared.clear();},close:()=>{closed=true;cancel();prepared.clear();provider.close();},status:()=>({...provider.status(),reporting:reporter?'developer-channel':'not-configured'})});
+    return Object.freeze({handlers:()=>handlers,invalidate:()=>{cancel();prepared.clear();},close:()=>{closed=true;cancel();prepared.clear();return Promise.all([provider.close(),gemini?.close()]);},status:()=>({...provider.status(),reporting:reporter?'developer-channel':'not-configured'})});
   }
   return Object.freeze({create});
 });
