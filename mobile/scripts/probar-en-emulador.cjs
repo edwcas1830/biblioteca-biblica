@@ -103,7 +103,9 @@ async function esperarLista(app, etiqueta) {
   const archivos = fs.readdirSync(traspaso);
   adb('shell', 'run-as', PKG, 'mkdir', '-p', 'files/traspaso-entrante');
   for (const a of archivos) {
-    execFileSync('adb', ['exec-in', 'run-as', PKG, 'sh', '-c', `cat > files/traspaso-entrante/${a}`], { input: fs.readFileSync(path.join(traspaso, a)), maxBuffer: 64 * 1024 * 1024 });
+    // adb une los argumentos en UNA línea para el shell del teléfono: la redirección debe ir entre
+    // comillas dentro de «sh -c» para que la ejecute run-as (con permiso sobre files/) y no el shell.
+    execFileSync('adb', ['exec-in', `run-as ${PKG} sh -c 'cat > files/traspaso-entrante/${a}'`], { input: fs.readFileSync(path.join(traspaso, a)), maxBuffer: 64 * 1024 * 1024 });
   }
   const copiados = adb('shell', 'run-as', PKG, 'ls', '-l', 'files/traspaso-entrante');
   anotar(archivos.every(a => copiados.includes(a)), 'archivos de traspaso en la memoria de la app', archivos.length + ' archivos');
