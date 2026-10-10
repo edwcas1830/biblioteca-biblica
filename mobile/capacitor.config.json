@@ -1,0 +1,22 @@
+{
+  "appId": "com.edward.bibliotecabiblica",
+  "appName": "Biblioteca Bíblica",
+  "webDir": "www",
+  "android": {
+    "minWebViewVersion": 110,
+    "allowMixedContent": false,
+    "captureInput": false,
+    "webContentsDebuggingEnabled": false
+  },
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "CapacitorSQLite": {
+      "androidIsEncryption": false
+    },
+    "Keyboard": {
+      "resize": "body"
+    }
+  }
+}

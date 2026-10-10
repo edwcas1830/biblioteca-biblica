@@ -1,0 +1,211 @@
+/* Capa de teléfono (ancho < 600 px). Solo actúa con html[data-telefono="true"], que pone mobile/movil.js.
+   Usa los tokens de cada diseño (A, B, C): no define colores propios salvo mezclas de esos tokens. */
+
+:root[data-telefono="true"] {
+  --nav-alto: 64px;
+  --hoja-cab: 52px;
+  --seguro-arriba: env(safe-area-inset-top, 0px);
+  --seguro-abajo: env(safe-area-inset-bottom, 0px);
+  --pie: calc(var(--nav-alto) + var(--seguro-abajo));
+  --hoja-plegada: var(--hoja-cab);
+  --hoja-media: 48dvh;
+  --hoja-completa: calc(100dvh - var(--seguro-arriba) - var(--pie) - 12px);
+  --hoja-alto: var(--hoja-plegada);
+  --fondo-hoja: var(--paper, var(--surface, Canvas));
+  --borde-hoja: color-mix(in srgb, currentColor 18%, transparent);
+  -webkit-text-size-adjust: 100%;
+}
+:root[data-telefono="true"][data-hoja="media"] { --hoja-alto: var(--hoja-media); }
+:root[data-telefono="true"][data-hoja="completa"] { --hoja-alto: var(--hoja-completa); }
+
+:root[data-telefono="true"] body {
+  padding-top: var(--seguro-arriba);
+  padding-bottom: var(--pie);
+  overscroll-behavior-y: contain;
+}
+
+/* Objetivos táctiles de 48 dp y letra mínima de 12 px en la interfaz. */
+:root[data-telefono="true"] button,
+:root[data-telefono="true"] select,
+:root[data-telefono="true"] input,
+:root[data-telefono="true"] summary { min-height: 44px; }
+:root[data-telefono="true"] small,
+:root[data-telefono="true"] .fine-print,
+:root[data-telefono="true"] .pane-kicker,
+:root[data-telefono="true"] sup { font-size: max(12px, .75rem); }
+
+/* ---------- Cabecera: en el teléfono todo pasa a la barra inferior y a «Más» ---------- */
+:root[data-telefono="true"] .topbar { display: none !important; }
+:root[data-telefono="true"] .topbar .compact-nav,
+:root[data-telefono="true"] .topbar .library-menu,
+:root[data-telefono="true"] .topbar .appearance-control,
+:root[data-telefono="true"] .app-footer,
+:root[data-telefono="true"] .pane-view-controls,
+:root[data-telefono="true"] #pane-layout-notice,
+:root[data-telefono="true"] .pane-resizer,
+:root[data-telefono="true"] #pane-biblia .pane-close,
+:root[data-telefono="true"] #pane-comentario .pane-close,
+:root[data-telefono="true"] #pane-diccionario .pane-close { display: none !important; }
+
+:root[data-telefono="true"] .reading-toolbar {
+  display: flex; flex-wrap: nowrap; gap: 4px; padding: 0 8px; margin: 0;
+  overflow-x: auto; scrollbar-width: none;
+}
+:root[data-telefono="true"] .reading-toolbar { padding: 6px 8px 4px; }
+:root[data-telefono="true"] .reading-actions { flex-wrap: nowrap; gap: 0; width: 100%; justify-content: space-between; align-items: center; }
+:root[data-telefono="true"] .reading-actions > * { flex: 0 1 auto; min-width: 0; }
+:root[data-telefono="true"] .reading-actions button,
+:root[data-telefono="true"] .reading-actions summary { min-width: 40px; padding-inline: 6px; font-size: .9rem; white-space: nowrap; }
+:root[data-telefono="true"] #pane-biblia .passage-picker { display: grid; grid-template-columns: minmax(0, 1fr) 6.5rem; gap: 6px; width: 100%; }
+:root[data-telefono="true"] #pane-biblia .passage-picker select { width: 100%; min-width: 0; }
+
+/* ---------- Lectura a todo el ancho ---------- */
+:root[data-telefono="true"] #read-view { padding: 0; }
+:root[data-telefono="true"] #reading-desk { display: block; margin: 0; }
+:root[data-telefono="true"] #panes.reading-layout {
+  display: block !important;
+  grid-template-columns: none !important;
+  grid-template-rows: none !important;
+  height: auto !important;
+  min-height: 0;
+  margin: 0;
+}
+:root[data-telefono="true"] #pane-biblia {
+  width: 100% !important; max-width: none;
+  height: var(--alto-libro, 60dvh) !important;
+  min-height: 320px;
+  border-radius: 0; margin: 0; box-shadow: none;
+  display: flex; flex-direction: column;
+}
+:root[data-telefono="true"] #pane-biblia .pane-head { padding: 8px 16px 4px; gap: 6px; flex-wrap: wrap; }
+:root[data-telefono="true"] #pane-biblia .passage-picker { flex: 1 1 auto; }
+:root[data-telefono="true"] #pane-biblia #comparison-controls { padding: 0 16px 4px; }
+:root[data-telefono="true"] #verses.pane-body {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto;
+  padding: 8px 20px 32px;
+  overscroll-behavior: contain;
+}
+:root[data-telefono="true"] #verses .verse { width: 100%; max-width: none; }
+:root[data-telefono="true"] #pane-biblia .pane-foot { padding: 4px 12px; }
+:root[data-telefono="true"] #pane-biblia .page-controls { width: 100%; justify-content: space-between; }
+:root[data-telefono="true"] .pane-notes { margin: 0 8px; }
+
+/* ---------- Hoja de estudio (Comentario / Diccionario / Original) ---------- */
+:root[data-telefono="true"] #pane-comentario,
+:root[data-telefono="true"] #pane-diccionario {
+  position: fixed !important;
+  left: 0; right: 0;
+  bottom: var(--pie);
+  width: auto !important;
+  height: calc(var(--hoja-alto) - var(--hoja-cab)) !important;
+  max-height: none;
+  margin: 0; border-radius: 0; box-shadow: none;
+  z-index: 40;
+  background: var(--fondo-hoja);
+  display: none !important;
+  flex-direction: column;
+  overflow: hidden;
+}
+:root[data-telefono="true"]:not([data-hoja="plegada"])[data-vista-movil="read-view"][data-pestana="comentario"] #pane-comentario,
+:root[data-telefono="true"]:not([data-hoja="plegada"])[data-vista-movil="read-view"][data-pestana="diccionario"] #pane-diccionario,
+:root[data-telefono="true"]:not([data-hoja="plegada"])[data-vista-movil="read-view"][data-pestana="original"] #pane-diccionario { display: flex !important; }
+:root[data-telefono="true"][data-pestana="original"] #pane-diccionario #dictionary-content,
+:root[data-telefono="true"][data-pestana="original"] #pane-diccionario #dictionary-form { display: none; }
+:root[data-telefono="true"][data-pestana="original"] #pane-diccionario #original-inline { display: block !important; }
+:root[data-telefono="true"][data-pestana="diccionario"] #pane-diccionario #original-inline { display: none !important; }
+:root[data-telefono="true"] #pane-comentario .pane-head,
+:root[data-telefono="true"] #pane-diccionario .pane-head { padding: 8px 16px; gap: 6px; flex-wrap: wrap; }
+:root[data-telefono="true"] #pane-comentario .pane-body,
+:root[data-telefono="true"] #pane-diccionario .pane-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 8px 18px 24px; }
+
+#movil-hoja-cabecera { display: none; }
+:root[data-telefono="true"][data-vista-movil="read-view"] #movil-hoja-cabecera {
+  display: grid; grid-template-columns: 44px 1fr 44px; align-items: center;
+  position: fixed; left: 0; right: 0; z-index: 41;
+  bottom: calc(var(--pie) + var(--hoja-alto) - var(--hoja-cab));
+  height: var(--hoja-cab);
+  background: var(--fondo-hoja);
+  border-top: 1px solid var(--borde-hoja);
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -6px 18px color-mix(in srgb, black 12%, transparent);
+  padding: 0 4px;
+  transition: bottom .22s ease;
+}
+.movil-hoja-asa { background: none; border: 0; display: grid; place-items: center; cursor: grab; color: inherit; }
+.movil-hoja-asa span { width: 28px; height: 4px; border-radius: 2px; background: currentColor; opacity: .35; }
+.movil-hoja-pestanas { display: flex; justify-content: center; gap: 2px; }
+.movil-hoja-pestanas button {
+  flex: 1 1 0; min-width: 0; border: 0; background: none; color: inherit;
+  font: inherit; font-size: .9rem; padding: 0 6px; border-bottom: 2px solid transparent; border-radius: 0;
+}
+.movil-hoja-pestanas button[aria-selected="true"] { font-weight: 700; border-bottom-color: currentColor; }
+.movil-hoja-fijar { opacity: .5; }
+.movil-hoja-fijar[aria-pressed="true"] { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { #movil-hoja-cabecera { transition: none; } }
+
+/* ---------- Navegación inferior ---------- */
+#movil-nav { display: none; }
+:root[data-telefono="true"] #movil-nav {
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+  height: var(--pie); padding-bottom: var(--seguro-abajo);
+  background: var(--fondo-hoja);
+  border-top: 1px solid var(--borde-hoja);
+}
+#movil-nav button {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  border: 0; background: none; color: inherit; font: inherit; min-height: 48px; padding: 4px 0;
+  opacity: .72; border-radius: 0;
+}
+#movil-nav .movil-nav-icono { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; box-sizing: content-box; }
+#movil-nav .movil-nav-texto { font-size: .75rem; }
+#movil-nav button[aria-current="page"] { opacity: 1; font-weight: 700; }
+#movil-nav button[aria-current="page"] .movil-nav-icono {
+  background: color-mix(in srgb, currentColor 14%, transparent); border-radius: 999px; padding: 2px 16px;
+}
+
+/* ---------- Menú «Más» ---------- */
+#movil-mas {
+  margin: auto 0 0; width: 100%; max-width: none; max-height: 82dvh;
+  border: 0; border-radius: 18px 18px 0 0; padding: 8px 16px calc(16px + var(--seguro-abajo));
+  background: var(--fondo-hoja); color: inherit;
+}
+#movil-mas::backdrop { background: rgb(0 0 0 / .35); }
+.movil-mas-cabecera { display: flex; justify-content: space-between; align-items: center; }
+.movil-mas-cabecera h2 { margin: 0; font-size: 1.2rem; }
+.movil-mas-ajustes { display: grid; gap: 8px; margin: 8px 0 12px; }
+.movil-mas-ajustes .appearance-control { display: grid !important; grid-template-columns: 5rem 1fr; align-items: center; }
+.movil-mas-lista { display: grid; }
+.movil-mas-lista button { text-align: left; min-height: 48px; border-radius: 10px; padding: 0 12px; }
+
+/* ---------- Diálogos a pantalla de teléfono ---------- */
+:root[data-telefono="true"] dialog:not(#movil-mas):not(#original-dialog) {
+  width: 100%; max-width: none; height: 100dvh; max-height: none; margin: 0;
+  border-radius: 0; padding-top: var(--seguro-arriba); padding-bottom: var(--seguro-abajo);
+}
+/* Popover de la palabra: mitad opuesta al toque. */
+:root[data-telefono="true"] #original-dialog {
+  position: fixed; left: 12px; right: 12px; width: auto; max-width: none;
+  max-height: 44dvh; overflow-y: auto; margin: 0; border-radius: 14px;
+}
+:root[data-telefono="true"] #original-dialog[data-lado="arriba"] { top: calc(var(--seguro-arriba) + 12px); bottom: auto; }
+:root[data-telefono="true"] #original-dialog[data-lado="abajo"],
+:root[data-telefono="true"] #original-dialog:not([data-lado]) { bottom: calc(var(--pie) + 12px); top: auto; }
+
+/* ---------- IA a pantalla completa ---------- */
+:root[data-telefono="true"] #ai-pane:not([hidden]) {
+  position: fixed !important; inset: 0 0 var(--pie) 0; z-index: 60;
+  width: auto !important; height: auto !important; max-width: none; margin: 0; border-radius: 0;
+  padding-top: var(--seguro-arriba);
+}
+:root[data-telefono="true"] #ai-resizer { display: none !important; }
+
+/* ---------- Botón «volver al principio» sobre la hoja ---------- */
+:root[data-telefono="true"] #back-to-top { bottom: calc(var(--pie) + var(--hoja-alto) + 12px); right: 12px; }
+
+/* ---------- Otras vistas (plan, devocional, oración) ---------- */
+:root[data-telefono="true"] main > section.view:not(#read-view) { padding: 8px 14px 24px; }
+:root[data-telefono="true"] main { overflow-x: hidden; }
+
+/* En el teléfono la hoja es el estudio: el interruptor «Solo lectura» de escritorio sobra. */
+:root[data-telefono="true"] #study-open { display: none !important; }

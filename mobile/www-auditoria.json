@@ -1,0 +1,13 @@
+{
+  "fecha": "2026-10-10T07:30:52.623Z",
+  "archivos": 95,
+  "megabytes": 16.9,
+  "prohibidos": [],
+  "modulosLibres": [
+    "onbv2008",
+    "step-greek",
+    "step-hebrew"
+  ],
+  "puentes": [],
+  "huellaIndex": "6345f3128db085db"
+}
