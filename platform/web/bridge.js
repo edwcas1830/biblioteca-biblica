@@ -3,8 +3,8 @@
   else root.LibraryWebBridge=factory(root.LibraryBridgeContract,root.LibraryWebStore,root.LibraryWebReader);
 })(typeof globalThis!=='undefined'?globalThis:this,function(contract,stores,readers){
   'use strict';
-  function create({bible,manifest,dbName, indexedDB,handlers={},events=[],reasons={}}={}){
-    const store=new stores.PersonalStore({indexedDB,dbName,books:bible?.books}),reader=readers.create({bible,manifest});
+  function create({bible,manifest,dbName,indexedDB,resources,resourceBase,source,handlers={},events=[],reasons={}}={}){
+    const store=new stores.PersonalStore({indexedDB,dbName,books:bible?.books}),reader=readers.create({bible,manifest,resources,resourceBase,source});
     const adapter=contract.createBridge({platform:'web',storage:'indexeddb',events,reasons,handlers:{
       ...reader,
       bootstrap:data=>store.bootstrap(data),savePersonal:data=>store.write(data),exportBackup:()=>store.exportBackup(),restoreBackup:data=>store.restoreBackup(data),
