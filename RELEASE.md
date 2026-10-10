@@ -1,3 +1,15 @@
+Biblioteca Bíblica 0.5.0 — estudio, oración y diseño.
+
+- **Tres diseños** a elegir (A · libro abierto, B · página amplia, C · columna serena) y temas Marfil, Sepia y Noche, también automático según la hora.
+- **Biblia, comentario y diccionario abiertos a la vez**, con paneles que se ocultan o se muestran, lado a lado o arriba y abajo, y separadores ajustables. El comentario sigue el versículo que lees. Diccionarios: Strong, Vine y RAE. Botón «Volver al principio».
+- **Devocionales y planes desde PDF y Word**, con revisión previa y lectura por días: índice, progreso, pasajes que abren la Biblia y nota por día.
+- **Estudiar con IA** con tu propia cuenta (OpenRouter gratis) o «Copiar y abrir» en ChatGPT, Gemini o Claude. Muestra las fuentes y nunca envía tus notas ni tus oraciones.
+- **Oración y testimonios**: guías ACAS y Padre Nuestro, peticiones con estados, libro de testimonios y candado con PIN para tu cuaderno (el PIN olvidado no se puede recuperar).
+- **Series y guías** de 5 a 7 días con OIA, EOAO o HEAR, para uso personal, en pareja o en familia.
+- **Música de YouTube** en un reproductor visible y movible, que se pausa al minimizar.
+
+Tus notas, planes y avance se conservan. Los módulos con derechos siguen fuera del instalador público. Versión de evaluación sin firma digital.
+
 Biblioteca Bíblica 0.3.0 está preparada para revisión local, pendiente de aprobación para publicar. Conserva notas, planes y avance mediante una migración reversible a SQLite; lee paquetes locales de Biblias, diccionarios y comentarios, incorpora búsqueda sin tildes, concordancia Strong, rojo del NT y voces locales de Windows. Los módulos personales se instalan aparte y no forman parte del instalador público. Ver `V03.md` para compatibilidad, recuperación y límites.
 
 Biblioteca Bíblica 0.2.1 cambia el canal de actualizaciones al repositorio propio `edwcas1830/biblioteca-biblica`. Desde esta versión, las siguientes llegan con aviso dentro de la app. Si tienes la 0.2.0, instala esta una vez con el instalador; tus notas, planes y avance se conservan.
