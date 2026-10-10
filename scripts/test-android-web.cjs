@@ -6,7 +6,7 @@ async function browserWorker(){
   const profile=process.argv[process.argv.indexOf('--test-profile')+1];
   if(!profile||!path.basename(profile).startsWith('biblia-web-test-')||!path.resolve(profile).startsWith(path.resolve(os.tmpdir())+path.sep))throw Error('Se requiere un perfil temporal de prueba.');
   app.setPath('userData',profile);await app.whenReady();
-  const root=path.resolve(__dirname,'..'),allowed=new Set(['/tests/browser/android-store.html','/tests/browser/android-store.js','/app/prayer-core.js','/app/guide-core.js','/app/study-chat-core.js','/platform/bridge-contract.js','/shared/references.js','/shared/personal-model.js','/platform/web/personal-store.js','/platform/web/library.js','/platform/web/bridge.js']);
+  const root=path.resolve(__dirname,'..'),allowed=new Set(['/tests/browser/android-store.html','/tests/browser/android-store.js','/app/prayer-core.js','/app/guide-core.js','/app/study-chat-core.js','/platform/bridge-contract.js','/shared/references.js','/shared/personal-model.js','/shared/sha256-stream.js','/shared/transfer.js','/platform/android/transfer.js','/platform/web/personal-store.js','/platform/web/library.js','/platform/web/bridge.js']);
   const server=http.createServer((req,res)=>{
     if(req.method!=='GET'||!allowed.has(req.url)){res.writeHead(404);res.end();return;}
     res.writeHead(200,{'Content-Type':req.url.endsWith('.html')?'text/html; charset=utf-8':'text/javascript; charset=utf-8','Content-Security-Policy':"default-src 'none'; script-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'"});res.end(fs.readFileSync(path.join(root,req.url)));

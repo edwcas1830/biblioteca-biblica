@@ -34,6 +34,15 @@ export interface Person { id:string; name:string; original?:string; lookup?:stri
 export interface ScanResult { folder:string; items:({token:string; original:string; status:string; reason?:string} & Record<string,unknown>)[]; }
 export interface PdfRecord { text:string; page:number; kind:string; spans:{text:string; bold?:boolean; italic?:boolean}[]; [key:string]:unknown; }
 export interface PdfResult { records:PdfRecord[]; title:string; subtitle:string; pages:number; indexTitles:Record<string,string>; warnings:string[]; }
+/** App-private paths returned by BibliaPlataforma.elegirArchivosTraspaso; never SAF URIs. */
+export interface TransferSelection { carpeta:'traspaso-entrante'; archivos:{nombre:string; ruta:string; bytes:number}[]; }
+export interface TransferSummary {
+  conteos:{diasPlan:number; diasCompletados:number; devocionales:number; oraciones?:number; estadoCifrado:boolean};
+  modulos:{id:string; tipo:'biblia'|'comentario'|'diccionario'; titulo:string}[];
+  modoPersonal:boolean; versionPaquete:string; bytes:number; conservaPin:boolean;
+}
+export interface TransferReview { token:string; expiresAt:number; resumen:TransferSummary; requiereConfirmacion:true; }
+export interface TransferResult { instalado:true; resumen:TransferSummary; respaldo:string; requiereRecarga:true; }
 export interface Capabilities { version:1; platform:'web'|'android'; storage:'none'|'indexeddb'|'sqlite'; nativeVerified:boolean; operations:Record<keyof Omit<LibraryBridge,'getCapabilities'>,{available:boolean; reason?:string}>; }
 export type Unsubscribe = () => void;
 export interface LibraryBridge {
@@ -88,5 +97,7 @@ export interface LibraryBridge {
   playVoice(data:{text:string; lang?:string; voice?:string; rate?:number}):Promise<void>;
   stopVoice():Promise<void>; voiceOptions():Promise<{id:string; name:string; lang:string; localService?:boolean}[]>;
   shareText(data:{text:string; title?:string}):Promise<{completed:boolean}>;
+  transferScan(data:TransferSelection):Promise<TransferReview>;
+  transferInstall(data:{token:string; confirmado:true}):Promise<TransferResult>;
 }
 declare global { interface Window { libraryDesktop:LibraryBridge; } }

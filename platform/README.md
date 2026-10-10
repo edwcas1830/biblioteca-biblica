@@ -68,3 +68,40 @@ Los eventos se habilitan con `events:['onMusicPause','onFullscreen',…]` al cre
 Para ofrecer recuperación de las copias locales, la integración puede usar `adapter.store.listBackups()` y `adapter.store.backup(id)`. El primer método devuelve registros que pueden contener contenido privado: no volcarlos a consola ni mandarlos al servidor. `backup(id)` devuelve el JSON previo (objeto) o el texto exacto de una migración antigua. Estos métodos de mantenimiento quedan fuera del puente de los controladores. Al desmontar la vista previa, llamar `await adapter.store.close()`.
 
 RV1909 usa el texto público suministrado en `bible`; pasar también `manifest` desde `app/data/rv1909-manifest.json` conserva permiso de IA y atribución. La búsqueda web cooperativa admite texto/prefijos y concordancia de palabra exacta sin tildes. **No es FTS5** ni un lector de módulos SQLite. Las operaciones para módulos personales rechazan `NOT_FOUND`; comentarios, diccionario y gráficos seguirán sin capacidad hasta su entrega.
+
+## Traspaso desde la PC (pieza 7, datos)
+
+Se añaden `transferScan` y `transferInstall`. No reutilizan `restoreBackup`, porque esta operación sustituye **base y paquete** como una sola instalación recuperable. `platform/scripts-movil.json` incluye las dependencias nuevas antes de los controladores; todo sigue siendo UMD, sin Node/Electron en producción.
+
+```js
+// Selección que ya devuelve la integración de Claude: copyFile, readData:false.
+const seleccion = await BibliaPlataforma.elegirArchivosTraspaso();
+const revision = await libraryDesktop.transferScan(seleccion);
+// Mostrar revision.resumen, esperar una confirmación explícita del lector.
+const resultado = await libraryDesktop.transferInstall({token:revision.token, confirmado:true});
+// resultado.requiereRecarga: abrir una sesión nueva, sin guardar el estado anterior.
+```
+
+`transferScan({carpeta:'traspaso-entrante',archivos:[{nombre,ruta,bytes}]})` solo admite rutas de esa carpeta privada, nunca URI SAF ni rutas arbitrarias. La selección debe contener exactamente `traspaso.json`, la base, `manifest.json` y los módulos enumerados. `bytes` debe ser el tamaño real **después** de copiar; si el proveedor no lo informa, usar `Filesystem.stat` sobre el destino. Los nombres duplicados se rechazan, también cambiando mayúsculas. Conviene detectarlos en el selector antes de copiar con overwrite.
+
+Verifica tamaños/SHA-256 de cada archivo y ambas listas de módulos; crea un candidato privado y vuelve a verificar cada copia. SHA-256 incremental procesa bloques de 256 KiB mediante `readFileInChunks`, sin cargar el módulo completo. Lee SQLite por conexión NC **de solo lectura**, con `integrity_check`, claves externas, esquema, ordinales, referencias, progreso e IDs válidos. El resumen sale de la base, no de los conteos del exportador. Conserva manifest/licencias/atribución/iaPermitida sin transformar. Las huellas detectan corrupción; no autentican un editor ni conceden permisos sobre el texto.
+
+El resultado es `{token,expiresAt,resumen,requiereConfirmacion:true}`. `resumen` solo incluye conteos, títulos/IDs/tipos de módulos, modo personal, versión, bytes y `conservaPin`; no contiene notas, oraciones, respuestas ni pasajes. Con bóveda, devuelve `estadoCifrado:true` y omite `oraciones`. El token dura 30 minutos, se usa una vez y queda ligado a la revisión de la biblioteca. Una copia alterada o una biblioteca modificada desde el resumen no se instala.
+
+La fábrica nativa es `LibraryAndroidTransfer.create({filesystem,sqlite,books,repository})`; recibe los plugins **raw** Filesystem y CapacitorSQLite, y los libros canónicos. Primero llamar `await servicio.recover()` **antes de abrir el repositorio**. Después registrar `servicio.handlers()` en `LibraryAndroidServices` y, si el puente ya existe, en `adapter.register(...)`. No se instala automáticamente al cargar el script. Sin repositorio conectado solo registra `transferScan`; `transferInstall` conserva capacidad ausente. No usar IndexedDB como respaldo silencioso ni anunciar `storage:'sqlite'` por tener un importador.
+
+`repository` debe suministrar estas cinco operaciones; son parte de la conexión al repositorio nativo, **no implementaciones simuladas para producción**:
+
+- `revision()` devuelve una revisión comparable que cambia con cualquier guardado.
+- `exclusive(fn)` serializa el traspaso con todos los guardados y cambios de catálogo/PIN.
+- `quiesce()` detiene las colas, limpia claves en memoria, cierra conexiones y termina/checkpointa WAL. Una base activa con sidecars bloquea la sustitución.
+- `activate({database,modules,locked,generation})` abre y valida la base instalada y enlaza su catálogo; invalida la sesión previa. Los destinos lógicos son `biblioteca-personal.sqlite` y `modulos/personal`, dentro de DATA/files. Si el repositorio usa la base conformada del plugin en `databases/`, necesita un adaptador de ubicaciones/transacción que incluya **esa base activa** en el respaldo; copiar solo un snapshot de files no basta. La fábrica actual no presume esa conexión.
+- `resume({installed,blockWritesUntilBootstrap})` reabre el conjunto correcto. Al instalar mantiene bloqueados los guardados de la sesión anterior hasta un nuevo bootstrap; al revertir restaura la sesión anterior. Así un autosave tardío no sobrescribe la importación.
+
+`transferInstall({token,confirmado:true})` vuelve a comprobar el candidato, pausa el repositorio y conserva el conjunto anterior en `respaldos/traspaso-<id>/` antes de sustituirlo. Un diario pequeño y una marca de commit permiten recuperar una interrupción de proceso: sin marca vuelve al conjunto anterior; con marca conserva el nuevo. Si la recuperación falla, mantiene el diario y el repositorio cerrado, devuelve `LOCKED` y exige recuperación antes de abrir. Un fallo de limpieza después del commit no convierte el éxito en fallo. No se promete resistencia a un corte eléctrico sin verificar durabilidad/fsync en Android. El resultado es `{instalado:true,resumen,respaldo,requiereRecarga:true}`.
+
+El PIN no se solicita ni se guarda durante el traspaso: se conserva exactamente la bóveda Windows scrypt/AES-GCM. Se comprueba su estructura y que no mezcle texto privado abierto; autenticar/abrir el contenido cifrado corresponde al servicio de PIN pendiente. La prueba Node demuestra que el mismo PIN abre el resultado en Windows; **todavía no demuestra desbloqueo en Android**. Credenciales del proveedor y tokens de Windows no están entre los archivos admitidos.
+
+Dos cuidados para `traspaso-pc.cjs`, propiedad de Claude: detectar `meta['private-vault']` para `estadoCifrado`, no inferirlo de un fallo al leer `meta.state`; dejar el snapshot en `PRAGMA journal_mode=DELETE` tras el backup y antes de las huellas. Una copia WAL abierta incluso en solo lectura puede crear `-wal`/`-shm`; esos archivos no forman parte del formato plano y se rechazan como extras. Esto se hace en la copia, nunca en el perfil real.
+
+`node --test tests/android-transfer.test.cjs` utiliza exclusivamente fixtures temporales inventados, con SQLite real y adaptadores de plugins que operan esos archivos en Node. Comprueba huellas, 329/1189, dos devocionales, notas/IDs, PIN, errores y recuperación. No usa la carpeta privada de OneDrive y **no equivale a ejecutar los plugins en un teléfono**. La conexión del repositorio nativo, selección SAF/OneDrive, almacenamiento lleno, PIN nativo, reinicio y APK siguen en la matriz pendiente.

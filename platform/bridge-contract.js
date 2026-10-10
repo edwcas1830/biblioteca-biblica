@@ -44,7 +44,17 @@
     aiPrepare: payload, aiAsk: payload, aiCopy: payload, youtubeSearch: payload,
     graphicsChronology: payload, graphicsPeople: payload, graphicsGenealogy: payload,
     circleConnect: payload, circlePreview: payload, circleShare: payload, circleResolve: payload, circleReading: payload,
-    playVoice: value => { payload(value); text(value.text, 200000); }, shareText: value => { payload(value); text(value.text); }
+    playVoice: value => { payload(value); text(value.text, 200000); }, shareText: value => { payload(value); text(value.text); },
+    transferScan: value => {
+      payload(value);
+      if (value.carpeta !== 'traspaso-entrante' || !Array.isArray(value.archivos) || value.archivos.length < 4 || value.archivos.length > 503) fail('Selecciona todos los archivos del traspaso.');
+      const seen = new Set();
+      for (const file of value.archivos) {
+        if (!object(file) || typeof file.nombre !== 'string' || !/^[\p{L}\p{N}_()\[\] .-]{1,120}$/u.test(file.nombre) || file.nombre.startsWith('.') || file.nombre.endsWith('.') || file.nombre.trim() !== file.nombre || seen.has(file.nombre.toLowerCase()) || file.ruta !== value.carpeta + '/' + file.nombre || !Number.isSafeInteger(file.bytes) || file.bytes < 0) fail('Selección de archivos no válida.');
+        seen.add(file.nombre.toLowerCase());
+      }
+    },
+    transferInstall: value => { payload(value); if (!/^transfer-[a-f0-9]{32}$/.test(value.token) || value.confirmado !== true) fail('Confirma el resumen del traspaso.'); }
   };
   const eventNames = ['onFullscreen', 'onAiProgress', 'onAiState', 'onMusicPause', 'onUpdateState'];
   // The 67 preload operations retain their result shapes. Mobile extensions are additive.
@@ -60,7 +70,7 @@
     'moduleScan','moduleInstall','connections','compare','studySources','catalog','metadata','chapter','search','comments','dictionary',
     'getUpdateState','checkForUpdates','downloadUpdate','installUpdate','onUpdateState'
   ];
-  const mobileNames = ['playVoice', 'stopVoice', 'voiceOptions', 'shareText'];
+  const mobileNames = ['playVoice', 'stopVoice', 'voiceOptions', 'shareText', 'transferScan', 'transferInstall'];
   const operations = Object.freeze(Object.fromEntries([...names, ...mobileNames].map(name => [name, Object.freeze({event: eventNames.includes(name), validate: validate[name] || none})])));
   function createBridge({platform = 'web', storage = 'none', handlers = {}, events = [], reasons = {}, nativeVerified = false} = {}) {
     if (!['web', 'android'].includes(platform)) fail('Plataforma desconocida.');
