@@ -1,6 +1,6 @@
 {
-  "fecha": "2026-10-10T07:59:47.705Z",
-  "archivos": 109,
+  "fecha": "2026-10-10T08:24:35.904Z",
+  "archivos": 112,
   "megabytes": 17,
   "prohibidos": [],
   "modulosLibres": [
@@ -12,11 +12,14 @@
     "platform/bridge-contract.js",
     "shared/references.js",
     "shared/personal-model.js",
+    "shared/sha256-stream.js",
+    "shared/transfer.js",
     "platform/web/personal-store.js",
     "platform/web/library.js",
     "platform/web/bridge.js",
     "platform/android/services.js",
+    "platform/android/transfer.js",
     "platform/android/bridge.js"
   ],
-  "huellaIndex": "5a62326569a47523"
+  "huellaIndex": "1fef11ca1e6cbdf3"
 }

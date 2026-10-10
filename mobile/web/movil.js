@@ -296,6 +296,85 @@
     html.style.setProperty('--alto-libro', Math.max(320, window.innerHeight - arriba - pie - cab) + 'px');
   }
 
+  // ---------- Traer desde la PC ----------
+  // Elegir los archivos de traspaso-android → copiar → revisar (transferScan) → confirmar → instalar.
+  let dialogoTraspaso, botonTraspaso;
+  const MB = b => (b / 1048576).toFixed(1).replace('.', ',') + ' MB';
+  function pasoTraspaso(titulo, parrafos = [], botones = [], { progreso = false } = {}) {
+    const cuerpo = $('.movil-traspaso-cuerpo', dialogoTraspaso);
+    cuerpo.replaceChildren(crear('h3', { texto: titulo }), ...parrafos.map(p => crear('p', { texto: p })));
+    if (progreso) cuerpo.append(crear('progress', progreso === true ? {} : { max: '100', value: '0' }));
+    const fila = crear('div', { class: 'movil-traspaso-acciones' });
+    for (const [texto, fn, principal] of botones) fila.append(crear('button', { type: 'button', class: principal ? 'primary' : 'quiet', texto, onclick: fn }));
+    cuerpo.append(fila);
+    return cuerpo;
+  }
+  function errorTraspaso(e) {
+    pasoTraspaso('No se pudo traer', [(e && e.message) || 'Error desconocido.', 'No se cambió nada de lo que ya tenías.'], [['Cerrar', () => dialogoTraspaso.close(), true]]);
+  }
+  function iniciarTraspaso() {
+    pasoTraspaso('Traer desde la PC', [
+      'En el selector, abre tu OneDrive › FABRICA › biblia-estudio › traspaso-android y marca todos sus archivos (son 17).',
+      'Se copian a la memoria privada de la app. Nada cambia hasta que confirmes.'
+    ], [['Elegir archivos', elegirTraspaso, true], ['Cancelar', () => dialogoTraspaso.close()]]);
+  }
+  async function elegirTraspaso() {
+    const cuerpo = pasoTraspaso('Copiando…', ['Preparando.'], [], { progreso: 'porcentaje' });
+    try {
+      const seleccion = await window.BibliaPlataforma.elegirArchivosTraspaso({ alProgreso: ({ archivo, copiados, total }) => {
+        $('p', cuerpo).textContent = archivo ? `Copiando ${archivo}…` : 'Copia terminada.';
+        $('progress', cuerpo).value = total ? Math.round(copiados / total * 100) : 0;
+      } });
+      if (!seleccion.archivos.length) { dialogoTraspaso.close(); return; }
+      pasoTraspaso('Revisando tus archivos…', ['Se comprueba la huella de cada archivo y tu base de datos. Con 200 MB puede tardar unos minutos: deja la app abierta.'], [], { progreso: true });
+      mostrarResumen(await window.libraryDesktop.transferScan(seleccion));
+    } catch (e) { errorTraspaso(e); }
+  }
+  async function mostrarResumen(rev) {
+    const r = rev.resumen, c = r.conteos;
+    const cuerpo = pasoTraspaso('Esto se traerá a este teléfono', []);
+    const dl = crear('dl', { class: 'movil-traspaso-resumen' });
+    const fila = (t, v) => dl.append(crear('dt', { texto: t }), crear('dd', { texto: v }));
+    fila('Plan', `${c.diasCompletados} de ${c.diasPlan} días leídos`);
+    fila('Devocionales', String(c.devocionales));
+    if (c.estadoCifrado) fila('Cuaderno', 'Protegido con tu PIN: se abre con el mismo PIN.');
+    else if (typeof c.oraciones === 'number') fila('Oraciones', String(c.oraciones));
+    fila('Módulos', `${r.modulos.length}: ` + r.modulos.map(m => m.titulo).join(' · '));
+    fila('Tamaño', MB(r.bytes));
+    const acciones = $('.movil-traspaso-acciones', cuerpo);
+    acciones.before(dl, crear('p', { texto: 'Lo que hoy tiene este teléfono se guarda primero en una copia de seguridad.' }));
+    let instalable = false;
+    try { const caps = await window.libraryDesktop.getCapabilities(); instalable = !!(caps.operations.transferInstall && caps.operations.transferInstall.available); } catch { /* sin datos */ }
+    if (instalable) acciones.append(crear('button', { type: 'button', class: 'primary', texto: 'Instalar en este teléfono', onclick: () => instalarTraspaso(rev) }));
+    else acciones.before(crear('p', { class: 'movil-traspaso-aviso', texto: 'Tus archivos están bien. La instalación se activa cuando esta versión tenga su base de datos propia; vuelve a intentarlo después de actualizar.' }));
+    acciones.append(crear('button', { type: 'button', class: 'quiet', texto: 'Cancelar', onclick: () => dialogoTraspaso.close() }));
+  }
+  async function instalarTraspaso(rev) {
+    pasoTraspaso('Instalando…', ['Guardando la copia de seguridad y colocando tus datos y tus módulos.'], [], { progreso: true });
+    try {
+      const res = await window.libraryDesktop.transferInstall({ token: rev.token, confirmado: true });
+      pasoTraspaso('Listo', ['Tus datos y tus módulos ya están en este teléfono.', 'La copia de lo que había antes quedó en ' + res.respaldo + '.'], [['Abrir mi biblioteca', () => location.reload(), true]]);
+    } catch (e) { errorTraspaso(e); }
+  }
+  // El botón aparece solo si la plataforma ofrece la revisión del traspaso (en el teléfono).
+  async function prepararTraspaso() {
+    const puente = window.libraryDesktop;
+    if (!puente || typeof puente.getCapabilities !== 'function' || !hojaMas) return;
+    let caps; try { caps = await puente.getCapabilities(); } catch { return; }
+    const disponible = !!(caps.operations.transferScan && caps.operations.transferScan.available);
+    if (!disponible) { if (botonTraspaso) botonTraspaso.hidden = true; return; }
+    if (!dialogoTraspaso) {
+      dialogoTraspaso = crear('dialog', { id: 'movil-traspaso', 'aria-label': 'Traer desde la PC' }, [crear('div', { class: 'movil-traspaso-cuerpo' })]);
+      document.body.append(dialogoTraspaso);
+    }
+    if (!botonTraspaso) {
+      botonTraspaso = crear('button', { type: 'button', class: 'quiet', id: 'movil-traer-pc', texto: '⇣ Traer desde la PC', onclick: () => { cerrarMas(); dialogoTraspaso.showModal(); iniciarTraspaso(); } });
+      $('.movil-mas-lista', hojaMas).prepend(botonTraspaso);
+    }
+    botonTraspaso.hidden = false;
+  }
+  window.addEventListener('biblioteca:capacidades', prepararTraspaso);
+
   // Strong y voz (#library-controls) se pliegan tras un botón «Lectura» para no quitar alto al texto.
   function construirControlesLectura() {
     const acciones = $('.reading-actions');
@@ -319,6 +398,7 @@
     construirHoja();
     construirBarraVersiculo();
     construirControlesLectura();
+    prepararTraspaso();
     vigilarOriginal();
     // Se oculta cuando el lector desplaza el texto (no cuando la app centra el versículo elegido).
     for (const ev of ['touchmove', 'wheel']) $('#verses')?.addEventListener(ev, ocultarBarra, { passive: true });

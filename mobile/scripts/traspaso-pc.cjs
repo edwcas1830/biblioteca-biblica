@@ -37,17 +37,22 @@ const huella = archivo => new Promise((ok, mal) => {
   const fuente = new sqlite.DatabaseSync(origenDb, { readOnly: true });
   await sqlite.backup(fuente, destinoDb);
   fuente.close();
-  const copia = new sqlite.DatabaseSync(destinoDb, { readOnly: true });
+  // La COPIA (nunca el perfil real) queda en modo de diario DELETE: un archivo plano, sin -wal/-shm.
+  const copia = new sqlite.DatabaseSync(destinoDb);
+  copia.exec('PRAGMA journal_mode=DELETE');
   const integridad = copia.prepare('pragma integrity_check').get();
   const dias = copia.prepare('select count(*) total, coalesce(sum(completed),0) hechos from plan_days').get();
+  const boveda = copia.prepare("select 1 from meta where key='private-vault'").get();
   const estado = copia.prepare("select value from meta where key='state'").get();
   copia.close();
+  for (const extra of ['-wal', '-shm', '-journal']) if (fs.existsSync(destinoDb + extra)) throw new Error('La copia quedó con ' + extra + '; vuelve a intentarlo.');
   if (Object.values(integridad)[0] !== 'ok') throw new Error('La copia de datos no pasó la revisión de integridad.');
-  let conteos = { diasPlan: dias.total, diasCompletados: dias.hechos };
-  try {
+  let conteos = { diasPlan: dias.total, diasCompletados: dias.hechos, estadoCifrado: !!boveda };
+  // Con PIN (bóveda), el estado privado va cifrado y se abre con el mismo PIN en el teléfono.
+  if (!boveda && estado) {
     const st = JSON.parse(estado.value);
     conteos = { ...conteos, devocionales: (st.devotionals || []).length, oraciones: (st.prayers || []).length };
-  } catch { conteos.estadoCifrado = true; } // con PIN, el estado va cifrado: se abre con el mismo PIN en el teléfono
+  }
   archivos.push({ archivo: 'biblioteca-personal.sqlite', tipo: 'datos', bytes: fs.statSync(destinoDb).size, sha256: await huella(destinoDb) });
 
   // 2. Paquete personal: módulos verificados contra su propio manifiesto.

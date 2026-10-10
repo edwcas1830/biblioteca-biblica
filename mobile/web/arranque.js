@@ -98,4 +98,24 @@
 
   window.libraryDesktop = adaptador.bridge;
   document.documentElement.dataset.puente = nativo ? 'android' : 'web';
+
+  // Traspaso desde la PC (servicio de Codex). Primero recuperar un traspaso interrumpido,
+  // después registrar sus operaciones. Sin repositorio nativo solo ofrece la revisión (transferScan).
+  if (nativo && window.LibraryAndroidTransfer && cap.registerPlugin) {
+    const listo = (async () => {
+      const servicio = window.LibraryAndroidTransfer.create({
+        filesystem: cap.registerPlugin('Filesystem'),
+        sqlite: cap.registerPlugin('CapacitorSQLite'),
+        books: window.BIBLE && window.BIBLE.books,
+        repository: window.LibraryAndroidRepository || undefined
+      });
+      await servicio.recover();
+      const manejadores = servicio.handlers();
+      if (window.LibraryAndroidServices) window.LibraryAndroidServices.register(manejadores);
+      adaptador.register(manejadores);
+      return Object.keys(manejadores);
+    })();
+    listo.then(ops => window.dispatchEvent(new CustomEvent('biblioteca:capacidades', { detail: { nuevas: ops } })))
+      .catch(e => { html.dataset.traspaso = 'error'; html.dataset.traspasoMotivo = (e && e.message) || 'No se pudo preparar el traspaso.'; });
+  }
 })();

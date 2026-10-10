@@ -112,6 +112,15 @@
     if (!capacidades.traspaso) throw Object.assign(new Error('Elegir archivos solo funciona en el teléfono.'), { code: 'UNAVAILABLE' });
     const { files } = await FilePicker.pickFiles({ limit: 0, types: ['*/*'], readData: false });
     if (!files || !files.length) return { archivos: [], carpeta: CARPETA_ENTRANTE };
+    // Antes de copiar: nombres válidos y sin duplicados (también ignorando mayúsculas).
+    const vistos = new Set();
+    for (const f of files) {
+      const nombre = nombreSeguro(f.name);
+      if (!nombre || !f.path) throw Object.assign(new Error(`No se puede copiar «${f.name}».`), { code: 'VALIDATION' });
+      const clave = nombre.toLocaleLowerCase('es');
+      if (vistos.has(clave)) throw Object.assign(new Error(`Elegiste dos archivos llamados «${nombre}». Elige cada archivo una sola vez.`), { code: 'VALIDATION' });
+      vistos.add(clave);
+    }
     try { await Filesystem.rmdir({ directory: 'DATA', path: CARPETA_ENTRANTE, recursive: true }); } catch { /* no existía */ }
     await Filesystem.mkdir({ directory: 'DATA', path: CARPETA_ENTRANTE, recursive: true });
     const { uri } = await Filesystem.getUri({ directory: 'DATA', path: CARPETA_ENTRANTE });
@@ -121,11 +130,12 @@
     const archivos = [];
     for (const f of files) {
       const nombre = nombreSeguro(f.name);
-      if (!nombre || !f.path) throw Object.assign(new Error(`No se puede copiar «${f.name}».`), { code: 'VALIDATION' });
       if (alProgreso) alProgreso({ archivo: nombre, copiados, total });
       await FilePicker.copyFile({ from: f.path, to: `${base}/${nombre}`, overwrite: true });
-      copiados += f.size || 0;
-      archivos.push({ nombre, ruta: `${CARPETA_ENTRANTE}/${nombre}`, bytes: f.size || 0 });
+      // El tamaño que vale es el del archivo ya copiado (OneDrive no siempre lo informa).
+      const { size } = await Filesystem.stat({ directory: 'DATA', path: `${CARPETA_ENTRANTE}/${nombre}` });
+      copiados += f.size || size || 0;
+      archivos.push({ nombre, ruta: `${CARPETA_ENTRANTE}/${nombre}`, bytes: size });
     }
     if (alProgreso) alProgreso({ archivo: null, copiados, total });
     return { archivos, carpeta: CARPETA_ENTRANTE };
