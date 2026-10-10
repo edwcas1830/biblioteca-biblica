@@ -95,8 +95,9 @@
   });
   // Portapapeles para «Copiar» de la IA: nativo en Android, del navegador en la vista web. Sin portapapeles, no se registra.
   const Clipboard = nativo && cap.registerPlugin ? cap.registerPlugin('Clipboard') : null;
-  if (Clipboard) integraciones.aiTextCopy = async ({ text }) => { await Clipboard.write({ string: text }); };
-  else if (navigator.clipboard && navigator.clipboard.writeText) integraciones.aiTextCopy = async ({ text }) => { await navigator.clipboard.writeText(text); };
+  // El contrato entrega una cadena (pregunta preparada o respuesta), no un objeto.
+  if (Clipboard) integraciones.aiTextCopy = async texto => { await Clipboard.write({ string: texto }); return true; };
+  else if (navigator.clipboard && navigator.clipboard.writeText) integraciones.aiTextCopy = async texto => { await navigator.clipboard.writeText(texto); return true; };
   if (Object.keys(integraciones).length) adaptador.register(integraciones);
 
   // Ciclo de vida → evento del contrato (la música se pausa al salir de la app).

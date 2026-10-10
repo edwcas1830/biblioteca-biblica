@@ -426,6 +426,31 @@
       });
     }
 
+    // 1b. Cuota visible de OpenRouter: lo que informa /key, con su hora; nunca un cupo inventado.
+    if (disponible('aiQuota') && !$('#movil-ia-cuota')) {
+      const linea = () => crear('p', { class: 'movil-ia-cuota', role: 'status' }, [crear('span', { class: 'movil-ia-cuota-texto', texto: 'Cuota: conecta tu cuenta para verla.' }), crear('button', { type: 'button', class: 'quiet movil-ia-cuota-refrescar', 'aria-label': 'Actualizar cuota', texto: '↻' })]);
+      const enAjustes = linea(); enAjustes.id = 'movil-ia-cuota';
+      const enPanel = linea();
+      (estadoAjustes || conectar || $('#ai-settings'))?.after(enAjustes);
+      $('#ai-pane .ai-pane-head')?.append(enPanel);
+      const hora = iso => { try { return new Date(iso).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' }); } catch { return ''; } };
+      const pintar = texto => { for (const el of [enAjustes, enPanel]) $('.movil-ia-cuota-texto', el).textContent = texto; };
+      const refrescarCuota = async () => {
+        try {
+          const q = await puente.aiQuota();
+          const partes = [];
+          if (q && q.daily && Number.isFinite(q.daily.remaining)) partes.push(`Consultas gratis hoy: quedan ${q.daily.remaining} de ${q.daily.limit}`);
+          else partes.push('Consultas gratis hoy: no informado');
+          if (q && Number.isFinite(q.creditsRemaining)) partes.push(`créditos: ${q.creditsRemaining}`);
+          if (q && q.checkedAt) partes.push('revisado ' + hora(q.checkedAt));
+          pintar(partes.join(' · ') + (q && q.notice ? ' — ' + q.notice : ''));
+        } catch (err) { pintar(err && err.code === 'QUOTA' ? 'Llegaste al límite por ahora. Puedes copiar o compartir la pregunta.' : 'Cuota: ' + ((err && err.message) || 'no disponible')); }
+      };
+      for (const el of [enAjustes, enPanel]) $('.movil-ia-cuota-refrescar', el).addEventListener('click', refrescarCuota);
+      $('#movil-ia-codigo-enviar')?.addEventListener('click', () => setTimeout(refrescarCuota, 1500));
+      $('#ai-ask')?.addEventListener('click', () => setTimeout(refrescarCuota, 6000));
+    }
+
     // 2. Compartir pregunta: la misma consulta preparada, a la app de ChatGPT, Gemini o Claude del lector.
     const accionesVista = $('#ai-preview .ai-actions');
     if (accionesVista && disponible('aiShare') && !$('#movil-ia-compartir')) {
@@ -447,17 +472,21 @@
         const b = e.target.closest('[data-ai-reply="report"]');
         if (!b) return;
         e.preventDefault(); e.stopImmediatePropagation();
-        const articulo = b.closest('article') || b.parentElement;
-        const texto = (articulo ? articulo.innerText : '').replace(/Copiar|Llevar a nota|Reportar error|Error señalado en este equipo/g, '').trim().slice(0, 30000);
-        const selModelo = $('#ai-model');
-        const modelo = (articulo && articulo.dataset.model) || (selModelo && selModelo.value) || '';
+        // Solo la respuesta (sus secciones), sin citas ni fuentes: el mensaje real del hilo, no el texto de la tarjeta.
+        const idMensaje = (b.closest('[data-ai-message]') || {}).dataset?.aiMessage;
+        let mensaje = null;
+        try { const hiloActual = typeof aiCurrentThread === 'function' ? aiCurrentThread() : null; mensaje = hiloActual && hiloActual.messages.find(m => m.id === idMensaje); } catch { mensaje = null; }
+        if (!mensaje || mensaje.role !== 'assistant') { mostrarAviso('No encontré esa respuesta para reportarla.'); return; }
+        const texto = (typeof aiText === 'function' ? aiText(mensaje) : String(mensaje.text || '')).trim().slice(0, 30000);
+        const modelo = mensaje.model || '';
         const cuerpo = $('.movil-traspaso-cuerpo', dialogo);
         const lista = crear('div', { class: 'movil-ia-motivos', role: 'radiogroup', 'aria-label': 'Motivo' });
         MOTIVOS.forEach(([v, t], i) => lista.append(crear('label', { class: 'opcion' }, [crear('input', Object.assign({ type: 'radio', name: 'motivo-ia', value: v }, i === 0 ? { checked: '' } : {})), crear('span', { texto: ' ' + t })])));
         const detalle = crear('textarea', { maxlength: '2000', rows: '3', placeholder: 'Detalle (opcional)', 'aria-label': 'Detalle del reporte' });
         const nota = crear('p', { class: 'movil-traspaso-aviso', texto: 'Se reporta solo el texto de esta respuesta y el modelo. No se envían tu pregunta completa, tus notas ni tus oraciones.' });
         const acciones = crear('div', { class: 'movil-traspaso-acciones' });
-        cuerpo.replaceChildren(crear('h3', { texto: 'Reportar esta respuesta' }), lista, detalle, nota, acciones);
+        const vistaTexto = crear('pre', { class: 'movil-ia-reporte-texto', texto });
+        cuerpo.replaceChildren(crear('h3', { texto: 'Reportar esta respuesta' }), crear('p', { texto: 'Esto es exactamente lo que se reporta:' }), vistaTexto, lista, detalle, nota, acciones);
         acciones.append(
           crear('button', { type: 'button', class: 'primary', texto: 'Confirmar reporte', onclick: async () => {
             const marcado = lista.querySelector('input:checked');

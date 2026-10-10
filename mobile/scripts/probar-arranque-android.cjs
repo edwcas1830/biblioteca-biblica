@@ -14,7 +14,9 @@ const t = { after: fn => despues.push(fn) };
   // Diseño de Android: DATA/files y databases/ separados (igual que las pruebas de Codex).
   const datos = path.join(root, 'files'), bases = path.join(root, 'databases');
   fs.mkdirSync(datos, { recursive: true }); fs.mkdirSync(bases, { recursive: true });
-  const plugins = { CapacitorSQLite: helpers.sqlite(bases), Filesystem: helpers.filesystem(datos, { absoluteRoot: root }) };
+  const portapapeles = [];
+  const Clipboard = { write: async o => { if (!o || typeof o.string !== 'string') throw new Error('Clipboard.write exige {string}'); portapapeles.push(o.string); } };
+  const plugins = { CapacitorSQLite: helpers.sqlite(bases), Filesystem: helpers.filesystem(datos, { absoluteRoot: root }), Clipboard };
   const eventos = [];
   const ventana = {
     Capacitor: { isNativePlatform: () => true, registerPlugin: n => plugins[n] || { getSupportedVoices: async () => ({ voices: [] }), speak: async () => {}, stop: async () => {}, addListener() {} } },
@@ -50,6 +52,10 @@ const t = { after: fn => despues.push(fn) };
   console.log('nota persistida en SQLite:', otra.state.notes['42:3:16']);
   await ventana.BibliaPreparacion.modulos;
   console.log('servicios nativos:', ventana.document.documentElement.dataset.serviciosNativos, ventana.document.documentElement.dataset.serviciosFallos || '');
+  // Portapapeles: el contrato entrega una cadena y debe llegar exacta al plugin nativo.
+  const textoCopia = 'Juan 3:16 · «Porque de tal manera amó Dios al mundo» ñ';
+  await puente.aiTextCopy(textoCopia);
+  console.log('portapapeles nativo exacto:', portapapeles[portapapeles.length - 1] === textoCopia);
   await ventana.LibraryAndroidServices.close();
 })().catch(e => { console.error('FALLÓ', e && (e.code || ''), e && e.message); process.exitCode = 1; })
   .finally(async () => { for (const fn of despues.reverse()) await fn(); });

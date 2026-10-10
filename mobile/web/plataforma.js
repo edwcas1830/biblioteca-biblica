@@ -24,7 +24,28 @@
   if (App) {
     // Al salir de la app: pausar la música y cerrar el cuaderno con PIN (closePrivate de app/privacy.js
     // espera la cola de guardado antes de cerrar, así no se pierde lo último escrito).
-    const cerrarCuaderno = () => { try { if (typeof window.closePrivate === 'function') Promise.resolve(window.closePrivate()).catch(() => {}); } catch { /* sin PIN */ } };
+    // Si no se pudo cerrar (p. ej. falló el último guardado), se TAPA la pantalla para que el contenido
+    // privado no se vea en «recientes»; al volver, el lector decide reintentar o seguir. Nunca se descartan datos.
+    const cuadernoAbierto = () => { try { return typeof state !== 'undefined' && !!state.privacyEnabled && !state.privateLocked; } catch { return false; } };
+    const cubrir = () => {
+      let tapa = document.getElementById('cuaderno-cubierto');
+      if (!tapa) {
+        tapa = document.createElement('div'); tapa.id = 'cuaderno-cubierto'; tapa.setAttribute('role', 'alertdialog');
+        tapa.innerHTML = '<div class="preparacion-caja"><p class="preparacion-texto">Tu cuaderno sigue abierto porque no se pudo guardar el último cambio. Lo tapé mientras estabas fuera.</p><button type="button" class="primary" data-accion="cerrar">Guardar y cerrar el cuaderno</button><button type="button" class="quiet" data-accion="seguir">Seguir leyendo</button></div>';
+        tapa.querySelector('[data-accion="cerrar"]').addEventListener('click', async () => { try { await window.closePrivate(); } catch { /* el aviso de la app explica el fallo */ } if (!cuadernoAbierto()) tapa.hidden = true; });
+        tapa.querySelector('[data-accion="seguir"]').addEventListener('click', () => { tapa.hidden = true; });
+        document.body.append(tapa);
+      }
+      tapa.hidden = false;
+    };
+    const cerrarCuaderno = () => {
+      if (!cuadernoAbierto()) return;
+      cubrir(); // primero tapar (la miniatura de «recientes» se toma enseguida), luego intentar cerrar
+      try {
+        Promise.resolve(typeof window.closePrivate === 'function' ? window.closePrivate() : null)
+          .catch(() => {}).finally(() => { if (!cuadernoAbierto()) { const t = document.getElementById('cuaderno-cubierto'); if (t) t.hidden = true; } });
+      } catch { /* queda tapado */ }
+    };
     App.addListener('appStateChange', ({ isActive }) => { if (!isActive) { pausarMusica('segundo-plano'); cerrarCuaderno(); } });
     App.addListener('pause', () => { pausarMusica('pausa'); cerrarCuaderno(); });
     // ---------- Atrás: popover → hoja → vista → salir ----------

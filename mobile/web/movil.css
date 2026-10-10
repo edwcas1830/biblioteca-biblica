@@ -338,3 +338,13 @@
 :root[data-telefono="true"] #ai-pane, :root[data-telefono="true"] #ai-pane * { overflow-wrap: anywhere; min-width: 0; }
 :root[data-telefono="true"] #ai-pane #ai-context, :root[data-telefono="true"] #ai-pane textarea { width: 100%; box-sizing: border-box; }
 :root[data-telefono="true"] #ai-pane .ai-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* Cuaderno tapado al salir si no se pudo cerrar; texto del reporte; cuota visible. */
+#cuaderno-cubierto { position: fixed; inset: 0; z-index: 95; display: grid; place-items: center; padding: 24px; background: var(--paper, Canvas); color: var(--ink, CanvasText); }
+#cuaderno-cubierto[hidden] { display: none; }
+#cuaderno-cubierto .preparacion-caja { display: grid; gap: 12px; max-width: 22rem; text-align: center; }
+#cuaderno-cubierto button { min-height: 48px; }
+.movil-ia-reporte-texto { max-height: 30dvh; overflow: auto; white-space: pre-wrap; font: inherit; font-size: .9rem; padding: 10px; border: 1px solid var(--borde-hoja, currentColor); border-radius: 10px; margin: 0; }
+.movil-ia-cuota { display: flex; align-items: center; gap: 6px; margin: 4px 0; font-size: .82rem; opacity: .9; }
+.movil-ia-cuota-texto { flex: 1 1 auto; min-width: 0; }
+.movil-ia-cuota-refrescar { min-width: 40px; min-height: 40px; padding: 0; }
