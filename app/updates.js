@@ -10,7 +10,7 @@
     document.querySelector('#update-download').hidden=state.status!=='available';document.querySelector('#update-install').hidden=state.status!=='ready';document.querySelector('#update-retry').hidden=!['idle','current','error'].includes(state.status);
     if((['available','ready'].includes(state.status)||manual)&&!dialog.open){dialog.showModal();manual=false;}
   }
-  bridge.onUpdateState(render);bridge.getUpdateState().then(render).catch(()=>{});
+  try{bridge.onUpdateState(render);}catch(error){if(error?.code!=='UNAVAILABLE')throw error;}bridge.getUpdateState().then(render).catch(()=>{});
   button.addEventListener('click',async()=>{manual=true;render(await bridge.getUpdateState());render(await bridge.checkForUpdates());});
   document.querySelector('#update-close').addEventListener('click',()=>dialog.close());
   document.querySelector('#update-download').addEventListener('click',async()=>{render(await bridge.downloadUpdate());});

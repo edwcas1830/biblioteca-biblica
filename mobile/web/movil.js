@@ -108,7 +108,25 @@
       ajustes, lista
     );
     hojaMas.addEventListener('click', e => { if (e.target === hojaMas) cerrarMas(); });
+    ocultarSinCapacidad(lista);
     document.body.append(hojaMas);
+  }
+  // Lo que la plataforma aún no ofrece no se muestra (en vez de un botón que falla).
+  const OPERACION_DE = [
+    [/actualizaciones/i, 'checkForUpdates'], [/proteger/i, 'setPin'], [/inteligencia artificial|estudio con ia/i, 'aiStatus'],
+    [/música/i, 'musicPlayer'], [/guardar copia/i, 'exportBackup'], [/recuperar copia/i, 'restoreBackup'], [/fuentes/i, 'studySources']
+  ];
+  async function ocultarSinCapacidad(lista) {
+    const puente = window.libraryDesktop;
+    if (!puente || typeof puente.getCapabilities !== 'function') return; // escritorio: todo disponible
+    let caps; try { caps = await puente.getCapabilities(); } catch { return; }
+    for (const b of $$('button', lista)) {
+      const par = OPERACION_DE.find(([re]) => re.test(b.textContent));
+      if (par && caps.operations[par[1]] && !caps.operations[par[1]].available) b.hidden = true;
+    }
+    for (const b of $$('.reading-actions button')) {
+      if (/\bIA\b/.test(b.textContent) && caps.operations.aiStatus && !caps.operations.aiStatus.available) b.hidden = true;
+    }
   }
   function abrirMas() { if (!hojaMas.open) hojaMas.showModal(); }
   function cerrarMas() { if (hojaMas?.open) hojaMas.close(); }

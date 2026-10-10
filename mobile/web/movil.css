@@ -258,3 +258,9 @@
 :root[data-telefono="true"] #music-panel #music-drag span { visibility: hidden; width: 0; overflow: hidden; }
 :root[data-telefono="true"] #music-panel #music-drag { justify-content: flex-end; }
 :root[data-telefono="true"] #music-panel button { min-height: 40px; }
+
+/* Lectura inmersiva (devocional): sin barras propias mientras dura. */
+:root.lectura-inmersiva #movil-nav,
+:root.lectura-inmersiva #movil-hoja-cabecera,
+:root.lectura-inmersiva #movil-versiculo { display: none !important; }
+:root.lectura-inmersiva body { padding-bottom: var(--seguro-abajo); }

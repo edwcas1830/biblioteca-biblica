@@ -4,8 +4,10 @@
 // Se carga después del contrato y los adaptadores, y antes de los controladores de app/.
 (function () {
   const cap = window.Capacitor;
+  const html = document.documentElement;
   const nativo = !!(cap && typeof cap.isNativePlatform === 'function' && cap.isNativePlatform());
-  const EVENTOS = ['onMusicPause'];
+  const EVENTOS = ['onMusicPause', 'onFullscreen'];
+  const manifiesto = window.BibliaManifiestos && window.BibliaManifiestos.rv1909;
   let adaptador = null;
 
   if (nativo && window.LibraryAndroidBridge) {
@@ -14,7 +16,7 @@
     const servicios = window.LibraryAndroidServices && window.LibraryAndroidServices.handlers ? window.LibraryAndroidServices.handlers() : {};
     adaptador = window.LibraryAndroidBridge.create({ handlers: servicios, events: EVENTOS });
   } else if (!nativo && window.LibraryWebBridge) {
-    adaptador = window.LibraryWebBridge.create({ bible: window.BIBLE, dbName: 'biblioteca-preview-v1', events: EVENTOS });
+    adaptador = window.LibraryWebBridge.create({ bible: window.BIBLE, manifest: manifiesto, dbName: 'biblioteca-preview-v1', events: EVENTOS });
   }
   if (!adaptador) { document.documentElement.dataset.puente = 'ausente'; return; }
 
@@ -68,6 +70,22 @@
     };
     integraciones.youtubeCloud = async () => { await abrirFuera('https://console.cloud.google.com/apis/library/youtube.googleapis.com'); };
   }
+  // Lectura a pantalla completa (devocional en vista de libro): API de pantalla completa del WebView.
+  integraciones.readerFullscreen = async valor => {
+    const activo = !!document.fullscreenElement;
+    const quiero = typeof valor === 'boolean' ? valor : !activo;
+    try {
+      if (quiero && !activo) await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
+      if (!quiero && activo) await document.exitFullscreen();
+    } catch { /* sin permiso: se usa el modo inmersivo de la página */ }
+    html.classList.toggle('lectura-inmersiva', quiero);
+    adaptador.emit('onFullscreen', quiero);
+    return quiero;
+  };
+  document.addEventListener('fullscreenchange', () => {
+    const activo = !!document.fullscreenElement;
+    if (!activo && html.classList.contains('lectura-inmersiva')) { html.classList.remove('lectura-inmersiva'); adaptador.emit('onFullscreen', false); }
+  });
   if (Object.keys(integraciones).length) adaptador.register(integraciones);
 
   // Ciclo de vida → evento del contrato (la música se pausa al salir de la app).

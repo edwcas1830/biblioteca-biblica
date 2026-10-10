@@ -41,7 +41,17 @@ const puentes = fs.existsSync(ordenCodex)
   : ['platform/bridge-contract.js', 'shared/references.js', 'shared/personal-model.js',
      'platform/web/personal-store.js', 'platform/web/library.js', 'platform/web/bridge.js', 'platform/android/bridge.js']
       .filter(f => fs.existsSync(path.join(out, f)));
-const scriptsMovil = [...puentes, 'mobile/plataforma.js', 'mobile/arranque.js', 'mobile/movil.js']
+// Núcleos puros de app/ que el modelo personal necesita al crearse: se adelantan (y se quita
+// su etiqueta original para no cargarlos dos veces).
+const nucleos = ['prayer-core.js', 'guide-core.js', 'study-chat-core.js'];
+for (const n of nucleos) html = html.replace(`<script defer src="${n}"></script>`, '');
+// Manifiesto público de RV1909 (permiso de IA y atribución) embebido: el adaptador se crea sin esperar red.
+const manifiestoRv = path.join(out, 'data', 'rv1909-manifest.json');
+if (fs.existsSync(manifiestoRv)) {
+  fs.writeFileSync(path.join(out, 'mobile', 'manifiestos.js'),
+    "'use strict';\nwindow.BibliaManifiestos = Object.freeze({ rv1909: " + JSON.stringify(JSON.parse(fs.readFileSync(manifiestoRv, 'utf8'))) + ' });\n');
+}
+const scriptsMovil = [...nucleos, ...puentes, 'mobile/manifiestos.js', 'mobile/plataforma.js', 'mobile/arranque.js', 'mobile/movil.js']
   .filter(f => fs.existsSync(path.join(out, f)))
   .map(f => `<script defer src="${f}"></script>`).join('\n  ');
 const ancla = '<script defer src="bible-data.js"></script>';

@@ -64,7 +64,8 @@ function bindJourneys(){
   $('#journey-edit').addEventListener('click',editCurrentDev);$('#book-prev').addEventListener('click',()=>turnBook(-1));$('#book-next').addEventListener('click',()=>turnBook(1));
   for(const [id,delta]of [['journey-smaller',-1],['journey-larger',1]])$('#'+id).addEventListener('click',()=>{state.bookFont=Math.max(16,Math.min(30,(state.bookFont||20)+delta));$('#journey-body').style.setProperty('--book-font',state.bookFont+'px');layoutBook();save();});
   const full=async()=>{try{await desktop.readerFullscreen();}catch(e){toast(e.message);}};$('#journey-fullscreen').addEventListener('click',full);document.addEventListener('keydown',e=>{if(e.key==='F11'&&activeView==='journey'){e.preventDefault();full();}if(e.key==='Escape'&&activeView==='journey'){desktop.readerFullscreen(false);$('#journey-drawer').hidden=true;$('#journey-index-toggle').setAttribute('aria-expanded','false');}});
-  desktop.onFullscreen(value=>{document.body.classList.toggle('book-fullscreen',value);$('#journey-fullscreen').textContent=value?'↙ Salir de pantalla completa':'⤢ Pantalla completa';requestAnimationFrame(layoutBook);});
+  // Si la plataforma aún no ofrece el evento (UNAVAILABLE), no se suscribe.
+  try{desktop.onFullscreen(value=>{document.body.classList.toggle('book-fullscreen',value);$('#journey-fullscreen').textContent=value?'↙ Salir de pantalla completa':'⤢ Pantalla completa';requestAnimationFrame(layoutBook);});}catch(error){if(error?.code!=='UNAVAILABLE')throw error;}
 
   $('#journey-title-case').addEventListener('change',()=>{const d=journeyData();if(d&&activeJourney.kind==='dev'){d.item.titleCase=$('#journey-title-case').checked;renderJourney();save();}});
   $('#dev-title-case').addEventListener('change',()=>{if(!pendingDev)return;pendingDev.entries.forEach(d=>d.title=$('#dev-title-case').checked?StudyCore.sentenceTitle(d.originalTitle||d.title):(d.originalTitle||d.title));renderDevReview();});

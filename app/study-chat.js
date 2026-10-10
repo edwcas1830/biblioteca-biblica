@@ -37,14 +37,14 @@ async function askAi(){
 }
 function bindAi(){
  $('#ai-context-options').append($('#ai-task'));
- bindAiAccounts();desktop?.onAiState(updateAiStatus);
+ bindAiAccounts();try{desktop?.onAiState(updateAiStatus);}catch(error){if(error?.code!=='UNAVAILABLE')throw error;}
  for(const b of document.querySelectorAll('[data-action="ai-settings"]'))b.addEventListener('click',openAiSettings);for(const b of document.querySelectorAll('[data-action="ai-open"]'))b.addEventListener('click',()=>openAi());
  $('#ai-close').onclick=()=>$('#ai-settings').close();$('#ai-settings-open').onclick=openAiSettings;$('#ai-pane-close').onclick=closeAi;$('#ai-prepare').onclick=prepareAi;$('#ai-ask').onclick=askAi;$('#ai-cancel').onclick=()=>{cancelAi();$('#ai-status').textContent='Consulta detenida.';};
  $('#ai-connect').onclick=async()=>{try{updateAiStatus(await desktop.aiConnect());}catch(e){$('#ai-settings-status').textContent=e.message;}};$('#ai-disconnect').onclick=async()=>{try{updateAiStatus(await desktop.aiDisconnect());}catch(e){$('#ai-settings-status').textContent=e.message;}};$('#ai-model-refresh').onclick=refreshAiModels;
  $('#ai-provider').addEventListener('change',()=>{state.aiPrefs.provider=$('#ai-provider').value;save();});
  for(const id of ['ai-task','ai-question','ai-include-bible','ai-include-comment','ai-include-history','ai-living'])$('#'+id).addEventListener('input',()=>{if(!aiWorking)invalidateAi();});
  $('#ai-scope').onchange=()=>openAi({anchor:{...aiAnchor,scope:$('#ai-scope').value}});
- desktop.onAiProgress(({id,text})=>{if(!aiWorking||state.privateLocked||id!==aiPrepared?.id||!aiLive)return;aiLive.sections=StudyChatCore.partial(text);if(!Object.keys(aiLive.sections).length)aiLive.sections={brief:'El proveedor está preparando la respuesta…'};renderAiThread();});
+ try{desktop.onAiProgress(({id,text})=>{if(!aiWorking||state.privateLocked||id!==aiPrepared?.id||!aiLive)return;aiLive.sections=StudyChatCore.partial(text);if(!Object.keys(aiLive.sections).length)aiLive.sections={brief:'El proveedor está preparando la respuesta…'};renderAiThread();});}catch(error){if(error?.code!=='UNAVAILABLE')throw error;}
  for(const b of document.querySelectorAll('[data-ai-copy]'))b.onclick=async()=>{if(!aiPrepared)return;try{await desktop.aiCopy({id:aiPrepared.id,provider:b.dataset.aiCopy||undefined});$('#ai-status').textContent='Consulta copiada; pégala en tu conversación.';}catch(e){$('#ai-status').textContent=e.message;}};
  $('#ai-thread').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;if(state.privateLocked)return;const m=aiCurrentThread()?.messages.find(m=>m.id===b.closest('[data-ai-message]')?.dataset.aiMessage);
  if(b.dataset.aiFollowup){$('#ai-question').value=b.dataset.aiFollowup;invalidateAi();$('#ai-question').focus();}
