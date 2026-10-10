@@ -1,0 +1,10 @@
+[
+  "platform/bridge-contract.js",
+  "shared/references.js",
+  "shared/personal-model.js",
+  "platform/web/personal-store.js",
+  "platform/web/library.js",
+  "platform/web/bridge.js",
+  "platform/android/services.js",
+  "platform/android/bridge.js"
+]

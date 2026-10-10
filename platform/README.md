@@ -15,6 +15,12 @@ Cargar el contrato y el adaptador antes de cualquier controlador. Web, en orden:
 3. `platform/web/personal-store.js`, `platform/web/library.js`, `platform/web/bridge.js`.
 4. Crear el adaptador y asignar `window.libraryDesktop`. Después cargar los controladores de interfaz.
 
+El ensamblador móvil puede usar `platform/scripts-movil.json`: lista ordenada de rutas relativas a `www/`. Los tres núcleos personales anteriores se adelantan aparte, como ya hace `build-www.cjs`. `voice-core.js` se carga desde la etiqueta común de `index.html` antes de `app.js`; no necesita otra inserción en la lista del puente.
+
+El punto de entrada acordado es `window.LibraryAndroidServices.handlers()`. El registro se carga con `platform/android/services.js` y comienza vacío: no publica servicios nativos todavía inexistentes. Los repositorios nativos, después de inicializarse, usarán `LibraryAndroidServices.register({...})`; `handlers()` devuelve una copia congelada. Después de registrar `bootstrap` y `savePersonal` y abrir el repositorio, `setStorage('sqlite')` permite anunciar el almacén real. Crear el puente con `{handlers:LibraryAndroidServices.handlers(),storage:LibraryAndroidServices.storage()}`. Si se registran servicios después de crear el puente, actualizarlo con `adapter.register(...)`; la copia de manejadores no se actualiza sola. El registro no instala SQLite ni sustituye su inicialización.
+
+Voz y Share siguen en las integraciones de Claude. `app/voice-core.js` selecciona el puente cuando `playVoice`, `stopVoice` y `voiceOptions` están disponibles; Windows mantiene Web Speech con voces locales. En Android no se usa el shim para fingir una capacidad ausente. El TTS se divide por versículos y fragmentos de hasta 3000 unidades UTF-16; la pausa reinicia el fragmento interrumpido y un callback cancelado no salta versículos. Los textos comunes dicen «Voz del dispositivo». La respuesta `voiceOptions` puede conservar `localService`; si declara false, esa voz se excluye. Una voz sin ese dato no se anuncia como offline.
+
 ```js
 const adapter = LibraryWebBridge.create({bible: window.BIBLE, dbName: 'biblioteca-preview-v1'});
 // Android, después de inicializar SQLite: LibraryAndroidBridge.create({handlers, events, storage:'sqlite'}).
