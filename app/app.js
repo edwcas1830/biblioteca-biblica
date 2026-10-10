@@ -94,7 +94,7 @@ function showView(view) {
   activeView=view;
   document.querySelectorAll('.view').forEach(el=>el.hidden=el.id!==view+'-view');
   document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));
-  if(view!=='read') { document.body.classList.remove('focus');updateReadingMode(); }
+  if(view!=='read') { graphicsExpanded=false;document.body.classList.remove('focus');updateReadingMode(); }
   if(view==='dev') renderDevList();
   if(view==='plan') renderPlans();
   if(view==='journey')renderJourney();if(view==='prayer')renderPrayer();
@@ -290,7 +290,7 @@ function bind() {
   $('#larger').addEventListener('click',()=>{state.font=Math.min(28,state.font+1);settings();save();});
   $('#smaller').addEventListener('click',()=>{state.font=Math.max(16,state.font-1);settings();save();});
   $('#night').addEventListener('click',()=>{state.appearance.theme=document.documentElement.dataset.theme==='noche'?'marfil':'noche';settings();save();});
-  $('#focus').addEventListener('click',()=>{showView('read');document.body.classList.toggle('focus');updateReadingMode();});
+  $('#focus').addEventListener('click',()=>{graphicsExpanded=false;showView('read');document.body.classList.toggle('focus');updateReadingMode();});
   $('#cover').addEventListener('click',()=>$('#books-dialog').showModal()); $('#books-close').addEventListener('click',()=>$('#books-dialog').close());
   $('#books-grid').addEventListener('click',event=>{const button=event.target.closest('[data-book]');if(button){$('#books-dialog').close();go(Number(button.dataset.book),1);}});
   $('#search-open').addEventListener('click',()=>{$('#search-dialog').showModal();$('#search-input').focus();});
@@ -418,12 +418,13 @@ function queryFromReading(query,strong=false){
   else if(!strong&&select.value==='strong-es')select.value=groups.includes('drae')?'drae':groups.includes('vine')?'vine':select.value;
   $('#dictionary-query').value=query;syncDictionaryRef();consultDictionary();
 }
-function effectivePanes(){return document.body.classList.contains('focus')||comparisonExpanded?['biblia']:state.appearance.views.visible;}
+function effectivePanes(){return document.body.classList.contains('focus')||comparisonExpanded?['biblia']:graphicsExpanded?['biblia','comentario']:state.appearance.views.visible;}
+function effectivePaneLayout(){return graphicsExpanded?'columns':state.appearance.views.layout;}
 function updateReadingMode(){
   state.appearance.views=paneCore.normalize(state.appearance.views,state.appearance.panes);
-  const views=state.appearance.views,visible=effectivePanes(),solo=visible.length===1,container=$('#panes');
+  const views={...state.appearance.views,layout:effectivePaneLayout()},visible=effectivePanes(),solo=visible.length===1,container=$('#panes');
   const geometry=[state.appearance.design,views.layout,visible.join(',')].join('|'),changed=container.dataset.geometry!==geometry;
-  if(changed){for(const pane of container.querySelectorAll('.pane:not([hidden])'))paneScrollPositions.set(pane.dataset.pane,pane.querySelector('.pane-body').scrollTop);container.dataset.geometry=geometry;suppressReaderSyncUntil=Date.now()+500;}
+  if(changed){for(const pane of container.querySelectorAll('.pane:not([hidden])'))paneScrollPositions.set(pane.dataset.pane,pane.querySelector('.pane-body:not([hidden])').scrollTop);container.dataset.geometry=geometry;suppressReaderSyncUntil=Date.now()+500;}
   container.dataset.active=String(!solo);container.dataset.layout=views.layout;container.dataset.visible=visible.join(',');
   document.body.classList.toggle('reading-only',solo);
   for(const panel of container.querySelectorAll('.pane'))panel.hidden=!visible.includes(panel.dataset.pane);
@@ -432,9 +433,10 @@ function updateReadingMode(){
   $('#study-open').textContent=solo?'Abrir estudio':'Solo lectura';$('#study-open').setAttribute('aria-pressed',String(!solo));
   $('#focus').textContent=document.body.classList.contains('focus')?'✦ Volver a mi biblioteca':'✦ Modo intimidad';
   updateComparisonExpansion();
+  updateGraphicsExpansion();
   applyPaneSizes();
   const primary=$('#pane-resizer-primary'),secondary=$('#pane-resizer-secondary');
-  primary.hidden=solo;secondary.hidden=visible.length!==3;
+  primary.hidden=solo||graphicsExpanded;secondary.hidden=visible.length!==3;
   primary.dataset.axis=views.layout==='rows'?'y':'x';secondary.dataset.axis='x';
   primary.dataset.between=views.layout==='rows'&&visible.length===3?'biblia,comentario,diccionario':'biblia,'+(visible[1]||'comentario');
   for(const separator of [primary,secondary]){
@@ -443,22 +445,23 @@ function updateReadingMode(){
     separator.setAttribute('aria-label',ids.length===3?'Ajustar Biblia y paneles de estudio':'Ajustar '+ids.map(id=>id==='biblia'?'Biblia':id==='comentario'?'Comentario':'Diccionario').join(' y '));
   }
   requestAnimationFrame(()=>{
-    if(changed){$('#verses [data-verse="'+state.position.verse+'"]')?.scrollIntoView({block:'nearest'});for(const id of visible.slice(1))$('#pane-'+id+' .pane-body').scrollTop=paneScrollPositions.get(id)||0;}
+    if(changed){$('#verses [data-verse="'+state.position.verse+'"]')?.scrollIntoView({block:'nearest'});for(const id of visible.slice(1)){const body=$('#pane-'+id+' .pane-body:not([hidden])');if(body)body.scrollTop=paneScrollPositions.get(id)||0;}}
     checkPaneFit();
   });
 }
 function applyPaneSizes(){
-  const config=paneCore.configuration(state.appearance.views,effectivePanes()),container=$('#panes');
+  const views={...state.appearance.views,layout:effectivePaneLayout()},config=graphicsExpanded?{weights:[38,62]}:paneCore.configuration(views,effectivePanes()),container=$('#panes');
   for(let i=0;i<3;i++)container.style.setProperty('--view-w'+(i+1),(config.weights[i]||1)+'fr');
   for(let i=0;i<2;i++)container.style.setProperty('--view-a'+(i+1),(config.aux?.[i]||50)+'fr');
 }
 function setPaneVisibility(id,show){
   comparisonExpanded=false;
+  graphicsExpanded=false;
   const visible=effectivePanes();document.body.classList.remove('focus');
   state.appearance.views.visible=paneCore.panels.filter(p=>p==='biblia'||(p===id?show:visible.includes(p)));
   updateReadingMode();save();
 }
-function setPaneLayout(layout){state.appearance.views.layout=layout==='rows'?'rows':'columns';updateReadingMode();save();}
+function setPaneLayout(layout){graphicsExpanded=false;state.appearance.views.layout=layout==='rows'?'rows':'columns';updateReadingMode();save();}
 function checkPaneFit(){
   if(activeView!=='read')return;
   const container=$('#panes'),cs=getComputedStyle(container),width=container.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight),height=container.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom),visible=effectivePanes();
@@ -482,6 +485,7 @@ function bindReaderSync(){
   },250);},{passive:true});
 }
 function paneResizeSpec(separator){
+  if(graphicsExpanded)return null;
   const views=state.appearance.views,visible=effectivePanes(),isSecondary=separator.id==='pane-resizer-secondary';
   if(visible.length===1||isSecondary&&visible.length!==3)return null;
   const rows=views.layout==='rows',a=isSecondary?'comentario':'biblia',b=isSecondary?'diccionario':visible[1];
@@ -524,7 +528,7 @@ function bindAppearance(){
   const updateTop=()=>{const visible=window.scrollY>600||scrollAreas().some(el=>el&&el.scrollTop>600);const button=$('#back-to-top');button.classList.toggle('is-visible',visible);button.setAttribute('aria-hidden',String(!visible));button.tabIndex=visible?0:-1;};
   document.addEventListener('scroll',updateTop,true);window.addEventListener('resize',updateTop);updateTop();
   $('#back-to-top').addEventListener('click',()=>{const behavior=matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth';window.scrollTo({top:0,behavior});for(const el of scrollAreas())el?.scrollTo({top:0,behavior});$('#book').focus({preventScroll:true});});
-  $('#study-open').addEventListener('click',()=>{if(comparisonExpanded){comparisonExpanded=false;updateReadingMode();return;}const solo=effectivePanes().length===1;document.body.classList.remove('focus');state.appearance.views.visible=solo?[...paneCore.panels]:['biblia'];updateReadingMode();save();});
+  $('#study-open').addEventListener('click',()=>{if(comparisonExpanded||graphicsExpanded){comparisonExpanded=false;graphicsExpanded=false;updateReadingMode();return;}const solo=effectivePanes().length===1;document.body.classList.remove('focus');state.appearance.views.visible=solo?[...paneCore.panels]:['biblia'];updateReadingMode();save();});
   document.querySelectorAll('[data-toggle-pane]').forEach(button=>button.addEventListener('click',()=>setPaneVisibility(button.dataset.togglePane,!effectivePanes().includes(button.dataset.togglePane))));
   document.querySelectorAll('[data-hide-pane]').forEach(button=>button.addEventListener('click',()=>{setPaneVisibility(button.dataset.hidePane,false);$('#pane-'+(button.dataset.hidePane==='comentario'?'comment':'dictionary')+'-toggle').focus({preventScroll:true});}));
   document.querySelectorAll('[data-set-layout]').forEach(button=>button.addEventListener('click',()=>setPaneLayout(button.dataset.setLayout)));

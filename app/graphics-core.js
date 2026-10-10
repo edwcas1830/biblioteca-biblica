@@ -16,5 +16,9 @@
  ['Anuncio y nacimiento',[[39,1,18],[41,1,26],[41,2,1]]],['Juan y el bautismo',[[39,3,1],[40,1,1],[41,3,1],[42,1,19]]],['Tentación',[[39,4,1],[40,1,12],[41,4,1]]],['Llamamiento de discípulos',[[39,4,18],[40,1,16],[41,5,1],[42,1,35]]],['Alimentación de cinco mil',[[39,14,13],[40,6,30],[41,9,10],[42,6,1]]],['Confesión de Pedro',[[39,16,13],[40,8,27],[41,9,18]]],['Transfiguración',[[39,17,1],[40,9,2],[41,9,28]]],['Entrada en Jerusalén',[[39,21,1],[40,11,1],[41,19,28],[42,12,12]]],['Cena y despedida',[[39,26,17],[40,14,12],[41,22,7],[42,13,1]]],['Arresto',[[39,26,47],[40,14,43],[41,22,47],[42,18,1]]],['Crucifixión',[[39,27,32],[40,15,21],[41,23,26],[42,19,16]]],['Resurrección',[[39,28,1],[40,16,1],[41,24,1],[42,20,1]]]
  ];
  const fold=s=>String(s).normalize('NFD').replace(/\p{M}/gu,'').toLowerCase();
- return {outline,harmonies,fold};
+ const familyNames={Terah:'Taré',Sarah:'Sara',Hagar:'Agar',Keturah:'Cetura',Ishmael:'Ismael',Medan:'Medán',Midian:'Madián',Zimran:'Zimrán',Shuah:'Súa',Jokshan:'Jocsán',Ishbak:'Isbac',Adam:'Adán',Eve:'Eva',Noah:'Noé',Lamech:'Lamec',Enoch:'Enoc',Seth:'Set',Nahor:'Nacor',Haran:'Harán'};
+ const personName=p=>familyNames[p.original]||familyNames[p.name]||p.name;
+ const names=items=>{const list=items.map(personName),last=list.at(-1);return list.length<2?list.join(''):list.slice(0,-1).join(', ')+(/^[ií]/i.test(last)&&!/^ie/i.test(last)?' e ':' y ')+last;};
+ function familySummary(groups){const labels={father:'Padre',mother:'Madre',partners:'Familia / parejas registradas',children:'Hijos'};return groups.filter(g=>labels[g.kind]&&g.items.length).map(g=>(g.kind==='partners'?'Familia con ':labels[g.kind]+': ')+names(g.items)).join(' · ')||'Sin relaciones familiares registradas en esta fuente.';}
+ return {outline,harmonies,fold,personName,names,familySummary};
 });
