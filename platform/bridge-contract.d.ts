@@ -23,10 +23,12 @@ export interface AiStatus { connected:boolean; waiting:boolean; secure:boolean; 
 export interface PersonalAiStatus { available:boolean; enabled:boolean; providers:{id:string; installed:boolean; connected?:boolean; session?:string}[]; }
 export interface AiPrepared { id:string; prompt:string; sources:Source[]; notices:string[]; [key:string]:unknown; }
 export interface AiReply { text:string; model:string; structured:boolean; citations:(Ref & {text?:string})[]; sources:Source[]; allowLiving?:boolean; sections?:Record<'brief'|'context'|'meaning'|'keywords'|'connections'|'prayer',string>; keywords?:{code:string; label:string}[]; sourceIds?:number[]; followups?:string[]; living?:string; [key:string]:unknown; }
-export interface AiSelection extends Ref { module?:string; comment?:string; includeBible?:boolean; includeComment?:boolean; task:string; question?:string; study?:boolean; history?:string; allowLiving?:boolean; series?:JSONValue; }
+export interface AiSelection extends Ref { module?:string; comment?:string; scope?:'verse'|'chapter'|'book'|'general'; includeBible?:boolean; includeComment?:boolean; task:string; question?:string; study?:boolean; history?:string; allowLiving?:boolean; series?:JSONValue; }
 export interface YoutubeStatus { personal:boolean; connected:boolean; secure:boolean; }
 export interface UpdateState { status:string; [key:string]:unknown; }
 export interface CircleStatus { connected:boolean; [key:string]:unknown; }
+export type CircleSelection = {kind:'reading'; plan:string; day:string}|{kind:'prayer'; id:string}|{kind:'message'; text:string; ref:Ref};
+export interface CirclePreview {kind:'reading'|'prayer'|'message'; object?:string; value:{title:string; text:string; completed:boolean; refs:Ref[]};}
 export interface GraphicsResult { places:JSONValue[]; land:JSONValue; events:JSONValue[]; epochs:JSONValue[]; outline:JSONValue; harmonies:JSONValue; }
 export interface Person { id:string; name:string; original?:string; lookup?:string; ambiguous?:boolean; parents:unknown[]; }
 export interface ScanResult { folder:string; items:({token:string; original:string; status:string; reason?:string} & Record<string,unknown>)[]; }
@@ -44,7 +46,7 @@ export interface LibraryBridge {
   exportBackup():Promise<PersonalState>; restoreBackup(data:RestoreInput):Promise<PersonalState>;
   catalog():Promise<Catalog>; metadata():Promise<Book[]>;
   chapter(data:Ref & {module?:string; strong?:boolean}):Promise<Chapter>;
-  search(data:{module:string; query:string; mode?:'text'|'strong'}):Promise<SearchResult>;
+  search(data:{module?:string; query:string; mode?:'text'|'word'|'strong'}):Promise<SearchResult>;
   comments(data:Ref & {module:string}):Promise<{module:string; revision:string; entries:Entry[]}>;
   dictionary(data:{group:string; query:string}):Promise<{entries:Entry[]}>;
   connections(data:Ref & {comment?:string}):Promise<{items:(Ref & {endBook:number; endChapter:number; score:number|null; sources:string[]})[]; license:string; title:string}>;
@@ -56,7 +58,7 @@ export interface LibraryBridge {
   graphicsGenealogy(data:{id:string}):Promise<{person:Person; groups:{kind:string; items:Person[]}[]}>;
   readPdf(bytes:Uint8Array):Promise<PdfResult>;
   moduleScan(data?:{choose?:boolean}):Promise<ScanResult|null>;
-  moduleInstall(tokens:string[]):Promise<{installed:ModuleInfo[]; count:number; backup:string|null}>;
+  moduleInstall(tokens:string[]):Promise<{installed:string[]; count:number; backup:string|null}>;
   aiStatus():Promise<AiStatus>; aiConnect(data?:{code?:string}):Promise<AiStatus>;
   aiDisconnect():Promise<AiStatus>; aiModels():Promise<{id:string; name:string}[]>;
   aiPrepare(data:AiSelection):Promise<AiPrepared>;
@@ -76,9 +78,9 @@ export interface LibraryBridge {
   youtubeExternal(query:string):Promise<void>; youtubeCloud():Promise<void>;
   circleStatus():Promise<CircleStatus>; circleSync():Promise<CircleStatus>;
   circleConnect(data:{name:string; code?:string}):Promise<CircleStatus|null>;
-  circlePreview(data:JSONValue):Promise<JSONValue>; circleShare(data:{selection:JSONValue; preview:string}):Promise<JSONValue>;
-  circleRecovery():Promise<string>; circleResolve(data:JSONValue):Promise<CircleStatus>;
-  circleReading(data:JSONValue):Promise<CircleStatus>; circleLeave():Promise<CircleStatus>; circleCopyCode():Promise<boolean>;
+  circlePreview(data:CircleSelection):Promise<CirclePreview>; circleShare(data:{selection:CircleSelection; preview:string}):Promise<CircleStatus>;
+  circleRecovery():Promise<string>; circleResolve(data:{object:string; id:string}):Promise<CircleStatus>;
+  circleReading(data:{object:string; id:string}):Promise<CircleStatus>; circleLeave():Promise<CircleStatus>; circleCopyCode():Promise<boolean>;
   getUpdateState():Promise<UpdateState>; checkForUpdates():Promise<UpdateState>;
   downloadUpdate():Promise<UpdateState>; installUpdate():Promise<UpdateState>;
   onUpdateState(callback:(value:UpdateState)=>void):Unsubscribe;

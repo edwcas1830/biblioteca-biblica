@@ -64,6 +64,7 @@
   const operations = Object.freeze(Object.fromEntries([...names, ...mobileNames].map(name => [name, Object.freeze({event: eventNames.includes(name), validate: validate[name] || none})])));
   function createBridge({platform = 'web', storage = 'none', handlers = {}, events = [], reasons = {}, nativeVerified = false} = {}) {
     if (!['web', 'android'].includes(platform)) fail('Plataforma desconocida.');
+    if (!['none', 'indexeddb', 'sqlite'].includes(storage)) fail('Almacenamiento desconocido.');
     const active = new Map(), listeners = new Map(), availableEvents = new Set(events);
     const checkName = name => { if (!Object.hasOwn(operations, name)) fail('Operación desconocida: ' + name); };
     for (const name of availableEvents) { checkName(name); if (!operations[name].event) fail('No es un evento: ' + name); }
