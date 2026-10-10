@@ -201,6 +201,14 @@ function cargarPagina(plugins) {
       // Paquete real (solo en la PC de Edward): imprime conteos, nunca contenido.
       const p0 = tras.state.plans[0] || {}, cat = await puente.catalog();
       console.log('REAL tras recargar · plan:', (p0.entries || []).length + '/' + (p0.completed || []).length, '· devocionales:', tras.state.devotionals.length, '· notas:', Object.keys(tras.state.notes || {}).length, '· módulos en catálogo:', cat.modules.length, '· preparación:', ventana.document.documentElement.dataset.preparacion, '· fallos:', ventana.document.documentElement.dataset.serviciosFallos || 'ninguno');
+      // Lo mismo que hace la pantalla (app.js validateState) con cada plan: si falla, la app queda vacía.
+      const planCore = require(path.join(repo, 'app', 'plan-core.js'));
+      for (const pl of tras.state.plans) {
+        try { if (pl.scope === 'custom') planCore.validateCustomPlan(pl, ventana.BIBLE.books); console.log('REAL plan', pl.scope, 'acepta la pantalla: sí'); }
+        catch (e) { const d0 = pl.entries && pl.entries[0]; console.log('REAL plan', pl.scope, 'RECHAZADO por la pantalla:', e.message, '· campos del día 1:', d0 ? Object.keys(d0).join(',') : '-', '· tipos:', d0 ? Object.entries(d0).map(([k, v]) => k + ':' + (Array.isArray(v) ? 'lista' : typeof v)).join(',') : '-'); }
+      }
+      const pantalla = require(path.join(__dirname, 'validar-como-pantalla.cjs'))(ventana, www, tras.state);
+      console.log('REAL la pantalla acepta lo traído:', pantalla.acepta ? 'sí' : 'NO · ' + pantalla.motivo);
       await ventana.LibraryAndroidServices.close(); return;
     }
     const plan = tras.state.plans[0] || {};
@@ -208,6 +216,9 @@ function cargarPagina(plugins) {
     const c = await puente.chapter({ book: 18, chapter: 23, module: 'texto-sintetico' });
     const verso = (c.verses[0] || {}).text || '';
     console.log('tras el traspaso · plan:', (plan.entries || []).length + '/' + (plan.completed || []).length, '· devocionales:', tras.state.devotionals.length, '· nota:', !!tras.state.notes['18:23:1'], '· módulo:', cat.modules.some(m => m.id === 'texto-sintetico'), '· verso:', verso.slice(0, 40));
+    const pantallaSint = require(path.join(__dirname, 'validar-como-pantalla.cjs'))(ventana, www, tras.state);
+    console.log('la pantalla acepta lo traído:', pantallaSint.acepta ? 'sí' : 'NO · ' + pantallaSint.motivo);
+    if (!pantallaSint.acepta) throw new Error('La pantalla rechaza lo traído: ' + pantallaSint.motivo);
     if ((plan.entries || []).length !== 1189 || (plan.completed || []).length !== 329 || tras.state.devotionals.length !== 2 || !/Texto inventado/.test(verso)) throw new Error('Los datos traídos no cuadran');
   }
   await ventana.LibraryAndroidServices.close();

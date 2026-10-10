@@ -16,7 +16,7 @@ fs.rmSync(trabajo, { recursive: true, force: true });
 const estado = {
   version: 1, position: { book: 18, chapter: 23, verse: 1 },
   notes: { '18:23:1': 'Nota sintética del traspaso' }, highlights: { '18:23:1': 'gold' },
-  plans: [{ id: 'plan-1760000000000-sintetico', days: 1189, scope: 'custom', title: 'Plan sintético', entries: Array.from({ length: 1189 }, (_, i) => ({ title: 'Día ' + (i + 1), readings: [{ book: 18, chapter: 23 }] })), completed: Array.from({ length: 329 }, (_, i) => i) }],
+  plans: [{ id: 'plan-1760000000000-sintetico', days: 1189, scope: 'custom', title: 'Plan sintético', entries: Array.from({ length: 1189 }, (_, i) => ({ title: 'Día ' + (i + 1), sourceText: 'Salmos 23', readings: [{ book: 18, chapter: 23 }] })), completed: Array.from({ length: 329 }, (_, i) => i) }],
   devotionals: ['a', 'b'].map(x => ({ id: 'dev-sintetico-' + x, title: 'Devocional sintético ' + x, entries: [{ title: 'Día 1', body: 'Contenido inventado', book: 18, chapter: 23 }], completed: [], lastDay: 0 })),
   prayers: [], devResponses: {}, planNotes: {}, prayerDrafts: {}, guideResponses: {}, aiStudies: [], appearance: { design: 'a' }, font: 20
 };
