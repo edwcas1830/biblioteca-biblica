@@ -155,6 +155,7 @@
           <div class="imagen-fila"><label>Estilo <select id="imagen-estilo">${Object.entries(ESTILOS).map(([id, e]) => `<option value="${id}">${e.nombre}</option>`).join('')}</select></label>
           <label>Tamaño <select id="imagen-formato">${Object.entries(FORMATOS).map(([id, f]) => `<option value="${id}">${f.nombre}</option>`).join('')}</select></label></div>
           <div class="imagen-fila"><label class="imagen-foto">Foto de fondo (opcional)<input id="imagen-foto" type="file" accept="image/*"></label><button type="button" class="quiet" id="imagen-sin-foto" hidden>Quitar foto</button></div>
+          <div id="imagen-ia" class="imagen-ia" hidden><label>Fondo creado con IA (usa tu conexión de OpenRouter)<textarea id="imagen-ia-texto" rows="2" maxlength="600"></textarea></label><button type="button" class="quiet" id="imagen-ia-crear">✦ Crear fondo con IA</button></div>
           <div class="imagen-acciones"><button type="button" class="primary" id="imagen-guardar"></button></div>
           <p id="imagen-estado" class="muted" role="status"></p>
         </div>
@@ -175,6 +176,32 @@
       lector.readAsDataURL(archivo);
     });
     $('#imagen-sin-foto').addEventListener('click', () => { fotoFondo = null; $('#imagen-foto').value = ''; $('#imagen-sin-foto').hidden = true; dibujar(); });
+    $('#imagen-ia-crear').addEventListener('click', crearFondoIA);
+  }
+
+  // Fondo con IA: la operación aiImage (Codex) pide a OpenRouter una imagen SIN texto; el versículo lo dibuja
+  // la app encima, así nunca sale mal escrito. Solo aparece si la plataforma la ofrece.
+  const ASPECTO = { vertical: '4:5', cuadrado: '1:1', historia: '9:16' };
+  async function crearFondoIA() {
+    const aviso = $('#imagen-estado'), boton = $('#imagen-ia-crear');
+    const prompt = $('#imagen-ia-texto').value.trim();
+    if (!prompt) { aviso.textContent = 'Describe el fondo que quieres.'; return; }
+    boton.disabled = true; aviso.textContent = 'Creando el fondo… puede tardar unos segundos.';
+    try {
+      const r = await window.libraryDesktop.aiImage({ prompt, aspect: ASPECTO[$('#imagen-formato').value] || '4:5' });
+      await new Promise((ok, mal) => { const img = new Image(); img.onload = () => { fotoFondo = img; ok(); }; img.onerror = () => mal(new Error('La imagen recibida no se pudo abrir.')); img.src = r.dataUrl; });
+      $('#imagen-sin-foto').hidden = false; await dibujar();
+      aviso.textContent = 'Fondo creado' + (r.model ? ' con ' + r.model : '') + '. Si no te gusta, cambia la descripción y vuelve a crearlo.';
+    } catch (e) {
+      const m = (e && e.message) || 'No se pudo crear el fondo.';
+      aviso.textContent = !/OpenRouter/.test(m) && /conex|conect|LOCKED|UNAVAILABLE/i.test(m + (e && e.code || '')) ? m + ' Conecta OpenRouter en Mi biblioteca › Inteligencia artificial.' : m;
+    } finally { boton.disabled = false; }
+  }
+  async function mostrarIA() {
+    let ok = false;
+    try { ok = !!(await window.libraryDesktop?.getCapabilities?.())?.operations?.aiImage?.available; } catch { ok = false; }
+    $('#imagen-ia').hidden = !ok;
+    if (ok && !$('#imagen-ia-texto').value) $('#imagen-ia-texto').value = 'Paisaje sereno al amanecer, luz cálida y suave, colinas y cielo amplio, estilo pintura al óleo';
   }
 
   function abrir() {
@@ -184,6 +211,7 @@
     $('#imagen-estado').textContent = '';
     llenarSelectores();
     actualizarTexto();
+    mostrarIA();
     dialogo.showModal();
   }
 

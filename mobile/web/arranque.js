@@ -25,7 +25,10 @@
   const nativo = !!(cap && typeof cap.isNativePlatform === 'function' && cap.isNativePlatform());
   const EVENTOS = ['onMusicPause', 'onFullscreen', 'onAiState'];
   // La IA abre OpenRouter (y ChatGPT/Gemini/Claude al copiar) en el navegador del sistema, nunca en la WebView.
-  const aiOptions = { openExternal: url => abrirFuera(url) };
+  // En el teléfono, las conexiones de IA (OpenRouter, Gemini) se guardan en el llavero del Android Keystore
+  // (LlaveroSeguroPlugin); en la vista previa web no hay llavero y duran la sesión.
+  const enTelefono = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform());
+  const aiOptions = { openExternal: url => abrirFuera(url), ...(enTelefono && window.BibliaLlavero ? { credentialStore: window.BibliaLlavero } : {}) };
   const manifiesto = window.BibliaManifiestos && window.BibliaManifiestos.rv1909;
   let adaptador = null;
 

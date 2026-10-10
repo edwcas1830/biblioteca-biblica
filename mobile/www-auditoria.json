@@ -1,6 +1,6 @@
 {
-  "fecha": "2026-10-10T21:09:54.026Z",
-  "archivos": 364,
+  "fecha": "2026-10-10T23:49:19.802Z",
+  "archivos": 365,
   "megabytes": 23.8,
   "prohibidos": [],
   "modulosLibres": [
@@ -12,6 +12,7 @@
     "platform/bridge-contract.js",
     "ai-core.js",
     "shared/ai-context.js",
+    "shared/ai-image.js",
     "platform/ai/credentials.js",
     "platform/ai/openrouter.js",
     "platform/ai/gemini.js",
@@ -41,5 +42,5 @@
     "platform/android/documents.js",
     "platform/android/bridge.js"
   ],
-  "huellaIndex": "95df02df42c0ae17"
+  "huellaIndex": "365a45ddce80e154"
 }

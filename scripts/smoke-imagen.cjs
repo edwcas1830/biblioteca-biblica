@@ -9,6 +9,11 @@ module.exports=async({evaluate,screenshot,wait,args})=>{
  await evaluate("document.querySelector('#imagen-abrir').click()");await wait(500);
  await evaluate("document.querySelector('#imagen-hasta').value='3';document.querySelector('#imagen-hasta').dispatchEvent(new Event('change'))");await wait(800);
  report.texto=await evaluate("document.querySelector('#imagen-texto').value");
+ report.fondoIA=await evaluate("!document.querySelector('#imagen-ia').hidden");
+ assert.equal(report.fondoIA,true,'el botón Fondo con IA aparece');
+ await evaluate("document.querySelector('#imagen-ia-crear').click()");await wait(1500);
+ report.sinConexion=await evaluate("document.querySelector('#imagen-estado').textContent");
+ assert.match(report.sinConexion,/OpenRouter/,'sin conexión explica que hay que conectar OpenRouter');
  report.referencia=await evaluate("document.querySelector('#imagen-referencia').value");
  assert.match(report.texto,/JEHOVÁ es mi pastor/);assert.match(report.texto,/Confortará mi alma/);assert.doesNotMatch(report.texto,/\b[123]\b(?= [A-Z])/);
  assert.equal(report.referencia,'Salmos 23:1-3');

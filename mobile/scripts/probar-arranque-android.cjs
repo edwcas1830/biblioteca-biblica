@@ -134,7 +134,9 @@ function cargarPagina(plugins) {
     App: { addListener: async () => ({ remove() {} }), exitApp: async () => {} },
     TextToSpeech: { getSupportedVoices: async () => ({ voices: [] }), speak: async () => {}, stop: async () => {} },
     Share: { share: async () => ({}) }, Browser: { open: async () => {} }, FilePicker: { pickFiles: async () => ({ files: [] }), copyFile: async () => {} },
-    SystemBars: { setStyle: async () => {} }, TraspasoPaquete: paqueteComoAndroid(datos) };
+    SystemBars: { setStyle: async () => {} }, TraspasoPaquete: paqueteComoAndroid(datos),
+    // Doble del llavero (LlaveroSeguroPlugin.java): misma lista cerrada de nombres, en memoria.
+    LlaveroSeguro: (() => { const m = new Map(), ok = n => { if (!['openrouter', 'gemini'].includes(n)) throw new Error('Nombre no permitido en el llavero.'); }; return { disponible: async () => ({ disponible: true }), guardar: async ({ nombre, valor }) => { ok(nombre); m.set(nombre, valor); }, leer: async ({ nombre }) => { ok(nombre); return { valor: m.has(nombre) ? m.get(nombre) : null }; }, borrar: async ({ nombre }) => { ok(nombre); m.delete(nombre); } }; })() };
   const inicial = { version: 1, position: { book: 42, chapter: 3, verse: 1 }, notes: {}, highlights: {}, plans: [], devotionals: [], prayers: [], prayerDrafts: {}, guideResponses: {}, aiStudies: [], devResponses: {}, planNotes: {}, appearance: { design: 'a' }, font: 20 };
 
   // Primera sesión
@@ -226,6 +228,16 @@ function cargarPagina(plugins) {
     const pantallaSint = require(path.join(__dirname, 'validar-como-pantalla.cjs'))(ventana, www, tras.state);
     console.log('la pantalla acepta lo traído:', pantallaSint.acepta ? 'sí' : 'NO · ' + pantallaSint.motivo);
     if (!pantallaSint.acepta) throw new Error('La pantalla rechaza lo traído: ' + pantallaSint.motivo);
+    // IA en el teléfono: credenciales en el llavero y Gemini personal que sobrevive a recargar.
+    const estIa = await puente.aiStatus();
+    await puente.aiPersonalEnable(true);
+    await puente.aiGeminiKey('AIzaSy' + 'A'.repeat(33));
+    ventana = cargarPagina(plugins); puente = ventana.libraryDesktop; await ventana.BibliaPreparacion.modulos;
+    await puente.bootstrap({ initial: inicial, legacy: null, legacyValid: true });
+    const personal = await puente.aiPersonalStatus();
+    const gem = (personal.providers || []).find(p => p.id === 'gemini-api');
+    console.log('IA · credenciales:', estIa.credentialStorage, '· modo personal:', personal.enabled, '· Gemini conectado tras recargar:', !!(gem && gem.connected), '· imagen IA disponible:', !!(await puente.getCapabilities()).operations.aiImage?.available);
+    if (estIa.credentialStorage !== 'device-secure' || !(gem && gem.connected)) throw new Error('La IA del teléfono no guardó la conexión en el llavero');
     if ((plan.entries || []).length !== 1189 || (plan.completed || []).length !== 329 || tras.state.devotionals.length !== 2 || !/Texto inventado/.test(verso)) throw new Error('Los datos traídos no cuadran');
   }
   await ventana.LibraryAndroidServices.close();
