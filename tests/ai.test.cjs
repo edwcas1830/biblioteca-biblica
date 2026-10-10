@@ -1,5 +1,30 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),crypto=require('node:crypto');
 const core=require('../app/ai-core.js'),{AiService}=require('../lib/ai-service.cjs'),{Library}=require('../lib/library.cjs');
+const {installPublicPackage}=require('../lib/free-package.cjs');
+
+test('Fuentes libres declaran permiso y envían atribución, procedencia y licencia sin textos privados',async t=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'biblia-ai-open-')),appRoot=path.join(__dirname,'..');
+  installPublicPackage(root,appRoot);
+  const library=new Library({root,resources:path.join(root,'resources'),appRoot});
+  t.after(()=>{library.close();fs.rmSync(root,{recursive:true,force:true});});
+  const catalog=await library.catalog();
+  for(const id of ['rv1909','onbv2008','step-greek','step-hebrew']){
+    const m=catalog.modules.find(m=>m.id===id);assert.equal(m.iaPermitida,true);assert.ok(m.atribucion);assert.match(m.origen,/^https:/);
+  }
+  for(const module of ['rv1909','onbv2008']){
+    const context=library.aiContext({module,book:42,chapter:3,verse:16,includeBible:true});
+    assert.equal(context.notices.length,0);assert.equal(context.sources.length,1);
+    const source=context.sources[0],prepared=core.prepare({task:'explain',context});
+    for(const value of [source.license,source.attribution,source.origin])assert.ok(prepared.prompt.includes(value));
+    if(module==='onbv2008')assert.match(prepared.prompt,/https:\/\/creativecommons.org\/licenses\/by-sa\/4.0\//);
+    assert.equal(library.verifyAiSources(prepared.sources),true);
+  }
+  const merged=library.aiContext({module:'onbv2008',book:0,chapter:1,verse:12,includeBible:true});
+  assert.ok(merged.sources[0].text.length>20,'El versículo contenido en un rango unido también aporta su texto');
+  library.modules.get('rv1909').iaPermitida=false;
+  assert.equal(library.aiContext({book:42,chapter:3,verse:16,includeBible:true}).sources.length,0);
+  assert.throws(()=>library.verifyAiSources([{module:'rv1909',revision:library.get('rv1909').sha256}]),/permiso/);
+});
 const token='sk-or-v1-'+ 'a'.repeat(64),storage={isEncryptionAvailable:()=>true,encryptString:s=>Buffer.from('encrypted:'+Buffer.from(s).toString('base64')),decryptString:b=>Buffer.from(b.toString().slice(10),'base64').toString()};
 const setup=(options={})=>new AiService({root:fs.mkdtempSync(path.join(os.tmpdir(),'biblia-ai-')),safeStorage:storage,openExternal:async()=>{},...options});
 test('OAuth local usa PKCE S256, ruta impredecible, rechaza callbacks ajenos y no expone el token',async t=>{
