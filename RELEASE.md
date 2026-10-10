@@ -1,3 +1,5 @@
+Biblioteca Bíblica 0.3.0 está preparada para revisión local, pendiente de aprobación para publicar. Conserva notas, planes y avance mediante una migración reversible a SQLite; lee paquetes locales de Biblias, diccionarios y comentarios, incorpora búsqueda sin tildes, concordancia Strong, rojo del NT y voces locales de Windows. Los módulos personales se instalan aparte y no forman parte del instalador público. Ver `V03.md` para compatibilidad, recuperación y límites.
+
 Biblioteca Bíblica 0.2.1 cambia el canal de actualizaciones al repositorio propio `edwcas1830/biblioteca-biblica`. Desde esta versión, las siguientes llegan con aviso dentro de la app. Si tienes la 0.2.0, instala esta una vez con el instalador; tus notas, planes y avance se conservan.
 
 Biblioteca Bíblica 0.2.0 incorpora planes personales de Word, texto y JSON. Detecta pasajes, conserva instrucciones y fechas, reconoce tachados y casillas marcadas y permite confirmar si los resaltados representan lecturas completadas.

@@ -1,0 +1,9 @@
+.library-controls{display:flex;align-items:center;flex-wrap:wrap;gap:10px 18px;margin:0 0 18px;color:var(--muted)}
+.library-controls select{max-width:180px}.voice-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.library-controls small{flex-basis:100%}
+.jesus-words{color:#a43530}.night .jesus-words{color:#ef9a91}.strong-number{color:#776742;font:12px Georgia,serif;margin:0 4px;white-space:normal}
+.module-heading{display:block;text-align:center;font-size:.8em;line-height:1.5;margin-bottom:8px}.rtf-bold{font-weight:bold}.rtf-italic{font-style:italic}
+.module-study{border-top:1px solid #d9d0be;margin-top:24px;padding-top:20px}.module-study select,.module-study input{width:100%;margin:7px 0 12px}.module-study form{margin-top:22px}
+.module-content{max-height:400px;overflow:auto;line-height:1.7;font-size:15px}.module-content details{border-bottom:1px solid #d9d0be;padding:10px 0}.module-content details>div{padding-top:12px;overflow-wrap:anywhere}
+.source-card{border-bottom:1px solid #d9d0be;padding:12px 0}.source-card p{margin:6px 0;overflow-wrap:anywhere}#sources-dialog{max-width:760px}#sources-warning{white-space:pre-line}#search-mode{width:100%;margin-bottom:12px}
+
+.source-notice{white-space:pre-wrap;font-size:12px;line-height:1.7}

@@ -1,6 +1,6 @@
 {
   "name": "biblioteca-biblica",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Una biblioteca íntima para leer, estudiar y vivir la Biblia.",
   "author": "Edward",
   "private": true,
@@ -24,7 +24,12 @@
       "desktop.cjs",
       "preload.cjs",
       "update-service.cjs",
+      "lib/**/*.cjs",
       "app/**/*",
+      "!app/**/modulos/**",
+      "!app/**/*.bblx",
+      "!app/**/*.cmtx",
+      "!app/**/*.dctx",
       "package.json"
     ],
     "extraResources": [{ "from":"update-channel.json", "to":"update-channel.json" }],
