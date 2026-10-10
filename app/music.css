@@ -1,1 +1,21 @@
 html[data-design] #music-panel{position:fixed;z-index:80;width:480px;color:var(--ink);background:var(--paper);border:1px solid var(--control-border);border-radius:10px;box-shadow:0 12px 40px #0005;overflow:hidden;font-family:var(--font-ui)}#music-panel[hidden]{display:none}html[data-design] #music-drag{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;cursor:move;touch-action:none;background:var(--panel);font-family:var(--font-ui);font-size:15px}#music-drag:focus-visible{outline:3px solid var(--focus);outline-offset:-3px}html[data-design] #music-panel button{background:var(--paper);color:var(--ink);border:1px solid var(--control-border);min-height:34px;font-size:13px;padding:6px 10px;font-family:var(--font-ui)}#music-frame{display:block;width:100%;height:270px;border:0;background:#111}html[data-design] #music-panel footer{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px;font-size:12px;background:var(--paper)}#music-state{flex:1;min-width:110px;line-height:1.4}html[data-design] #music-dialog{width:min(640px,85vw);background:var(--paper);color:var(--ink);border:1px solid var(--line);padding:28px;font-family:var(--font-ui)}html[data-design] #music-dialog h2{font-family:var(--font-heading)}html[data-design] #music-dialog input{font-size:18px;width:100%;color:var(--ink);background:var(--paper);border:1px solid var(--control-border);padding:12px;margin:14px 0}html[data-design] #music-dialog button{color:var(--ink);background:var(--paper);border:1px solid var(--control-border)}#music-dialog p{line-height:1.65}
+#music-panel[data-mini=true]{width:202px!important}
+#music-panel[data-mini=true] #music-frame{width:200px;height:200px}
+html[data-design] #music-panel[data-mini=true] #music-drag{height:36px;padding:0 6px;font-size:12px;cursor:default}
+html[data-design] #music-panel[data-mini=true] footer{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:6px}
+#music-panel[data-mini=true] #music-state,#music-panel[data-mini=true] #music-expand{grid-column:1/-1}
+#music-panel[data-mini=true] #music-change,#music-panel[data-mini=true] #music-external{display:none}
+html[data-design] #music-dialog{width:min(760px,92vw);max-height:88vh;overflow:auto}
+html[data-design] .youtube-search-row{display:flex;align-items:center;gap:8px}
+html[data-design] .youtube-search-row input{flex:1;min-width:0;font-size:14px}
+html[data-design] .youtube-search-row select{width:90px;margin:0;font-size:13px}
+html[data-design] #youtube-results{max-height:300px;overflow:auto}
+html[data-design] .youtube-result{display:flex;gap:12px;border-top:1px solid var(--line);padding:12px 0}
+html[data-design] .youtube-result img{width:120px;height:90px;object-fit:cover}
+html[data-design] .youtube-result>div{flex:1;min-width:0;font-size:14px}
+html[data-design] .youtube-result small,html[data-design] .music-saved small{display:block;margin:6px 0;color:var(--muted)}
+html[data-design] .music-saved{display:flex;align-items:center;gap:8px;padding:12px 0;border-top:1px solid var(--line);font-size:14px}
+html[data-design] .music-saved>div{flex:1;min-width:0;overflow-wrap:anywhere}
+html[data-design] #music-list-form{display:flex;gap:8px;align-items:center}
+html[data-design] #music-list-form input{flex:1;min-width:0;font-size:14px}
+html[data-design] #youtube-status{font-size:13px;color:var(--muted)}

@@ -3,6 +3,6 @@
   if(video&&!/^[A-Za-z0-9_-]{11}$/.test(video)||list&&!/^[A-Za-z0-9_-]{10,100}$/.test(list)||!video&&!list)throw new Error('El enlace no contiene un vídeo o una lista válidos.');return {video,list,url:'https://www.youtube.com/'+(video?'watch?v='+video+(list?'&list='+list:''):'playlist?list='+list)};
  }
  function position(value,width,height,boxWidth=480,boxHeight=362){const x=Number.isFinite(value?.x)?value.x:width-boxWidth-20,y=Number.isFinite(value?.y)?value.y:height-boxHeight-20;return {x:Math.max(8,Math.min(Math.max(8,width-boxWidth-8),x)),y:Math.max(8,Math.min(Math.max(8,height-boxHeight-8),y))};}
- function preference(value){let url='';if(value?.url)try{url=parse(value.url).url;}catch{}return {...(Number.isFinite(value?.x)?{x:value.x}:{}),...(Number.isFinite(value?.y)?{y:value.y}:{}),url};}
+ function preference(value){let url='';if(value?.url)try{url=parse(value.url).url;}catch{}const lists=[];for(const item of (Array.isArray(value?.lists)?value.lists:[]).slice(0,50)){try{const link=parse(item.url).url;if(lists.some(i=>i.url===link))continue;lists.push({id:/^yt-[a-z0-9-]{1,80}$/.test(item.id)?item.id:'yt-'+lists.length,title:String(item.title||'Mi lista de adoración').slice(0,200),url:link});}catch{}}return {...(Number.isFinite(value?.x)?{x:value.x}:{}),...(Number.isFinite(value?.y)?{y:value.y}:{}),url,mini:value?.mini===true,lists};}
  const api={parse,position,preference};if(typeof module==='object'&&module.exports)module.exports=api;else root.MusicCore=api;
 })(typeof window==='object'?window:globalThis);

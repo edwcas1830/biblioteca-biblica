@@ -64,6 +64,10 @@ app.whenReady().then(async () => {
   const ai=new AiService({root:app.getPath('userData'),safeStorage,openExternal:url=>shell.openExternal(url),notify:status=>{if(!win.isDestroyed())win.webContents.send('library:ai-state',status);}}),prepared=new Map();
   const {PersonalAi}=require('./lib/personal-ai.cjs'),personalAi=new PersonalAi({root:app.getPath('userData'),safeStorage,policy:()=>request('personalAiPolicy'),openExternal:url=>shell.openExternal(url)});
   app.on('before-quit',()=>{ai.stop();personalAi.stop();});
+  const {YoutubeService}=require('./lib/youtube-service.cjs'),youtube=new YoutubeService({root:app.getPath('userData'),safeStorage,mode:()=>personalAi.mode()});
+  for(const [name,action] of [['status','status'],['key','store'],['remove-key','remove'],['search','search']])ipcMain.handle('library:youtube-'+name,(event,data)=>{if(!trusted(event))throw Error('Origen no autorizado.');return youtube[action](data);});
+  ipcMain.handle('library:youtube-external',(event,query)=>{if(!trusted(event))throw Error('Origen no autorizado.');return shell.openExternal(youtube.external(query));});
+  ipcMain.handle('library:youtube-cloud',event=>{if(!trusted(event))throw Error('Origen no autorizado.');return shell.openExternal('https://console.cloud.google.com/apis/library/youtube.googleapis.com');});
   ipcMain.handle('library:ai-personal-status',async event=>{if(!trusted(event))throw Error('Origen no autorizado.');personalAi.cache=null;return personalAi.status();});
   ipcMain.handle('library:ai-personal-enable',(event,value)=>{if(!trusted(event))throw Error('Origen no autorizado.');return personalAi.setEnabled(value);});
   ipcMain.handle('library:ai-personal-login',(event,provider)=>{if(!trusted(event))throw Error('Origen no autorizado.');return personalAi.login(provider);});
