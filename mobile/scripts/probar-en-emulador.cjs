@@ -190,8 +190,8 @@ async function esperarLista(app, etiqueta) {
   await app.evaluar(`document.querySelector('#imagen-cerrar').click();return true;`);
   anotar(imagen.ref === 'Salmos 23:1-2' && /JEHOVÁ/.test(imagen.texto) && imagen.w === 1080 && imagen.h === 1920 && imagen.compartir, 'imagen con versículos en el teléfono', JSON.stringify(imagen));
   // Llavero seguro: la clave de IA se guarda cifrada con el Android Keystore y debe sobrevivir a actualizar.
-  const llavero = await app.evaluar(`const d=await window.BibliaLlavero.disponible();await window.BibliaLlavero.guardar('gemini','clave-de-prueba-123');return {d,v:await window.BibliaLlavero.leer('gemini')};`);
-  anotar(llavero.d === true && llavero.v === 'clave-de-prueba-123', 'llavero seguro guarda y lee', JSON.stringify({ disponible: llavero.d, coincide: llavero.v === 'clave-de-prueba-123' }));
+  const llavero = await app.evaluar(`const d=await window.BibliaLlavero.disponible();await window.BibliaLlavero.guardar('gemini','clave-de-prueba-123');const v=await window.BibliaLlavero.leer('gemini');await window.BibliaLlavero.borrar('gemini');return {d,v,borrada:(await window.BibliaLlavero.leer('gemini'))===null};`);
+  anotar(llavero.d === true && llavero.v === 'clave-de-prueba-123' && llavero.borrada, 'llavero seguro guarda, lee y borra', JSON.stringify({ disponible: llavero.d, coincide: llavero.v === 'clave-de-prueba-123', borrada: llavero.borrada }));
   // Gemini personal: la clave queda en el llavero y OpenRouter declara almacenamiento seguro del dispositivo.
   const ia = await app.evaluar(`const s=await window.libraryDesktop.aiStatus();await window.libraryDesktop.aiPersonalEnable(true);await window.libraryDesktop.aiGeminiKey('AIzaSy'+'A'.repeat(33));const caps=await window.libraryDesktop.getCapabilities();return {almacen:s.credentialStorage,imagen:!!caps.operations.aiImage?.available};`, 60000);
   anotar(ia.almacen === 'device-secure' && ia.imagen, 'IA con llavero (OpenRouter y Gemini) y fondo con IA disponible', JSON.stringify(ia));
@@ -212,8 +212,6 @@ async function esperarLista(app, etiqueta) {
   anotar(actualizado && actualizado.lista && actualizado.hechos === 329 && actualizado.devocionales === 2 && actualizado.modulos >= 5, 'actualizar encima conserva los datos', JSON.stringify(actualizado));
   const geminiDespues = await app.evaluar(`const p=await window.libraryDesktop.aiPersonalStatus();const g=(p.providers||[]).find(x=>x.id==='gemini-api');await window.libraryDesktop.aiGeminiKey(null);return {personal:p.enabled,gemini:!!(g&&g.connected)};`, 60000);
   anotar(geminiDespues.personal && geminiDespues.gemini, 'Gemini sigue conectado tras actualizar', JSON.stringify(geminiDespues));
-  const llaveroDespues = await app.evaluar(`const v=await window.BibliaLlavero.leer('gemini');await window.BibliaLlavero.borrar('gemini');return {v,borrada:(await window.BibliaLlavero.leer('gemini'))===null};`);
-  anotar(llaveroDespues.v === 'clave-de-prueba-123' && llaveroDespues.borrada, 'la clave sigue tras actualizar y se puede borrar', JSON.stringify({ sigue: llaveroDespues.v === 'clave-de-prueba-123', borrada: llaveroDespues.borrada }));
   fs.writeFileSync(path.join(salida, 'consola.txt'), app.consola.join('\n'));
   app.cerrar();
 })().catch(e => {
