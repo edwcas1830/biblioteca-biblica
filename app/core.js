@@ -37,6 +37,7 @@
         if (!entry || typeof entry.body!=='string' || entry.body.length>2000000) throw new Error('Cada día necesita un campo body de texto de hasta 2 MB.');
         const out={title: String(entry.title||`Día ${i+1}`).slice(0,200),body:entry.body};
         const content=typeof module==='object'&&module.exports?require('./content-core.js'):root.ContentCore;
+        if(typeof entry.originalTitle==='string')out.originalTitle=entry.originalTitle.slice(0,200);
         if(entry.blocks)out.blocks=content.blocks(entry.blocks);
         if (entry.book!==undefined || entry.chapter!==undefined) {
           if (!Number.isInteger(entry.book) || !Number.isInteger(entry.chapter) || !books[entry.book]?.chapters[entry.chapter-1]) throw new Error('Referencia bíblica no válida: book comienza en 0 y chapter en 1.');

@@ -1,0 +1,15 @@
+{
+  "id": "openbible-crossrefs",
+  "title": "OpenBible · referencias cruzadas",
+  "author": "OpenBible.info",
+  "license": "CC BY 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+  "source": "https://www.openbible.info/labs/cross-references/",
+  "download": "https://a.openbible.info/data/cross-references.zip",
+  "retrieved": "2026-10-09",
+  "upstreamHeader": "From Verse\tTo Verse\tVotes\t#www.openbible.info CC-BY 2026-10-05",
+  "rawSha256": "ffc1950580282f7941b76eee4b7a8ff8281ed9171ac5bbbb603f45c8c7db5c85",
+  "sha256": "955e09ac5515d901daa101800b799bc091948d1af8673496f4528098d06504b9",
+  "count": 344799,
+  "changes": "OSIS convertido a referencias canónicas; agrupado por versículo y ordenado por votos. Sin citas ni texto de traducciones."
+}

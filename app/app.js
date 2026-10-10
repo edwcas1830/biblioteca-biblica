@@ -43,7 +43,7 @@ function validateState(candidate) {
     ids.add(dev.id);
     const validated=core.importDevotional('copia.json',JSON.stringify({title:dev.title,entries:dev.entries}),books);
     if(dev.completed!==undefined&&(!Array.isArray(dev.completed)||dev.completed.some(i=>!Number.isInteger(i)||i<0||i>=dev.entries.length)))throw new Error('Avance de devocional no válido.');
-    return {...validated,completed:[...new Set(dev.completed||[])],sourceName:String(dev.sourceName||'').slice(0,200),description:String(dev.description||'').slice(0,2000000),subtitle:String(dev.subtitle||'').slice(0,500),...(dev.introBlocks?{introBlocks:contentCore.blocks(dev.introBlocks)}:{}),...(dev.guide?{guide:GuideCore.configuration(dev.guide)}:{}),id:dev.id,origin:typeof dev.origin==='string'?dev.origin.slice(0,200):'Devocional recuperado',purpose:typeof dev.purpose==='string'?dev.purpose.slice(0,500):'',minutes:Number.isInteger(dev.minutes)?dev.minutes:undefined};
+    return {...validated,completed:[...new Set(dev.completed||[])],sourceName:String(dev.sourceName||'').slice(0,200),description:String(dev.description||'').slice(0,2000000),titleCase:dev.titleCase!==false,subtitle:String(dev.subtitle||'').slice(0,500),...(dev.introBlocks?{introBlocks:contentCore.blocks(dev.introBlocks)}:{}),...(dev.guide?{guide:GuideCore.configuration(dev.guide)}:{}),id:dev.id,origin:typeof dev.origin==='string'?dev.origin.slice(0,200):'Devocional recuperado',purpose:typeof dev.purpose==='string'?dev.purpose.slice(0,500):'',minutes:Number.isInteger(dev.minutes)?dev.minutes:undefined};
   });
   result.plans=candidate.plans.map(plan=>{
     if(!plan || !/^plan-\d+(?:-[a-z0-9]+)?$/.test(plan.id) || ids.has(plan.id)) throw new Error('Plan no válido.');
@@ -116,7 +116,7 @@ async function renderReader() {
     const generation=++readingGeneration;
     try{const result=await desktop.chapter({module:selectedVersion,book:p.book,chapter:p.chapter,strong:$('#show-strong').checked});if(generation!==readingGeneration)return;chapterData=result;
       $('#verses').innerHTML=result.verses.map(row=>`<button class="verse ${row.verse===state.position.verse?'selected':''} ${readerRange&&row.verse>=readerRange.start&&row.verse<=readerRange.end?'planned-range':''} ${state.highlights[key(row.verse)]?'highlight-'+state.highlights[key(row.verse)]:''}" data-verse="${row.verse}" aria-pressed="${row.verse===state.position.verse}"><sup>${row.verse}</sup>${row.html}</button>`).join('');
-      decorateReading();$('#edition-footer').textContent=result.title;$('#cover-edition').textContent=result.title;
+      decorateReading();renderComparison();$('#edition-footer').textContent=result.title;$('#cover-edition').textContent=result.title;
       if(result.verses.some(row=>!row.alignment))$('#module-status').textContent='En algunos versículos los números Strong se muestran al final porque el texto de apoyo difiere.';
       else $('#module-status').textContent='';
       if(state.position.verse===1)$('#verses').scrollTop=0;
@@ -128,7 +128,7 @@ function renderNote() {
   const p=state.position;document.documentElement.dataset.studyScope=studySelection;$('#selected-ref').textContent=studySelection==='chapter'?`${books[p.book].name} ${p.chapter}`:studySelection==='range'&&readerRange?`${books[p.book].name} ${p.chapter}:${readerRange.start}–${readerRange.end}`:reference();$('#bible-ref').textContent=$('#selected-ref').textContent;syncDictionaryRef();$('#note-reference').textContent=reference()+' · '+($('#version-select option:checked')?.textContent||selectedVersion);
   $('#note').value=state.notes[key()] || '';$('#note').disabled=!!state.privateLocked;
   $('#save-status').textContent=saveFailed?'No se pudo guardar. Exporta una copia.':selectedVersion!=='rv1909'&&Object.keys(state.notes).some(k=>!k.includes('@'))?'Notas de esta versión. Tus notas anteriores siguen en RV1909.':'Las notas se guardan en este equipo, vinculadas a esta versión.';
-  renderComment();
+  renderComment();renderConnections();
 }
 function go(book,chapter,verse=1,endVerse) {
   if(!validPosition({book,chapter,verse})) { toast('No se encontró ese pasaje.'); return; }
@@ -278,6 +278,7 @@ function bind() {
     $('#verses').querySelectorAll('.verse').forEach(el=>{el.classList.toggle('selected',el===verse);el.setAttribute('aria-pressed',String(el===verse));});
     renderNote(); save();
     const strong=event.target.closest('[data-strong]'),word=event.target.closest('[data-word]');
+    const original=event.target.closest('[data-original]');if(original){openOriginal(original.dataset.original,original.dataset.originalText);return;}
     if(strong)queryFromReading(strong.dataset.strong,true);else if(word)queryFromReading(word.dataset.word);
   });
   $('#note').addEventListener('input',()=>{if(state.privateLocked)return; if($('#note').value) state.notes[key()]=$('#note').value; else delete state.notes[key()]; save(); });
@@ -341,10 +342,10 @@ async function start() {
   $('#books-grid').innerHTML=books.map((book,i)=>`<button data-book="${i}">${esc(book.name)}</button>`).join('');
   $('#note').maxLength=100000;
   settings();renderReader();renderDevList();renderPlans();bind();bindPlanImport();
-  bindLibrary();bindAppearance();bindJourneys();bindAi();bindPrayer();bindPrivacy();bindGuides();bindMusic();uiReady=true;
+  bindLibrary();bindAppearance();bindJourneys();bindAi();bindPrayer();bindPrivacy();bindGuides();bindMusic();bindStudy();uiReady=true;
 }
 async function loadCatalog(){catalogData=await desktop.catalog();const versions=catalogData.modules.filter(m=>m.tipo==='biblia'&&m.rol==='version');selectedVersion=versions.some(m=>m.id===state.selectedVersion)?state.selectedVersion:versions.some(m=>m.id==='rv1960')?'rv1960':'rv1909';$('#version-select').innerHTML=versions.map(m=>`<option value="${esc(m.id)}">${esc(m.abreviatura||m.titulo)}</option>`).join('');$('#version-select').value=selectedVersion;const comments=catalogData.modules.filter(m=>m.rol==='comentario');$('#comment-select').innerHTML='<option value="">Elegir comentario</option>'+comments.map(m=>`<option value="${esc(m.id)}">${esc(m.titulo)}</option>`).join('');const options=[['strong-es','Strong español'],['vine','Vine · AT y NT'],['drae','RAE · Diccionario español']].filter(([id])=>id==='vine'?catalogData.modules.some(m=>m.id==='vine-at'||m.id==='vine-nt'):id==='drae'?catalogData.modules.some(m=>/^drae-[123]$/.test(m.id)):catalogData.modules.some(m=>m.id===id));$('#dictionary-select').innerHTML=options.map(([id,title])=>`<option value="${id}">${title}</option>`).join('');$('#show-strong').disabled=selectedVersion!=='rv1960'||!catalogData.modules.some(m=>m.id==='rv1960-strong');if($('#show-strong').disabled)$('#show-strong').checked=false;$('#comment-select').disabled=!comments.length;if(comments.length)$('#comment-select').value=(['diario-vivir','mundo-hispano'].find(id=>comments.some(m=>m.id===id))||comments[0].id);for(const id of ['dictionary-select','dictionary-query','dictionary-submit'])$('#'+id).disabled=!options.length;renderSources();}
-function renderSources(){if(!catalogData)return;$('#sources-list').innerHTML=catalogData.modules.map(m=>`<section class="source-card"><h4>${esc(m.titulo)}</h4><p>${esc(m.origen)} · ${esc(m.rol)}</p><p>${esc(m.licencia)}</p><p class="fine-print">${esc(m.versificacion)} · Revisión ${esc(m.sha256.slice(0,16))}</p>${m.sourceNotice?`<details><summary>Aviso incluido en la fuente</summary><p class="source-notice">${esc(m.sourceNotice)}</p></details>`:''}</section>`).join('');$('#sources-warning').textContent=catalogData.warnings.join('\n');}
+function renderSources(){if(!catalogData)return;$('#sources-list').innerHTML=catalogData.modules.map(m=>`<section class="source-card"><h4>${esc(m.titulo)}</h4><p>${esc(m.origen)} · ${esc(m.rol)}</p><p>${esc(m.licencia)}</p><p class="fine-print">${esc(m.versificacion)} · Revisión ${esc(m.sha256.slice(0,16))}</p>${m.sourceNotice?`<details><summary>Aviso incluido en la fuente</summary><p class="source-notice">${esc(m.sourceNotice)}</p></details>`:''}</section>`).join('');$('#sources-warning').textContent=catalogData.warnings.join('\n');renderStudySources();}
 async function renderComment(){
   const generation=++studyGeneration,content=$('#comment-content');
   $('#panes').dataset.sourcesReady=String(Boolean($('#comment-select').value&&$('#dictionary-select').value));
