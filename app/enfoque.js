@@ -49,7 +49,7 @@
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'quiet enfoque-abrir';
-      b.textContent = '⤢';
+      b.textContent = '⤢ Pantalla completa';
       b.title = 'Leer ' + nombre + ' a pantalla completa';
       b.setAttribute('aria-label', b.title);
       b.addEventListener('click', () => entrar(panel));
