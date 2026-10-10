@@ -1,8 +1,8 @@
-{
+﻿{
   "name": "biblioteca-biblica-movil",
-  "version": "0.7.0-alpha.1",
+  "version": "0.7.0-alpha.2",
   "private": true,
-  "description": "Biblioteca Bíblica para Android (Capacitor). Comparte app/ con la versión de escritorio.",
+  "description": "Biblioteca BÃ­blica para Android (Capacitor). Comparte app/ con la versiÃ³n de escritorio.",
   "scripts": {
     "www": "node scripts/build-www.cjs",
     "sync": "node scripts/build-www.cjs && cap sync android",

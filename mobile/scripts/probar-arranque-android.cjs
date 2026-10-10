@@ -9,6 +9,14 @@ const helpers = require(path.join(repo, 'tests', 'mobile-fixtures.cjs'));
 const despues = [];
 const t = { after: fn => despues.push(fn) };
 
+function puenteNativo(impl) {
+  const callbacks = new Set(['readFileInChunks', 'addListener']);
+  return {
+    PluginHeaders: Object.entries(impl).map(([name, obj]) => ({ name, methods: Object.keys(obj).filter(k => typeof obj[k] === 'function').map(m => ({ name: m, rtype: callbacks.has(m) ? 'callback' : 'promise' })) })),
+    nativePromise: (plugin, metodo, opciones) => impl[plugin][metodo](opciones),
+    nativeCallback: (plugin, metodo, opciones, cb) => { Promise.resolve(impl[plugin][metodo](opciones, cb)).catch(e => cb(null, e)); return 'cb-' + metodo; }
+  };
+}
 (async () => {
   const root = await helpers.root(t);
   // Diseño de Android: DATA/files y databases/ separados (igual que las pruebas de Codex).
@@ -16,10 +24,16 @@ const t = { after: fn => despues.push(fn) };
   fs.mkdirSync(datos, { recursive: true }); fs.mkdirSync(bases, { recursive: true });
   const portapapeles = [];
   const Clipboard = { write: async o => { if (!o || typeof o.string !== 'string') throw new Error('Clipboard.write exige {string}'); portapapeles.push(o.string); } };
-  const plugins = { CapacitorSQLite: helpers.sqlite(bases), Filesystem: helpers.filesystem(datos, { absoluteRoot: root }), Clipboard };
+  const plugins = { CapacitorSQLite: helpers.sqlite(bases), Filesystem: helpers.filesystem(datos, { absoluteRoot: root }), Clipboard,
+    App: { addListener: async () => ({ remove() {} }), exitApp: async () => {} },
+    TextToSpeech: { getSupportedVoices: async () => ({ voices: [] }), speak: async () => {}, stop: async () => {} },
+    Share: { share: async () => ({}) }, Browser: { open: async () => {} }, FilePicker: { pickFiles: async () => ({ files: [] }), copyFile: async () => {} },
+    SystemBars: { setStyle: async () => {} } };
   const eventos = [];
   const ventana = {
-    Capacitor: { isNativePlatform: () => true, registerPlugin: n => plugins[n] || { getSupportedVoices: async () => ({ voices: [] }), speak: async () => {}, stop: async () => {}, addListener() {} } },
+    // Puente nativo de Android simulado: lo que el teléfono inyecta ANTES de los scripts de la página.
+    androidBridge: { postMessage() {} },
+    Capacitor: puenteNativo(plugins),
     addEventListener(tipo, fn) { (eventos[tipo] = eventos[tipo] || []).push(fn); },
     dispatchEvent(e) { for (const fn of eventos[e.type] || []) fn(e); },
     CustomEvent: class { constructor(type, o = {}) { this.type = type; this.detail = o.detail; } },

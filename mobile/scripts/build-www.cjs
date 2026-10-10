@@ -51,12 +51,20 @@ if (fs.existsSync(manifiestoRv)) {
   fs.writeFileSync(path.join(out, 'mobile', 'manifiestos.js'),
     "'use strict';\nwindow.BibliaManifiestos = Object.freeze({ rv1909: " + JSON.stringify(JSON.parse(fs.readFileSync(manifiestoRv, 'utf8'))) + ' });\n');
 }
+// Capacitor sin empaquetador: el puente nativo de Android define window.Capacitor, pero registerPlugin
+// lo aporta @capacitor/core (dist/capacitor.js). Sin él, ningún plugin (SQLite, archivos, voz…) responde.
+const capacitorCore = path.join(mobile, 'node_modules', '@capacitor', 'core', 'dist', 'capacitor.js');
+if (!fs.existsSync(capacitorCore)) throw new Error('Falta @capacitor/core/dist/capacitor.js: ejecuta npm ci en mobile/.');
+fs.copyFileSync(capacitorCore, path.join(out, 'mobile', 'capacitor.js'));
 const scriptsMovil = [...nucleos, ...puentes, 'mobile/manifiestos.js', 'mobile/plataforma.js', 'mobile/arranque.js', 'mobile/movil.js']
   .filter(f => fs.existsSync(path.join(out, f)))
   .map(f => `<script defer src="${f}"></script>`).join('\n  ');
 const ancla = '<script defer src="bible-data.js"></script>';
 if (!html.includes(ancla)) throw new Error('index.html sin bible-data.js');
 html = html.replace(ancla, ancla + '\n  ' + scriptsMovil);
+// capacitor.js va primero de todo (antes incluso de la Biblia).
+const primerScript = html.indexOf('<script');
+html = html.slice(0, primerScript) + '<script defer src="mobile/capacitor.js"></script>\n  ' + html.slice(primerScript);
 html = html.replace('</head>', '  <link rel="stylesheet" href="mobile/movil.css">\n</head>');
 html = html.replace(/<meta name="viewport"[^>]*>/, '');
 html = html.replace('<head>', '<head>\n  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">');
@@ -66,6 +74,12 @@ html = html.replace(/<meta http-equiv="Content-Security-Policy" content="[^"]*">
   'connect-src \'self\' https://openrouter.ai https://generativelanguage.googleapis.com https://www.googleapis.com; ' +
   'frame-src \'self\' https://www.youtube-nocookie.com https://www.youtube.com; object-src \'none\'; base-uri \'none\'; form-action \'none\'">');
 html = html.replace('<html', '<html data-plataforma="movil"');
+// Comprobación de arranque: capacitor.js antes que plataforma.js y arranque.js (o el APK no ve los plugins).
+{
+  const orden = [...html.matchAll(/<script defer src="([^"]+)"/g)].map(m => m[1]);
+  const iCap = orden.indexOf('mobile/capacitor.js'), iPlat = orden.indexOf('mobile/plataforma.js'), iArr = orden.indexOf('mobile/arranque.js');
+  if (iCap !== 0 || iPlat < 0 || iArr < 0 || iCap > iPlat || iCap > iArr) throw new Error('Orden de scripts inválido: capacitor.js debe ir primero.');
+}
 fs.writeFileSync(indexPath, html);
 
 // Auditoría: nada privado dentro de www.
