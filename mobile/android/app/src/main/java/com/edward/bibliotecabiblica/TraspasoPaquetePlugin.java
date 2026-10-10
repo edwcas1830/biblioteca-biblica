@@ -14,7 +14,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Locale;
@@ -96,7 +95,7 @@ public class TraspasoPaquetePlugin extends Plugin {
             if (tam < 0 || tam > MAX_ARCHIVO || (total += tam) > MAX_TOTAL) throw new PaqueteInvalido("El paquete es demasiado grande.");
             if (destino.getUsableSpace() - tam < RESERVA) throw new PaqueteInvalido("No hay espacio suficiente en el teléfono para el traspaso.");
             File archivo = new File(destino, nombre);
-            try (OutputStream out = new FileOutputStream(archivo)) {
+            try (FileOutputStream out = new FileOutputStream(archivo)) {
                 long resta = tam;
                 while (resta > 0) {
                     int n = in.read(bufer, 0, (int) Math.min(bufer.length, resta));
