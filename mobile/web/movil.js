@@ -73,12 +73,22 @@
   }
 
   // ---------- Menú «Más» ----------
-  let hojaMas;
+  let hojaMas, ajustesMas, anclaAjustes;
+  // Los controles reales de Diseño y Tema se mueven (conservan sus eventos):
+  // al «Más» en vertical y de vuelta a la cabecera si el teléfono gira o es tableta.
+  function moverAjustes(alMas) {
+    const barra = $('.topbar-actions');
+    if (!barra || !ajustesMas) return;
+    if (!anclaAjustes) { anclaAjustes = document.createComment('ajustes'); barra.querySelector('label.appearance-control')?.before(anclaAjustes); }
+    const labels = $$('label.appearance-control');
+    if (alMas) labels.forEach(l => ajustesMas.append(l));
+    else if (anclaAjustes.parentNode) labels.forEach(l => anclaAjustes.before(l));
+  }
   function construirMas() {
     hojaMas = crear('dialog', { id: 'movil-mas', 'aria-label': 'Más opciones' });
     const ajustes = crear('div', { class: 'movil-mas-ajustes' });
-    // Se mueven los controles reales de Diseño y Tema: conservan sus eventos.
-    for (const label of $$('.topbar-actions label.appearance-control')) ajustes.append(label);
+    ajustesMas = ajustes;
+    moverAjustes(true);
     const lista = crear('div', { class: 'movil-mas-lista' });
     const extras = [
       ['Estudio con IA', () => botonPorTexto('.reading-actions button', 'ia')?.click()]
@@ -266,7 +276,8 @@
 
   function activar() {
     html.dataset.telefono = String(consulta.matches);
-    if (!consulta.matches || estado.construida) return;
+    if (estado.construida) { moverAjustes(consulta.matches); if (consulta.matches) { marcarDestino(); ajustarAltoLectura(); } else cerrarMas(); return; }
+    if (!consulta.matches) return;
     estado.construida = true;
     construirNavegacion();
     construirMas();
@@ -289,6 +300,7 @@
 
   window.BibliaMovil = { atras, ajustarAltoLectura, ponerAltura, elegirPestana, abrirMas, cerrarMas, estado };
   consulta.addEventListener('change', activar);
+  window.addEventListener('resize', () => { if (String(consulta.matches) !== html.dataset.telefono) activar(); });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(activar, 0));
   else setTimeout(activar, 0);
 })();
