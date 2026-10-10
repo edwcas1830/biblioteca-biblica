@@ -57,6 +57,7 @@ jobs:
         working-directory: mobile
         run: |
           node scripts/build-www.cjs
+          node scripts/probar-arranque-android.cjs
           npx cap sync android
 
       - name: Compilar APK de depuración
