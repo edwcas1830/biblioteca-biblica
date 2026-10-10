@@ -9,14 +9,14 @@ module.exports=async({evaluate,call,screenshot,wait,args})=>{
  try{
   for(const name of fs.readdirSync(args.documents).filter(n=>/\.(pdf|docx)$/i.test(n))){
    await evaluate(`(async()=>{showView('dev');await importDevFile(${asFile(fs.readFileSync(path.join(args.documents,name)),name)})})()`);
-   const row=await evaluate("({title:pendingDev.title,subtitle:pendingDev.subtitle,days:pendingDev.entries.length,introLength:pendingDev.description.length,bodyLengths:pendingDev.entries.map(e=>e.body.length),furniture:pendingDev.entries.some(e=>e.body.includes('M:7 BATTLE READY')),warnings:document.querySelector('#dev-review-warnings').textContent})");
+   const row=await evaluate("(()=>{const d=journeyData().item;return {title:d.title,subtitle:d.subtitle,days:d.entries.length,introLength:d.description.length,bodyLengths:d.entries.map(e=>e.body.length),furniture:d.entries.some(e=>e.body.includes('M:7 BATTLE READY')),warnings:d.importWarnings.join(' '),saved:state.devotionals.some(s=>s.id===d.id),reviewHidden:document.querySelector('#dev-review').hidden};})()");assert.equal(row.saved,true);assert.equal(row.reviewHidden,true);
    if(/Palabras/i.test(name)){assert.equal(row.days,2);assert.match(row.title,/poder de las palabras/i);}
    if(/Jacob/i.test(name)){assert.match(row.title,/Devocional: El propósito en lo inusual/);assert.notEqual(row.title,path.basename(name,'.docx'));}
    if(/\.pdf$/i.test(name)){assert.equal(row.days,28);assert.equal(row.title,'No más esconderse');assert.equal(row.subtitle,'Una travesía de 28 días de preparación para la batalla');assert.ok(row.introLength>1000);assert.ok(row.bodyLengths.every(n=>n>1000));assert.equal(row.furniture,false);}
-   report.files.push({name,...row});await screenshot('revision-'+path.extname(name).slice(1)+'-'+report.files.length,'#dev-review');
+   report.files.push({name,...row});await screenshot('libro-'+path.extname(name).slice(1)+'-'+report.files.length);
    if(/\.pdf$/i.test(name)){
-    await evaluate("document.querySelector('#dev-review-save').click()");await wait(200);await evaluate('saveQueue');pdfId=await evaluate('activeJourney.id');assert.ok(pdfId);
-   }else await evaluate("window.libraryTest.reviewAnswer(true).then(()=>document.querySelector('#dev-review-cancel').click())");
+    await evaluate('saveQueue');pdfId=await evaluate('activeJourney.id');assert.ok(pdfId);
+   }
   }
   assert.equal(report.files.length,3);assert.ok(pdfId);
   await call('Page.reload',{ignoreCache:true});for(let i=0;i<100;i++){await wait(100);if(await evaluate("typeof uiReady!=='undefined'&&uiReady"))break;}
@@ -27,7 +27,7 @@ module.exports=async({evaluate,call,screenshot,wait,args})=>{
    const intro=await evaluate("document.querySelector('#journey-intro').textContent");assert.match(intro,/DECLARACIÓN INICIAL/);assert.match(intro,/NOTA PARA LA EDICIÓN EN ESPAÑOL/);
    await evaluate("document.querySelector('#journey-intro').closest('details').open=false");await screenshot('pdf-'+design+'-dia1','#journey-day-title');
    await evaluate(`openJourney('dev',${JSON.stringify(pdfId)},27)`);await screenshot('pdf-'+design+'-dia28','#journey-day-title');
-   const layout=await evaluate("({design:document.documentElement.dataset.design,overflow:document.querySelector('main').scrollWidth>document.querySelector('main').clientWidth+2,bodyOverflow:document.querySelector('#journey-body').scrollWidth>document.querySelector('#journey-body').clientWidth+2,titleOutline:getComputedStyle(document.querySelector('#journey-title')).outlineStyle,paragraphs:document.querySelectorAll('#journey-body p').length,refs:document.querySelectorAll('#journey-body [data-document-ref]').length})");assert.equal(layout.overflow,false);assert.equal(layout.bodyOverflow,false);assert.equal(layout.titleOutline,'none');assert.ok(layout.paragraphs>5);assert.ok(layout.refs>0);report.layouts.push(layout);
+   const layout=await evaluate("({design:document.documentElement.dataset.design,overflow:document.querySelector('main').scrollWidth>document.querySelector('main').clientWidth+2,bodyOverflow:document.querySelector('#journey-body').scrollWidth>document.querySelector('#journey-body').clientWidth+2,titleOutline:getComputedStyle(document.querySelector('#journey-title')).outlineStyle,paragraphs:document.querySelectorAll('#journey-body p').length,refs:document.querySelectorAll('#journey-body [data-document-ref]').length})");assert.equal(layout.overflow,false);assert.ok(await evaluate('bookPageCount>=1'));assert.equal(layout.titleOutline,'none');assert.ok(layout.paragraphs>5);assert.ok(layout.refs>0);report.layouts.push(layout);
   }
   await evaluate(`openJourney('dev',${JSON.stringify(pdfId)},0);document.querySelector('#journey-complete').click();document.querySelector('#journey-note').value='Reflexión de prueba local';document.querySelector('#journey-note').dispatchEvent(new Event('input'));`);await evaluate('saveQueue');
   await call('Page.reload',{ignoreCache:true});for(let i=0;i<100;i++){await wait(100);if(await evaluate("typeof uiReady!=='undefined'&&uiReady"))break;}

@@ -12,7 +12,7 @@ let report={executable:path.basename(args.exe),phase:args.phase||'v03'};
 if(args.phase==='ai-free'){report.ai=await require('./smoke-ai-free.cjs')({evaluate,call,screenshot,wait,args});}
 else if(args.phase==='study-chat'){report.chat=await require('./smoke-study-chat.cjs')({evaluate,call,screenshot,wait,args});}
 else if(args.phase==='personal-ai'){report.ai=await require('./smoke-personal-ai.cjs')({evaluate,call,screenshot,wait,args});}
-else if(args.phase==='dev-review'){report.review=await require('./smoke-dev-review.cjs')({evaluate,call,screenshot,wait,args});}
+else if(args.phase==='book'){report.book=await require('./smoke-book.cjs')({evaluate,call,screenshot,wait,args});}
 else if(args.phase==='modules'){report.modules=await require('./smoke-modules.cjs')({evaluate,call,screenshot,wait,args});}
 else if(args.phase==='circle'){report.circle=await require('./smoke-circle.cjs')({evaluate,call,screenshot,wait,args});}
 else if(args.phase==='graphics'){report.graphics=await require('./smoke-graphics.cjs')({evaluate,call,screenshot,wait,args});}
