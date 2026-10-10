@@ -189,6 +189,10 @@
   // interrumpido, abre la base personal y registra lector público, documentos y traspaso.
   const biblioteca = (async () => {
     if (!plugins || !window.LibraryAndroidServices || !window.LibraryAndroidServices.attach) throw new Error('Faltan los servicios de Android.');
+    // Al recargar la página (tras un traspaso o «Reintentar») el lado nativo conserva las conexiones
+    // SQLite de la sesión anterior y createConnection falla con «already exists». Con listas vacías,
+    // checkConnectionsConsistency cierra todas las conexiones nativas antes de abrir de nuevo.
+    try { await plugins.sqlite.checkConnectionsConsistency({ dbNames: [], openModes: [] }); } catch { /* nada abierto */ }
     return window.LibraryAndroidServices.attach(adaptador, { sqlite: plugins.sqlite, filesystem: plugins.filesystem, bible: window.BIBLE, manifest: manifiesto, aiOptions });
   })();
   biblioteca.then(() => avisar('lista', ''))
