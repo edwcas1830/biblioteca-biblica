@@ -8,6 +8,7 @@
   const bookPattern=new RegExp('(^|[^a-z0-9])('+pattern+')\\.?\\s*(?=\\d)','g');
   const uid=()=> 'plan-'+Date.now()+'-'+Math.random().toString(36).slice(2,8);
   const limit=2000000;
+  const content=typeof module==='object'&&module.exports?require('./content-core.js'):root.ContentCore;
   function formatRef(ref,books){return books[ref.book].name+' '+ref.chapter+(ref.verse?':'+ref.verse+(ref.endVerse&&ref.endVerse!==ref.verse?'-'+ref.endVerse:''):'');}
   function checkRef(ref,books){
     const ch=books[ref?.book]?.chapters[ref?.chapter-1];
@@ -104,7 +105,8 @@
       if(!readings.length)warnings.push('Sin pasajes reconocidos. Puede ser un descanso o requerir corrección.');
       const highlighted=relevant.length>0&&relevant.every(row=>{const mark=markOf(row.record,row.parsed,true);return mark.completed&&!mark.ambiguous;});
       const highlightColors=[...new Set(group.records.flatMap(record=>(record.spans||[]).filter(span=>span.highlight&&span.highlight!=='none').map(span=>span.highlight)))];
-      return {title:group.title,sourceText:group.records.map(r=>r.text).join('\n').slice(0,20000),readings:[...new Map(readings.map(r=>[JSON.stringify(r),r])).values()],warnings:[...new Set(warnings)],highlightCandidate:highlighted&&!completed,highlightColors,detectedCompleted:completed,completionOrigin:completed?(hasCheck?'Marca de completado del archivo':'Referencias tachadas en el archivo'):''};
+      const rich=group.records.some(r=>r.blocks||r.kind);
+      return {title:group.title,sourceText:group.records.map(r=>r.text).join('\n').slice(0,20000),...(rich?{blocks:content.blocks(group.records.flatMap(r=>r.blocks||[{kind:r.kind,spans:r.spans||[{text:r.text}]}]))}:{}),readings:[...new Map(readings.map(r=>[JSON.stringify(r),r])).values()],warnings:[...new Set(warnings)],highlightCandidate:highlighted&&!completed,highlightColors,detectedCompleted:completed,completionOrigin:completed?(hasCheck?'Marca de completado del archivo':'Referencias tachadas en el archivo'):''};
     });
     return {id:uid(),scope:'custom',title:filename.replace(/\.[^.]+$/,'').slice(0,200),sourceName:filename.slice(0,200),description:preface.join('\n').slice(0,20000),days:entries.length,entries,completed:entries.flatMap((entry,i)=>entry.detectedCompleted?[i]:[]),createdAt:new Date().toISOString()};
   }
@@ -117,7 +119,7 @@
     const entries=data.entries.map((entry,i)=>{
       if(!entry||typeof entry.title!=='string'||entry.title.length>200||typeof entry.sourceText!=='string'||entry.sourceText.length>20000||!Array.isArray(entry.readings)||entry.readings.length>300)throw new Error(`El día ${i+1} no tiene un formato válido.`);
       const warnings=Array.isArray(entry.warnings)?entry.warnings.map(w=>String(w).slice(0,500)).slice(0,30):[];
-      return {title:entry.title,sourceText:entry.sourceText,readings:entry.readings.map(r=>checkRef(r,books)),warnings,highlightCandidate:entry.highlightCandidate===true,highlightColors:Array.isArray(entry.highlightColors)?entry.highlightColors.slice(0,10).map(c=>String(c).slice(0,30)):[],completionOrigin:typeof entry.completionOrigin==='string'?entry.completionOrigin.slice(0,200):''};
+      return {title:entry.title,sourceText:entry.sourceText,...(entry.blocks?{blocks:content.blocks(entry.blocks)}:{}),readings:entry.readings.map(r=>checkRef(r,books)),warnings,highlightCandidate:entry.highlightCandidate===true,highlightColors:Array.isArray(entry.highlightColors)?entry.highlightColors.slice(0,10).map(c=>String(c).slice(0,30)):[],completionOrigin:typeof entry.completionOrigin==='string'?entry.completionOrigin.slice(0,200):''};
     });
     if(!Array.isArray(data.completed)||data.completed.some(i=>!Number.isInteger(i)||i<0||i>=entries.length))throw new Error('El avance del plan no es válido.');
     if(data.dayIds!==undefined&&(!Array.isArray(data.dayIds)||data.dayIds.length!==entries.length||data.dayIds.some(id=>!/^day-[a-f0-9]{32}$/.test(id))||new Set(data.dayIds).size!==entries.length))throw new Error('Identificadores de días no válidos.');
@@ -136,7 +138,7 @@
     });
     return validateCustomPlan({title:data.title,sourceName:filename,description:data.description||'',entries,completed:data.days.flatMap((d,i)=>d.completed?[i]:[])},books);
   }
-  const signature=entry=>clean(entry.title).replace(/\s+/g,' ').trim()+'|'+JSON.stringify(entry.readings);
+  const signature=entry=>clean(entry.title).replace(/\s+/g,' ').trim()+'|'+JSON.stringify(entry.readings.map(r=>[r.book,r.chapter,r.verse??null,r.endVerse??null]));
   function mergePlan(old,incoming,books){
     if(old.scope!=='custom')throw new Error('Este plan no fue importado. Guarda el documento como un plan nuevo.');
     const next=validateCustomPlan(incoming,books),keys=new Map(next.entries.map((entry,i)=>[signature(entry),i]));

@@ -1,6 +1,7 @@
 const {contextBridge,ipcRenderer}=require('electron');
 if(process.argv.includes('--biblioteca-test'))contextBridge.exposeInMainWorld('libraryTest',{capture:()=>ipcRenderer.invoke('library:test-capture'),resize:(width,height)=>ipcRenderer.invoke('library:test-resize',{width,height})});
 contextBridge.exposeInMainWorld('libraryDesktop',{
+  readPdf:bytes=>ipcRenderer.invoke('library:read-pdf',bytes),
   bootstrap:data=>ipcRenderer.invoke('library:data-bootstrap',data),
   savePersonal:data=>ipcRenderer.invoke('library:data-save',data),
   catalog:()=>ipcRenderer.invoke('library:data-catalog'),

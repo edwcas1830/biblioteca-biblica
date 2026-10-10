@@ -29,6 +29,10 @@
       if(direct!==undefined||double!==undefined)return Boolean(direct||double);
       return styleStrike(val(child(style,'basedOn')),seen);
     }
+    function styleFormat(id,name,seen=new Set()){
+      if(!id||seen.has(id))return undefined;seen.add(id);const style=styleMap.get(id);if(!style)return undefined;
+      return bool(child(child(style,'rPr'),name))??styleFormat(val(child(style,'basedOn')),name,seen);
+    }
     let defaultStrike=false;
     if(stylesText){const defaults=descendants(xml(stylesText),'rPrDefault')[0];defaultStrike=bool(child(child(defaults,'rPr'),'strike'))===true;}
     function recordFromParagraph(p){
@@ -42,23 +46,26 @@
           const rpr=child(node,'rPr'),single=bool(child(rpr,'strike')),double=bool(child(rpr,'dstrike'));
           const inherited=styleStrike(val(child(rpr,'rStyle')))??styleStrike(pstyle)??defaultStrike;
           const strike=single!==undefined||double!==undefined?Boolean(single||double):inherited;
-          const highlight=val(child(rpr,'highlight'))||'';
+          const highlight=val(child(rpr,'highlight'))||'',rstyle=val(child(rpr,'rStyle'));
+          const bold=(bool(child(rpr,'b'))??styleFormat(rstyle,'b')??styleFormat(pstyle,'b'))===true,italic=(bool(child(rpr,'i'))??styleFormat(rstyle,'i')??styleFormat(pstyle,'i'))===true;
           for(const item of Array.from(node.childNodes)){
             if(item.namespaceURI!==W)continue;
             let value=item.localName==='t'?item.textContent:item.localName==='tab'?'\t':['br','cr'].includes(item.localName)?'\n':'';
             if(item.localName==='sym'){const code=item.getAttributeNS(W,'char');if(['F0FE','F0FC'].includes(code?.toUpperCase()))value='☑';else if(code?.toUpperCase()==='F0A8')value='☐';}
-            if(value){text+=value;spans.push({text:value,strike,highlight});}
+            if(value){text+=value;spans.push({text:value,strike,highlight,bold,italic});}
           }
           return;
         }
         for(const item of Array.from(node.children||[]))walk(item);
       }
-      walk(p);return {text,spans,checkbox};
+      const outline=val(child(child(p,'pPr'),'outlineLvl')),numbered=!!child(child(p,'pPr'),'numPr');
+      const kind=/heading|title|titulo|título/i.test(pstyle||'')||outline!==undefined?'heading':numbered?'list':/quote|cita/i.test(pstyle||'')?'quote':'paragraph';
+      walk(p);return {text,spans,checkbox,kind,blocks:[{kind,spans}]};
     }
     function combine(records,separator='\t'){
       let text='',spans=[];const statuses=[];
       records.forEach((record,i)=>{if(i){text+=separator;spans.push({text:separator,strike:false});}text+=record.text;spans.push(...record.spans);if(record.checkbox!=='none')statuses.push(record.checkbox);});
-      const set=new Set(statuses);return {text,spans,checkbox:set.size>1||set.has('mixed')?'mixed':statuses[0]||'none'};
+      const set=new Set(statuses);return {text,spans,blocks:records.flatMap(r=>r.blocks||[]),checkbox:set.size>1||set.has('mixed')?'mixed':statuses[0]||'none'};
     }
     const records=[],warnings=[];
     function table(tbl){
@@ -96,5 +103,10 @@
     const documentText=await boundedText(document,8000000),stylesText=styles?await boundedText(styles,2000000):'';
     return recordsFromXml(documentText,stylesText);
   }
-  root.PlanDocuments={readDocx,recordsFromXml};
+  async function read(file){
+    if(/\.docx$/i.test(file.name))return readDocx(file);
+    if(/\.pdf$/i.test(file.name)){if(!root.libraryDesktop?.readPdf)throw new Error('Abre la aplicación de Windows para importar PDF.');if(file.size>10000000)throw new Error('El PDF supera los 10 MB.');return root.libraryDesktop.readPdf(new Uint8Array(await file.arrayBuffer()));}
+    throw new Error('Elige un PDF o un Word DOCX.');
+  }
+  root.PlanDocuments={read,readDocx,recordsFromXml};
 })(window);

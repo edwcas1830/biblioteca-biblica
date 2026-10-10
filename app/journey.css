@@ -1,0 +1,36 @@
+/* Reading documents uses only the active design's typography and colour tokens. */
+html[data-design] #journey-view{display:flex;flex-direction:column;gap:20px;padding:24px 0;min-height:0}
+html[data-design] .journey-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:20px}
+html[data-design] .journey-heading h1{font:clamp(26px,3vw,38px)/1.25 var(--font-heading);margin:8px 0;color:var(--ink)}
+html[data-design] #journey-progress{appearance:none;display:block;width:min(420px,100%);height:7px;background:var(--line);border:0;border-radius:8px;overflow:hidden;margin:16px 0 0}
+html[data-design] #journey-progress::-webkit-progress-bar{background:var(--line)}
+html[data-design] #journey-progress::-webkit-progress-value{background:var(--accent);border-radius:8px}
+html[data-design] .journey-layout{display:grid;grid-template-columns:minmax(220px,270px) minmax(0,1fr);gap:24px;align-items:start}
+html[data-design] .journey-index{position:sticky;top:16px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
+html[data-design] .journey-index h2{font:20px var(--font-heading);margin:0 0 14px;color:var(--ink)}
+html[data-design] #journey-index{max-height:48vh;overflow:auto;display:flex;flex-direction:column;gap:5px}
+html[data-design] .journey-index-item{display:flex;align-items:baseline;gap:9px;text-align:left;line-height:1.5;font:15px var(--font-ui);color:var(--ink);background:transparent;border:1px solid transparent;border-radius:6px;padding:10px;white-space:normal}
+html[data-design] .journey-index-item.is-current{background:var(--highlight);border-color:var(--focus);font-weight:600}
+html[data-design] .journey-index footer{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px;color:var(--ink);font:13px var(--font-ui)}
+html[data-design] .journey-sheet{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:clamp(24px,4vw,64px);min-width:0;color:var(--ink)}
+html[data-design] .journey-sheet h2{font:clamp(24px,2.5vw,32px)/1.35 var(--font-heading);margin:10px 0 24px;color:var(--ink)}
+html[data-design] .journey-sheet .eyebrow{color:var(--ink)}
+html[data-design] .document-prose{font:var(--verse-size,20px)/1.85 var(--font-reader);max-width:65ch;margin:24px auto;color:var(--ink);overflow-wrap:anywhere}
+html[data-design] .document-prose p{font:inherit;white-space:pre-wrap;line-height:inherit;margin:0 0 1.15em;color:var(--ink)}
+html[data-design] .document-prose h2,html[data-design] .document-prose h3,html[data-design] .document-prose h4{font-family:var(--font-heading);color:var(--ink);line-height:1.4;margin:1.5em 0 .7em}
+html[data-design] .document-prose li{margin:.45em 0;line-height:inherit}
+html[data-design] .document-prose blockquote{border-left:3px solid var(--accent);padding-left:18px;margin:24px 0}
+html[data-design] .passage-link{display:inline;font:inherit;color:var(--ink);border:0;border-bottom:1px solid var(--focus);border-radius:0;padding:0;background:transparent;white-space:normal;text-align:left;line-height:inherit}
+html[data-design] #journey-passages{display:flex;flex-wrap:wrap;gap:8px}
+html[data-design] .journey-response{border-top:1px solid var(--line);margin:24px auto 0;padding-top:24px;max-width:65ch}
+html[data-design] .journey-response textarea{font:18px/1.6 var(--font-reader);color:var(--ink);background:var(--panel)}
+html[data-design] .journey-actions{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-top:24px}
+html[data-design] #journey-complete{background:var(--panel);color:var(--ink);border-color:var(--focus)}
+html[data-design] #journey-complete[aria-pressed=true]{background:var(--highlight)}
+html[data-design] #journey-intro{white-space:pre-wrap;margin:18px 0;line-height:1.7;color:var(--ink);max-width:70ch}
+html[data-design] .dev-review-day{border-top:1px solid var(--line);padding:24px 0}
+html[data-design] .dev-preview{background:var(--paper);padding:22px;border:1px solid var(--line);border-radius:8px;max-height:280px;overflow:auto;font-size:18px}
+html[data-design] #dev-review{margin-top:24px}
+html[data-design] #journey-warnings{color:var(--ink)}
+@media(max-width:1100px){html[data-design] .journey-layout{grid-template-columns:220px minmax(0,1fr);gap:16px}html[data-design] .journey-sheet{padding:24px}}
+@media(max-width:780px){html[data-design] .journey-layout{grid-template-columns:1fr}html[data-design] .journey-index{position:static}html[data-design] #journey-index{max-height:180px}html[data-design] .journey-heading{flex-direction:column}}

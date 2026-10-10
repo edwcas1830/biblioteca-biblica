@@ -83,6 +83,8 @@ Conservar reglas de `.reading-only` para la medida de página y `.focus` para in
 
 ## Comportamientos comunes
 
+Desde v0.5, `#journey-view` presenta devocionales y planes: `.journey-index` con días paginados, `.journey-sheet` y `.document-prose`, progreso, pasajes enlazados, marcado y nota personal por día. `journey.css` usa las fuentes y colores del diseño activo, sin fijar una paleta propia ni modificar `#panes`. PDF se extrae en un worker independiente; DOCX usa JSZip local. El formato de origen se guarda como bloques y spans validados, nunca como HTML importado. La revisión editable de devocionales vive en `#dev-review`; la de planes conserva su marcado. Las notas de planes usan `planNotes[planId:dayId]` y las de devocionales mantienen las claves antiguas de `devResponses`.
+
 - Cambiar capítulo muestra referencia de capítulo; tocar versículo o leer con desplazamiento manual sincroniza el comentario. Desplazamiento programático no decide el versículo por sí solo. Una selección del plan puede ser un rango; las notas conservan su anclaje a un versículo y edición, como v0.3.
 - Comentario inicial: Mundo Hispano si existe, o primera fuente. Rangos del módulo pueden abarcar todo un capítulo; no fingir comentarios individuales donde la fuente no los tiene.
 - Tocar palabra consulta el diccionario actual; si estaba Strong cambia a RAE (o Vine si RAE no existe). Tocar código Strong cambia a Strong español. **No inferir hebreo/griego a partir de una palabra española ni asociar números cuya alineación no exista.** Consultar selección y formulario son alternativas explícitas. Rojo NT y Strong siguen dependiendo de los módulos de v0.3.

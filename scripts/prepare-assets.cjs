@@ -4,5 +4,6 @@ const fs=require('node:fs/promises'),path=require('node:path');
   const zip=path.dirname(require.resolve('jszip/package.json'));
   await fs.copyFile(path.join(zip,'dist','jszip.min.js'),path.join(vendor,'jszip.min.js'));
   await fs.copyFile(path.join(zip,'LICENSE.markdown'),path.join(vendor,'JSZIP-LICENSE.md'));
-  console.log('Lector DOCX local preparado.');
+  await fs.copyFile(path.join(path.dirname(require.resolve('pdfjs-dist/package.json')),'LICENSE'),path.join(vendor,'PDFJS-LICENSE.txt'));
+  console.log('Lectores DOCX y PDF locales preparados.');
 })().catch(error=>{console.error(error.message);process.exitCode=1;});

@@ -32,8 +32,20 @@
       "!app/**/*.dctx",
       "package.json"
     ],
-    "extraResources": [{ "from":"update-channel.json", "to":"update-channel.json" }],
-    "publish": [{"provider":"github","owner":"edwcas1830","repo":"biblioteca-biblica","releaseType":"release"}],
+    "extraResources": [
+      {
+        "from": "update-channel.json",
+        "to": "update-channel.json"
+      }
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "edwcas1830",
+        "repo": "biblioteca-biblica",
+        "releaseType": "release"
+      }
+    ],
     "win": {
       "target": [
         "nsis"
@@ -54,6 +66,7 @@
     "jszip": "3.10.1"
   },
   "dependencies": {
-    "electron-updater": "6.8.9"
+    "electron-updater": "6.8.9",
+    "pdfjs-dist": "6.4.299"
   }
 }

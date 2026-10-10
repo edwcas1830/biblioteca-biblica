@@ -7,7 +7,7 @@ const planCore = window.PlanCore;
 const appearanceCore=window.AppearanceCore;
 const paneCore=window.PaneLayoutCore;
 const STORE = 'biblioteca-biblica-v1';
-const initial = () => ({ version:1, position:{book:18,chapter:23,verse:1}, notes:{}, highlights:{}, devResponses:{}, devotionals:[], plans:[], font:20, night:false, appearance:appearanceCore.normalize() });
+const initial = () => ({ version:1, position:{book:18,chapter:23,verse:1}, notes:{}, highlights:{}, devResponses:{}, planNotes:{}, devotionals:[], plans:[], font:20, night:false, appearance:appearanceCore.normalize() });
 let state = initial(), activeView='read', activeDev=null, activeDay=0, toastTimer, searchTimer;
 const desktop=window.libraryDesktop;
 let storageReady=false, saveQueue=Promise.resolve(), selectedVersion='rv1909', catalogData=null, readingGeneration=0, searchGeneration=0, studyGeneration=0, chapterData=null, savePending=0, saveFailed=false;
@@ -42,7 +42,8 @@ function validateState(candidate) {
     if(!dev || !/^(dev|import)-[a-z0-9-]+$/.test(dev.id) || ids.has(dev.id)) throw new Error('Devocional no válido.');
     ids.add(dev.id);
     const validated=core.importDevotional('copia.json',JSON.stringify({title:dev.title,entries:dev.entries}),books);
-    return {...validated,id:dev.id,origin:typeof dev.origin==='string'?dev.origin.slice(0,200):'Devocional recuperado',purpose:typeof dev.purpose==='string'?dev.purpose.slice(0,500):'',minutes:Number.isInteger(dev.minutes)?dev.minutes:undefined};
+    if(dev.completed!==undefined&&(!Array.isArray(dev.completed)||dev.completed.some(i=>!Number.isInteger(i)||i<0||i>=dev.entries.length)))throw new Error('Avance de devocional no válido.');
+    return {...validated,completed:[...new Set(dev.completed||[])],sourceName:String(dev.sourceName||'').slice(0,200),description:String(dev.description||'').slice(0,20000),...(dev.introBlocks?{introBlocks:contentCore.blocks(dev.introBlocks)}:{}),id:dev.id,origin:typeof dev.origin==='string'?dev.origin.slice(0,200):'Devocional recuperado',purpose:typeof dev.purpose==='string'?dev.purpose.slice(0,500):'',minutes:Number.isInteger(dev.minutes)?dev.minutes:undefined};
   });
   result.plans=candidate.plans.map(plan=>{
     if(!plan || !/^plan-\d+(?:-[a-z0-9]+)?$/.test(plan.id) || ids.has(plan.id)) throw new Error('Plan no válido.');
@@ -51,6 +52,7 @@ function validateState(candidate) {
     if(!Array.isArray(plan.completed) || plan.completed.some(day=>!Number.isInteger(day)||day<0||day>=plan.days)) throw new Error('Progreso de plan no válido.');
     return {...validated,id:plan.id,dayIds:Array.isArray(plan.dayIds)?plan.dayIds:undefined,completed:[...new Set(plan.completed)]};
   });
+  if(candidate.planNotes!==undefined){if(!candidate.planNotes||typeof candidate.planNotes!=='object'||Array.isArray(candidate.planNotes)||Object.keys(candidate.planNotes).length>35000)throw new Error('Notas de días no válidas.');for(const [key,note] of Object.entries(candidate.planNotes)){if(!/^plan-\d+(?:-[a-z0-9]+)?:day-[a-f0-9]{32}$/.test(key)||typeof note!=='string'||note.length>100000)throw new Error('Nota de día no válida.');result.planNotes[key]=note;}}
   result.font=Number.isInteger(candidate.font)?Math.max(16,Math.min(28,candidate.font)):20;
   result.night=candidate.night===true;
   result.appearance=appearanceCore.normalize(candidate.appearance);
@@ -62,7 +64,8 @@ function save() {
   if(desktop?.savePersonal){
     if(!storageReady){toast('La copia anterior está protegida. Reinicia para reintentar la migración.');return false;}
     const snapshot=JSON.parse(JSON.stringify(state));savePending++;$('#save-status').textContent='Guardando…';
-    saveQueue=saveQueue.catch(()=>{}).then(()=>desktop.savePersonal(snapshot)).then(saved=>{saveFailed=false;for(const plan of state.plans){const p=saved.plans.find(item=>item.id===plan.id);if(p&&JSON.stringify(p.entries)===JSON.stringify(plan.entries))plan.dayIds=p.dayIds;}$('#save-status').textContent='Guardado en este equipo.';}).catch(error=>{saveFailed=true;$('#save-status').textContent='No se pudo guardar. Exporta una copia.';toast(error.message);}).finally(()=>savePending--);
+    const stableEntries=entries=>JSON.stringify(entries,(_key,value)=>value&&typeof value==='object'&&!Array.isArray(value)?Object.fromEntries(Object.keys(value).sort().map(k=>[k,value[k]])):value);
+    saveQueue=saveQueue.catch(()=>{}).then(()=>desktop.savePersonal(snapshot)).then(saved=>{saveFailed=false;for(const plan of state.plans){const p=saved.plans.find(item=>item.id===plan.id);if(p&&stableEntries(p.entries)===stableEntries(plan.entries))plan.dayIds=p.dayIds;}$('#save-status').textContent='Guardado en este equipo.';}).catch(error=>{saveFailed=true;$('#save-status').textContent='No se pudo guardar. Exporta una copia.';toast(error.message);}).finally(()=>savePending--);
     return true;
   }
   try { localStorage.setItem(STORE,JSON.stringify(state)); $('#save-status').textContent='Guardado en este equipo.'; return true; }
@@ -91,6 +94,7 @@ function showView(view) {
   if(view!=='read') { document.body.classList.remove('focus');updateReadingMode(); }
   if(view==='dev') renderDevList();
   if(view==='plan') renderPlans();
+  if(view==='journey')renderJourney();
 }
 async function renderReader() {
   const p=state.position, book=books[p.book], chapter=book.chapters[p.chapter-1];
@@ -138,13 +142,7 @@ function changeChapter(direction) {
 function renderDevList() {
   $('#dev-list').innerHTML=state.devotionals.length?state.devotionals.map(dev=>`<div class="dev-item"><div><h4>${esc(dev.title)}</h4><small>${esc(dev.origin)} · ${dev.entries.length} ${dev.entries.length===1?'lectura':'días'}${dev.minutes?' · '+dev.minutes+' min':''}</small></div><button class="outline" data-dev="${esc(dev.id)}">Abrir →</button></div>`).join(''):'<p class="empty">Tu biblioteca de devocionales comienza aquí.<br>Trae una lectura que amas o prepara una nueva.</p>';
 }
-function renderDev() {
-  const dev=state.devotionals.find(item=>item.id===activeDev);
-  if(!dev) { $('#dev-detail').hidden=true; return; }
-  const day=dev.entries[activeDay];
-  $('#dev-detail').hidden=false;
-  $('#dev-detail').innerHTML=`<p class="eyebrow">${esc(dev.origin)}</p><div class="section-heading"><h3>${esc(dev.title)}</h3><select class="dev-day" aria-label="Día del devocional">${dev.entries.map((item,i)=>`<option value="${i}" ${i===activeDay?'selected':''}>${esc(item.title)}</option>`).join('')}</select></div>${dev.purpose?`<p class="muted">Mi intención: ${esc(dev.purpose)}</p>`:''}<h4>${esc(day.title)}</h4>${day.book!==undefined?`<button class="outline" data-read-book="${day.book}" data-read-chapter="${day.chapter}">Leer ${esc(books[day.book].name)} ${day.chapter} →</button>`:''}<p class="dev-body">${esc(day.body)}</p><label for="dev-response">Mi reflexión y oración</label><textarea id="dev-response" maxlength="100000" rows="5" placeholder="Escribe tu respuesta personal…">${esc(state.devResponses[dev.id+':'+activeDay]||'')}</textarea><small class="muted" id="dev-save-status">Se guarda en este equipo.</small>`;
-}
+function renderDev() { if(activeDev)openJourney('dev',activeDev,activeDay); }
 function renderPlans() {
   const titles={nt:'Nuevo Testamento',all:'Toda la Biblia',salmos:'Salmos'};
   $('#plan-list').innerHTML=state.plans.length?state.plans.map(plan=>{
@@ -153,7 +151,7 @@ function renderPlans() {
     const pages=Math.max(1,Math.ceil(available.length/PLAN_PAGE)),page=Math.min(planPages.get(plan.id)||0,pages-1);planPages.set(plan.id,page);
     return `<section class="card" data-plan-card="${plan.id}"><div class="section-heading"><h3>${esc(plan.title||titles[plan.scope])}</h3><button class="outline" data-export-plan="${plan.id}">↓ Exportar plan</button></div><p class="muted plan-progress">${plan.completed.length} de ${plan.days} días completados · ${Math.round(plan.completed.length/plan.days*100)}%</p>${plan.sourceName?`<p class="fine-print">Importado de ${esc(plan.sourceName)}</p>`:''}${plan.description?`<details class="plan-context"><summary>Indicaciones del documento</summary><p class="source-description muted">${esc(plan.description)}</p></details>`:''}<div class="progress-track"><progress value="${plan.completed.length}" max="${plan.days}" aria-label="Progreso del plan"></progress></div><div class="plan-list-toolbar"><select data-plan-filter="${plan.id}" aria-label="Filtrar días"><option value="all" ${filter==='all'?'selected':''}>Todos los días</option><option value="todo" ${filter==='todo'?'selected':''}>Por leer</option><option value="done" ${filter==='done'?'selected':''}>Completados</option></select><button class="quiet" data-plan-resume="${plan.id}">Continuar donde voy →</button></div><div class="plan-days">${available.slice(page*PLAN_PAGE,(page+1)*PLAN_PAGE).map(i=>{
       const day=dayOf(plan,i),done=plan.completed.includes(i);
-      return `<div class="day-card ${done?'completed':''}"><small class="day-number">DÍA ${i+1}</small><h4>${esc(day.title)}</h4>${day.readings.map((p,j)=>`<button class="quiet" data-plan-read="${plan.id}" data-day="${i}" data-reading="${j}">${esc(planCore.formatRef(p,books))} ↗</button>`).join('')}${day.warnings?.length?'<small class="review-warning">Revisar lectura</small>':''}${day.sourceText?`<details class="day-source"><summary>Texto de mi plan</summary><p>${esc(day.sourceText)}</p></details>`:''}<label><input type="checkbox" data-plan="${plan.id}" data-day="${i}" ${done?'checked':''}> ${done?'Completado':'Marcar como leído'}</label></div>`;
+      return `<div class="day-card ${done?'completed':''}"><small class="day-number">DÍA ${i+1}</small><h4>${esc(day.title)}</h4><button class="outline" data-plan-journey="${plan.id}" data-day="${i}">Leer este día →</button>${day.readings.map((p,j)=>`<button class="quiet" data-plan-read="${plan.id}" data-day="${i}" data-reading="${j}">${esc(planCore.formatRef(p,books))} ↗</button>`).join('')}${day.warnings?.length?'<small class="review-warning">Revisar lectura</small>':''}${day.sourceText?`<details class="day-source"><summary>Texto de mi plan</summary><p>${esc(day.sourceText)}</p></details>`:''}<label><input type="checkbox" data-plan="${plan.id}" data-day="${i}" ${done?'checked':''}> ${done?'Completado':'Marcar como leído'}</label></div>`;
     }).join('')}</div>${!available.length?'<p class="muted">No hay días con este filtro.</p>':''}<div class="review-navigation"><button class="outline" data-plan-page="${plan.id}" data-direction="-1" ${page===0?'disabled':''}>← Anteriores</button><span class="muted">Página ${page+1} de ${pages} · ${available.length} días</span><button class="outline" data-plan-page="${plan.id}" data-direction="1" ${page+1>=pages?'disabled':''}>Siguientes →</button></div></section>`;
   }).join(''):'<p class="empty">Trae tu plan personal o crea uno desde la app.</p>';
 }
@@ -190,11 +188,11 @@ function renderReview(){
 async function importPlanFile(file){
   $('#plan-import-status').textContent='Leyendo tu plan…';
   let plan,notices=[];
-  if(/\.docx$/i.test(file.name)){
-    const source=await window.PlanDocuments.readDocx(file);plan=planCore.parseRecords(source.records,file.name,books);notices=source.warnings;
+  if(/\.(docx|pdf)$/i.test(file.name)){
+    const source=await window.PlanDocuments.read(file);plan=planCore.parseRecords(source.records,file.name,books);notices=source.warnings;
   }else{
     if(file.size>2000000)throw new Error('El archivo de texto supera los 2 MB.');
-    if(!/\.(txt|md|csv|json)$/i.test(file.name))throw new Error('Puedes cargar Word DOCX, TXT, MD, CSV o JSON.');
+    if(!/\.(txt|md|csv|json)$/i.test(file.name))throw new Error('Puedes cargar PDF, Word DOCX, TXT, MD, CSV o JSON.');
     const text=await file.text();plan=/\.json$/i.test(file.name)?planCore.importJson(file.name,text,books):planCore.importText(file.name,text,books);
   }
   pendingPlan={plan,baseCompleted:new Set(plan.completed),manualCompleted:new Map()};reviewPage=0;
@@ -227,27 +225,32 @@ function bindPlanImport(){
   $('#plan-review-days').addEventListener('input',event=>{
     if(event.target.matches('[data-review-title]'))pendingPlan.plan.entries[Number(event.target.dataset.reviewTitle)].title=event.target.value;
     if(event.target.matches('[data-review-source]')){
-      const day=pendingPlan.plan.entries[Number(event.target.dataset.reviewSource)],parsed=planCore.parseReferences(event.target.value,books);day.sourceText=event.target.value;day.readings=parsed.refs;day.warnings=parsed.warnings.concat(parsed.refs.length?[]:['Sin pasajes reconocidos.']);
+      const day=pendingPlan.plan.entries[Number(event.target.dataset.reviewSource)],parsed=planCore.parseReferences(event.target.value,books);day.sourceText=event.target.value;if(day.blocks)day.blocks=contentCore.fromText(event.target.value);day.readings=parsed.refs;day.warnings=parsed.warnings.concat(parsed.refs.length?[]:['Sin pasajes reconocidos.']);
       const row=event.target.closest('.review-day');row.querySelector('.detected-passages').innerHTML=parsed.refs.map(ref=>`<span>${esc(planCore.formatRef(ref,books))}</span>`).join('');let warning=row.querySelector('.review-warning');if(!warning){warning=document.createElement('p');warning.className='review-warning';row.appendChild(warning);}warning.textContent=day.warnings.join(' ');
     }reviewSummary();
   });
-  $('#save-import-plan').addEventListener('click',()=>{
+  $('#save-import-plan').addEventListener('click',async()=>{
+    if(!pendingPlan||$('#save-import-plan').disabled)return;
+    $('#save-import-plan').disabled=true;let priorState=null;
     try{
       if(state.plans.length>=100&&$('#plan-import-target').value==='new')throw new Error('La biblioteca admite hasta 100 planes.');
       const plan=selectedImport(),old=state,existing=state.plans.find(p=>p.id===plan.id);
+      priorState=old;
       state={...state,plans:existing?state.plans.map(p=>p.id===plan.id?plan:p):[plan,...state.plans]};
       if(!save()){state=old;return;}
+      await saveQueue;if(saveFailed)throw new Error('No se pudo guardar el plan. Conserva la revisión y vuelve a intentarlo.');
       pendingPlan=null;$('#plan-review').hidden=true;$('#plan-import-status').textContent='Plan guardado. Puedes continuar tu lectura y marcar cada día.';planPages.set(plan.id,0);renderPlans();toast(existing?'Plan actualizado conservando el avance.':'Tu plan personal está listo.');
-    }catch(error){toast(error.message);}
+    }catch(error){if(priorState)state=priorState;toast(error.message);}finally{if(pendingPlan)reviewSummary();}
   });
   $('#plan-list').addEventListener('click',event=>{
+    const journey=event.target.closest('[data-plan-journey]');if(journey){openJourney('plan',journey.dataset.planJourney,Number(journey.dataset.day));return;}
     const read=event.target.closest('[data-plan-read]');if(read){readPlanDay(read.dataset.planRead,Number(read.dataset.day),Number(read.dataset.reading));return;}
     const page=event.target.closest('[data-plan-page]');if(page){planPages.set(page.dataset.planPage,(planPages.get(page.dataset.planPage)||0)+Number(page.dataset.direction));renderPlans();return;}
-    const resume=event.target.closest('[data-plan-resume]');if(resume){const plan=state.plans.find(p=>p.id===resume.dataset.planResume),i=plan.entries.findIndex((_day,index)=>!plan.completed.includes(index)&&dayOf(plan,index).readings.length);if(i<0){toast('Todas las lecturas reconocidas están completadas.');return;}readPlanDay(plan.id,i);return;}
+    const resume=event.target.closest('[data-plan-resume]');if(resume){const plan=state.plans.find(p=>p.id===resume.dataset.planResume),i=plan.entries.findIndex((_day,index)=>!plan.completed.includes(index)&&dayOf(plan,index).readings.length);if(i<0){toast('Todas las lecturas reconocidas están completadas.');return;}openJourney('plan',plan.id,i);return;}
     const exportButton=event.target.closest('[data-export-plan]');if(exportButton){const plan=state.plans.find(p=>p.id===exportButton.dataset.exportPlan),custom=plan.scope==='custom'?plan:planCore.validateCustomPlan({id:plan.id,dayIds:plan.dayIds,title:{all:'Toda la Biblia',nt:'Nuevo Testamento',salmos:'Salmos'}[plan.scope],entries:plan.entries.map((_e,i)=>({...dayOf(plan,i),sourceText:dayOf(plan,i).readings.map(ref=>planCore.formatRef(ref,books)).join('; ')})),completed:plan.completed},books);downloadJson(custom,(custom.title.replace(/[<>:"/\\|?*]/g,'-')||'mi-plan')+'.json');}
   });
   $('#plan-list').addEventListener('change',event=>{if(event.target.matches('[data-plan-filter]')){planFilters.set(event.target.dataset.planFilter,event.target.value);planPages.set(event.target.dataset.planFilter,0);renderPlans();}});
-  $('#back-to-plan').addEventListener('click',()=>{if(activePlanDay){planPages.set(activePlanDay.id,Math.floor(activePlanDay.dayIndex/PLAN_PAGE));planFilters.set(activePlanDay.id,'all');}showView('plan');});
+  $('#back-to-plan').addEventListener('click',()=>{if(activePlanDay){planPages.set(activePlanDay.id,Math.floor(activePlanDay.dayIndex/PLAN_PAGE));planFilters.set(activePlanDay.id,'all');}if(activeJourney?.kind==='plan'){showView('journey');renderJourney();}else showView('plan');});
   $('#complete-plan-day').addEventListener('click',()=>{if(!activePlanDay)return;const plan=state.plans.find(p=>p.id===activePlanDay.id);if(!plan)return;if(!plan.completed.includes(activePlanDay.dayIndex))plan.completed.push(activePlanDay.dayIndex);save();$('#complete-plan-day').textContent='Día completado ✓';toast('Día marcado como completado.');});
 }
 async function search() {
@@ -292,19 +295,17 @@ function bind() {
   $('#search-results').addEventListener('click',event=>{const button=event.target.closest('[data-search-book]');if(button){const module=catalogData?.modules.find(m=>m.id===button.dataset.module);if(button.dataset.module&&(!module||module.sha256!==button.dataset.revision)){toast('Fuente no disponible: esta cita corresponde a otra revisión.');return;}if(module?.rol==='version'){selectedVersion=module.id;state.selectedVersion=selectedVersion;$('#version-select').value=selectedVersion;}else if(button.dataset.module==='rv1960-strong'&&catalogData.modules.some(m=>m.id==='rv1960')){selectedVersion='rv1960';state.selectedVersion=selectedVersion;$('#version-select').value=selectedVersion;}$('#search-dialog').close();go(Number(button.dataset.searchBook),Number(button.dataset.searchChapter),Number(button.dataset.searchVerse));}});
   $('#dev-form').addEventListener('submit',event=>{
     event.preventDefault();const data=new FormData(event.target);
-    try { const dev=core.createDevotional({topic:data.get('topic'),minutes:Number(data.get('minutes')),days:Number(data.get('days')),purpose:data.get('purpose')},books);state.devotionals.unshift(dev);save();renderDevList();activeDev=dev.id;activeDay=0;renderDev();$('#dev-detail').scrollIntoView({block:'start'});toast('Tu guía de devoción está preparada.'); }
+    try { const dev=core.createDevotional({topic:data.get('topic'),minutes:Number(data.get('minutes')),days:Number(data.get('days')),purpose:data.get('purpose')},books);state.devotionals.unshift(dev);save();renderDevList();activeDev=dev.id;activeDay=0;renderDev();toast('Tu guía de devoción está preparada.'); }
     catch(error){toast(error.message);}
   });
-  $('#dev-list').addEventListener('click',event=>{const button=event.target.closest('[data-dev]');if(button){activeDev=button.dataset.dev;activeDay=0;renderDev();$('#dev-detail').scrollIntoView({block:'start'});}});
-  $('#dev-detail').addEventListener('change',event=>{if(event.target.matches('.dev-day')){activeDay=Number(event.target.value);renderDev();}});
-  $('#dev-detail').addEventListener('input',event=>{if(event.target.id==='dev-response'){state.devResponses[activeDev+':'+activeDay]=event.target.value;$('#dev-save-status').textContent=save()?'Guardado en este equipo.':'No se pudo guardar. Exporta una copia.';}});
+  $('#dev-list').addEventListener('click',event=>{const button=event.target.closest('[data-dev]');if(button){activeDev=button.dataset.dev;activeDay=0;renderDev();}});
   document.addEventListener('click',event=>{const button=event.target.closest('[data-read-book]');if(button){go(Number(button.dataset.readBook),Number(button.dataset.readChapter));window.scrollTo({top:0});}});
   $('#import-dev').addEventListener('click',()=>$('#dev-file').click());
   $('#dev-file').addEventListener('change',async event=>{
     const file=event.target.files[0];if(!file)return;
-    try { if(file.size>2000000)throw new Error('El archivo supera los 2 MB.');const dev=core.importDevotional(file.name,await file.text(),books);state.devotionals.unshift(dev);save();renderDevList();activeDev=dev.id;activeDay=0;renderDev();toast('Devocional cargado.'); }
+    try { $('#import-dev').disabled=true;await importDevFile(file);toast('Revisa tu devocional antes de guardarlo.'); }
     catch(error){toast(error instanceof SyntaxError?'El JSON no tiene un formato válido.':error.message);}
-    finally{event.target.value='';}
+    finally{event.target.value='';$('#import-dev').disabled=false;}
   });
   $('#plan-form').addEventListener('submit',event=>{
     event.preventDefault();const data=new FormData(event.target);
@@ -326,7 +327,7 @@ function bind() {
   $('#restore').addEventListener('click',()=>$('#restore-file').click());
   $('#restore-file').addEventListener('change',async event=>{
     const file=event.target.files[0];if(!file)return;
-    try {if(file.size>10000000)throw new Error('La copia supera los 10 MB.');const incoming=validateState(JSON.parse(await file.text()));if(!window.confirm('Recuperar esta copia reemplazará tus notas, devocionales y planes actuales. ¿Continuar?'))return;state=incoming;activeDev=null;if(desktop?.catalog)await loadCatalog();save();settings();renderReader();renderDevList();renderDev();renderPlans();toast('Tu biblioteca ha sido recuperada.');}catch(error){toast(error instanceof SyntaxError?'La copia no es un archivo JSON válido.':error.message);}finally{event.target.value='';}
+    try {if(file.size>10000000)throw new Error('La copia supera los 10 MB.');const incoming=validateState(JSON.parse(await file.text()));if(!window.confirm('Recuperar esta copia reemplazará tus notas, devocionales y planes actuales. ¿Continuar?'))return;state=incoming;activeDev=null;activeJourney=null;$('#journey-return').hidden=true;showView('read');if(desktop?.catalog)await loadCatalog();save();settings();renderReader();renderDevList();renderDev();renderPlans();toast('Tu biblioteca ha sido recuperada.');}catch(error){toast(error instanceof SyntaxError?'La copia no es un archivo JSON válido.':error.message);}finally{event.target.value='';}
   });
 }
 async function start() {
@@ -336,9 +337,9 @@ async function start() {
   $('#books-grid').innerHTML=books.map((book,i)=>`<button data-book="${i}">${esc(book.name)}</button>`).join('');
   $('#note').maxLength=100000;
   settings();renderReader();renderDevList();renderPlans();bind();bindPlanImport();
-  bindLibrary();bindAppearance();
+  bindLibrary();bindAppearance();bindJourneys();
 }
-async function loadCatalog(){catalogData=await desktop.catalog();const versions=catalogData.modules.filter(m=>m.tipo==='biblia'&&m.rol==='version');selectedVersion=versions.some(m=>m.id===state.selectedVersion)?state.selectedVersion:versions.some(m=>m.id==='rv1960')?'rv1960':'rv1909';$('#version-select').innerHTML=versions.map(m=>`<option value="${esc(m.id)}">${esc(m.abreviatura||m.titulo)}</option>`).join('');$('#version-select').value=selectedVersion;const comments=catalogData.modules.filter(m=>m.rol==='comentario');$('#comment-select').innerHTML='<option value="">Elegir comentario</option>'+comments.map(m=>`<option value="${esc(m.id)}">${esc(m.titulo)}</option>`).join('');const options=[['strong-es','Strong español'],['vine','Vine · AT y NT'],['drae','RAE · Diccionario español']].filter(([id])=>id==='vine'?catalogData.modules.some(m=>m.id==='vine-at'||m.id==='vine-nt'):id==='drae'?catalogData.modules.some(m=>/^drae-[123]$/.test(m.id)):catalogData.modules.some(m=>m.id===id));$('#dictionary-select').innerHTML=options.map(([id,title])=>`<option value="${id}">${title}</option>`).join('');$('#show-strong').disabled=selectedVersion!=='rv1960'||!catalogData.modules.some(m=>m.id==='rv1960-strong');if($('#show-strong').disabled)$('#show-strong').checked=false;$('#comment-select').disabled=!comments.length;if(comments.length)$('#comment-select').value=comments.some(m=>m.id==='mundo-hispano')?'mundo-hispano':comments[0].id;for(const id of ['dictionary-select','dictionary-query','dictionary-submit'])$('#'+id).disabled=!options.length;renderSources();}
+async function loadCatalog(){catalogData=await desktop.catalog();const versions=catalogData.modules.filter(m=>m.tipo==='biblia'&&m.rol==='version');selectedVersion=versions.some(m=>m.id===state.selectedVersion)?state.selectedVersion:versions.some(m=>m.id==='rv1960')?'rv1960':'rv1909';$('#version-select').innerHTML=versions.map(m=>`<option value="${esc(m.id)}">${esc(m.abreviatura||m.titulo)}</option>`).join('');$('#version-select').value=selectedVersion;const comments=catalogData.modules.filter(m=>m.rol==='comentario');$('#comment-select').innerHTML='<option value="">Elegir comentario</option>'+comments.map(m=>`<option value="${esc(m.id)}">${esc(m.titulo)}</option>`).join('');const options=[['strong-es','Strong español'],['vine','Vine · AT y NT'],['drae','RAE · Diccionario español']].filter(([id])=>id==='vine'?catalogData.modules.some(m=>m.id==='vine-at'||m.id==='vine-nt'):id==='drae'?catalogData.modules.some(m=>/^drae-[123]$/.test(m.id)):catalogData.modules.some(m=>m.id===id));$('#dictionary-select').innerHTML=options.map(([id,title])=>`<option value="${id}">${title}</option>`).join('');$('#show-strong').disabled=selectedVersion!=='rv1960'||!catalogData.modules.some(m=>m.id==='rv1960-strong');if($('#show-strong').disabled)$('#show-strong').checked=false;$('#comment-select').disabled=!comments.length;if(comments.length)$('#comment-select').value=(['diario-vivir','mundo-hispano'].find(id=>comments.some(m=>m.id===id))||comments[0].id);for(const id of ['dictionary-select','dictionary-query','dictionary-submit'])$('#'+id).disabled=!options.length;renderSources();}
 function renderSources(){if(!catalogData)return;$('#sources-list').innerHTML=catalogData.modules.map(m=>`<section class="source-card"><h4>${esc(m.titulo)}</h4><p>${esc(m.origen)} · ${esc(m.rol)}</p><p>${esc(m.licencia)}</p><p class="fine-print">${esc(m.versificacion)} · Revisión ${esc(m.sha256.slice(0,16))}</p>${m.sourceNotice?`<details><summary>Aviso incluido en la fuente</summary><p class="source-notice">${esc(m.sourceNotice)}</p></details>`:''}</section>`).join('');$('#sources-warning').textContent=catalogData.warnings.join('\n');}
 async function renderComment(){
   const generation=++studyGeneration,content=$('#comment-content');
