@@ -8,6 +8,16 @@ window.testStorePhase1=async()=>{
   const names=[];const test=async(name,fn)=>{await fn();names.push(name);};
   const adapter=LibraryWebBridge.create({bible:{books:fixtureBooks},dbName:'test-persistence'}),store=adapter.store,bridge=adapter.bridge;
   let saved,ids;
+  await test('SHA incremental en Chromium coincide con WebCrypto y carga las fábricas sin Node',async()=>{
+    const bytes=Uint8Array.from({length:600007},(_,i)=>i%251),stream=LibrarySha256Stream.create();
+    for(let i=0;i<bytes.length;i+=65537)stream.update(bytes.subarray(i,i+65537));
+    const expected=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),n=>n.toString(16).padStart(2,'0')).join('');equal(stream.hex(),expected,'Huella portable');
+    ok(typeof LibraryTransfer.inspect==='function'&&typeof LibraryAndroidTransfer.create==='function','Fábricas UMD sin Node');
+  });
+  await test('La vista web no anuncia traspaso nativo ni convierte SQLite a IndexedDB',async()=>{
+    const caps=await bridge.getCapabilities();equal(caps.operations.transferScan.available,false,'Scan nativo ausente');equal(caps.operations.transferInstall.available,false,'Instalar ausente');
+    await rejects(()=>bridge.transferInstall({token:'transfer-'+'a'.repeat(32),confirmado:true}),'UNAVAILABLE');
+  });
   await test('IndexedDB real: migración conserva 1189 días y 329 completados',async()=>{const raw=JSON.stringify(fixtureState()),result=await bridge.bootstrap({legacy:raw,initial:fixtureState()});saved=result.state;ids=saved.plans[0].dayIds;equal(saved.plans[0].completed.length,329,'Progreso');equal(new Set(ids).size,1189,'IDs únicos');equal(saved.notes,fixtureState().notes,'Notas');equal(await store.backup(result.backup),raw,'Respaldo exacto');});
   await test('Guardado conserva nota por día, lectura pendiente y configuración',async()=>{saved.planNotes['plan-123:'+ids[0]]='Nota de día';saved.devotionals[0].lastDay=0;saved.devotionals[0].completed=[0];saved.devotionals[0].status='finished';saved.devotionals[0].finishedAt='2026-10-10T12:00:00.000Z';saved=await bridge.savePersonal(saved);equal(saved.plans[0].dayIds,ids,'IDs estables');});
   await test('Fallo después de poner datos revierte toda la transacción',async()=>{const before=await store.load(),next=structuredClone(before);next.notes['18:23:1']='No debe aparecer';await rejects(()=>store.write(next,{fail:true}),'STORAGE');equal(await store.load(),before,'Rollback');});
