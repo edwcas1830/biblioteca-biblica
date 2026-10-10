@@ -15,6 +15,10 @@ console.log('prueba en emulador · apk:', apk, '· traspaso:', traspaso, '· res
 const adb = (...a) => execFileSync('adb', a, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
 const espera = ms => new Promise(r => setTimeout(r, ms));
 const informe = [];
+// Mantiene vivo el proceso mientras dura la prueba y deja constancia si Node termina sin pasar por el final.
+const vigilia = setInterval(() => {}, 30000);
+let terminada = false;
+process.on('exit', codigo => { if (!terminada) { try { fs.writeFileSync(path.join(salida, 'informe.txt'), informe.concat('ERROR: la prueba terminó sin llegar al final (código ' + codigo + ')').join('\n') + '\n'); } catch { /* sin disco */ } } });
 const anotar = (ok, paso, detalle = '') => { const l = `${ok ? 'OK ' : 'FALLÓ'} ${paso}${detalle ? ' · ' + detalle : ''}`; informe.push(l); console.log(l); if (!ok) throw new Error(paso + ': ' + detalle); };
 const captura = nombre => { try { fs.writeFileSync(path.join(salida, nombre + '.png'), execFileSync('adb', ['exec-out', 'screencap', '-p'], { maxBuffer: 64 * 1024 * 1024 })); } catch { /* sin captura */ } };
 
@@ -57,7 +61,8 @@ async function conectar() {
   }
   if (!pagina) throw new Error('No encontré la página de la app en el WebView');
   const ws = new WebSocket(pagina.webSocketDebuggerUrl);
-  await new Promise((ok, mal) => { ws.onopen = ok; ws.onerror = mal; });
+  // Sin límite, un WebSocket que nunca abre ni falla dejaba a Node sin tareas y salía «bien» sin informe.
+  await new Promise((ok, mal) => { const tope = setTimeout(() => mal(new Error('El WebView no abrió la depuración a tiempo')), 15000); ws.onopen = () => { clearTimeout(tope); ok(); }; ws.onerror = e => { clearTimeout(tope); mal(e); }; ws.onclose = () => { clearTimeout(tope); mal(new Error('El WebView cerró la depuración')); }; });
   let id = 0; const pendientes = new Map(); const consola = [];
   ws.onmessage = ev => {
     const m = JSON.parse(ev.data);
@@ -214,6 +219,7 @@ async function esperarLista(app, etiqueta) {
 }).finally(() => {
   fs.writeFileSync(path.join(salida, 'informe.txt'), informe.join('\n') + '\n');
   try { fs.writeFileSync(path.join(salida, 'logcat.txt'), adb('logcat', '-d', '-v', 'brief', 'Capacitor:V', 'Capacitor/Console:V', 'chromium:V', 'AndroidRuntime:E', 'TraspasoPaquete:V', 'DEBUG:V', 'libc:V', 'ActivityManager:I', '*:E')); } catch { /* sin logcat */ }
+  terminada = true; clearInterval(vigilia);
   // Salir siempre: un WebSocket o temporizador abierto no debe dejar colgado al emulador.
   process.exit(process.exitCode || 0);
 });
