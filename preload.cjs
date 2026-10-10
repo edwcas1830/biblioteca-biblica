@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('libraryDesktop',{
   savePersonal:data=>ipcRenderer.invoke('library:data-save',data),
   graphicsChapter:data=>ipcRenderer.invoke('library:data-graphicsChapter',data),graphicsChronology:data=>ipcRenderer.invoke('library:data-graphicsChronology',data),graphicsPeople:data=>ipcRenderer.invoke('library:data-graphicsPeople',data),graphicsGenealogy:data=>ipcRenderer.invoke('library:data-graphicsGenealogy',data),
   circleStatus:()=>ipcRenderer.invoke('library:circle-status'),circleSync:()=>ipcRenderer.invoke('library:circle-sync'),circleConnect:data=>ipcRenderer.invoke('library:circle-connect',data),circlePreview:data=>ipcRenderer.invoke('library:circle-preview',data),circleShare:data=>ipcRenderer.invoke('library:circle-share',data),circleRecovery:()=>ipcRenderer.invoke('library:circle-recovery'),circleResolve:data=>ipcRenderer.invoke('library:circle-resolve',data),circleReading:data=>ipcRenderer.invoke('library:circle-reading',data),circleLeave:()=>ipcRenderer.invoke('library:circle-leave'),circleCopyCode:()=>ipcRenderer.invoke('library:circle-copy-code'),
+  moduleScan:data=>ipcRenderer.invoke('library:module-scan',data),moduleInstall:tokens=>ipcRenderer.invoke('library:module-install',tokens),
   connections:data=>ipcRenderer.invoke('library:data-connections',data),compare:data=>ipcRenderer.invoke('library:data-compare',data),studySources:()=>ipcRenderer.invoke('library:data-studySources'),
   catalog:()=>ipcRenderer.invoke('library:data-catalog'),
   metadata:()=>ipcRenderer.invoke('library:data-metadata'),

@@ -1,0 +1,71 @@
+About spaonbv_vpl
+
+This archive contains BIBLE TEXT ONLY. All formatting, paragraph breaks, notes, introductions, noncanonical section titles, etc., have been removed. The file ending "_vpl.txt" is designed for import into BibleWorks and similar Bible study programs. The file ending "_vpl.xml" contains the same information, but is in XML format and uses standard SIL/UBS book abbreviations.
+The file ending "_vpl.sql" contains the same information formatted to create a SQL data table.
+
+Check for updates and other Bible translations in this format at http:\\eBible.org\Scriptures\
+
+
+Biblica® Open Nueva Biblia Viva 2008
+
+The Holy Bible in Spanish: Biblica® Open Nueva Biblia Viva 2008 (Bible)
+
+copyright © 2008 Biblica, Inc.
+
+Language: Español
+
+Contributor: Biblica, Inc.
+
+
+
+
+        
+Biblica® Open Nueva Biblia Viva™
+        
+Copyright © 2006, 2008 by Biblica, Inc.
+        
+“Biblica” es una marca registrada en la oficina de Patentes y Marcas de los Estados Unidos por Biblica, Inc. Usado con permiso.
+        
+“Biblica” is a trademark registered in the United States Patent and Trademark Office by Biblica, Inc. Used with permission. 
+        
+Creative Commons license 
+        
+This work is made available under the Creative Commons Attribution-ShareAlike 4.0 International License (CC BY-SA). To view a copy of this license, visit https://creativecommons.org/licenses/by-sa/4.0 or send a letter to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA. 
+        
+You have permission to copy and distribute this Work, as long as you do not change it and you keep the title as it is. Changing or translating this Work will create a derivative work. When you publish this derivative work, you must list what changes you have made where people can see them, such as on a website. You must also show where the original Work is from: “The original Work by its copyright holders is available for free at www.biblica.com and open.bible.” 
+        
+Notice of copyright must appear on the title or copyright page of the work as follows: 
+        
+Biblica® Open Nueva Biblia Viva™
+        
+Copyright © 2006, 2008 by Biblica, Inc.
+        
+“Biblica” es una marca registrada en la oficina de Patentes y Marcas de los Estados Unidos por Biblica, Inc. Usado con permiso.
+        
+“Biblica” is a trademark registered in the United States Patent and Trademark Office by Biblica, Inc. Used with permission. 
+        
+You must also make your derivative work available under the same license (CC BY-SA). 
+        
+If you would like to notify Biblica, Inc. regarding your translation of this work, please contact us at https://open.bible/#feedback. 
+      
+
+This translation is made available to you under the terms of the
+Creative Commons Attribution Share-Alike license 4.0.
+
+You have permission to share and redistribute this Bible translation in any format and to make reasonable revisions and adaptations of this translation, provided that:
+
+
+You include the above copyright and source information.
+
+If you make any changes to the text, you must indicate that you did so in a way that makes it clear that the original licensor is not necessarily endorsing your changes.
+
+If you redistribute this text, you must distribute your contributions under the same license as the original.
+
+
+Pictures included with Scriptures and other documents on this site are licensed just for use with those Scriptures and documents.
+For other uses, please contact the respective copyright owners.
+
+Note that in addition to the rules above, revising and adapting God's Word involves a great responsibility to be true to God's Word. See Revelation 22:18-19.
+
+
+2025-05-21

@@ -1,8 +1,18 @@
 # Biblioteca Bíblica
 
-Un espacio personal para leer la Palabra, estudiarla y cultivar un tiempo de intimidad con Dios. Versión 0.2 para Windows, creada a partir de la idea de Edward.
+Un espacio personal para leer la Palabra, estudiarla y cultivar un tiempo de intimidad con Dios. Versión 0.6 en prueba para Windows, creada a partir de la idea de Edward.
 
-## Nuevo en 0.2
+## Nuevo en 0.6 (rama de prueba)
+
+Referencias cruzadas, comparación de versiones, palabra original cuando hay asociación Strong real, títulos de devocionales normalizados con opción de conservar el original, atlas/contexto offline, piloto de círculo cifrado con Laura y asistente de importación e-Sword.
+
+Paquete libre incluido: RV1909, Biblica® Open Nueva Biblia Viva 2008, léxicos STEPBible, OpenBible, Natural Earth, BibleData y Theographic como módulo separado. Atribuciones, huellas y límites en [FUENTES.md](FUENTES.md). Los rangos unidos de ONBV se conservan. El léxico hebreo no incluye las definiciones que requieren permiso adicional.
+
+El círculo comparte solo selecciones revisadas; no sincroniza el cuaderno privado ni una base activa. Necesita OneDrive ya compartido entre dos Windows. Las pruebas de transporte usan dos perfiles y carpeta local; la prueba entre PCs reales continúa pendiente. No se publicó la 0.6 ni se cambió el perfil real de Edward.
+
+Firma y teléfono siguen para v1.0: [preparación](FUTURO-V1.md).
+
+## Importación de planes desde 0.2
 
 **Plan de lectura → Subir mi plan** admite Word DOCX, TXT, MD, CSV y JSON. La app reconoce días, fechas, libros, capítulos y rangos de versículos; conserva las indicaciones originales y presenta una revisión editable antes de guardar. En tablas de calendario con días en columnas, cada casilla de lectura se convierte en un día del plan, conservando la etiqueta de fecha de su fila y el nombre de su columna. No se recalcula el calendario a partir de esas etiquetas.
 
