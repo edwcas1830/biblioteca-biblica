@@ -217,3 +217,29 @@
 
 /* En el teléfono la hoja es el estudio: el interruptor «Solo lectura» de escritorio sobra. */
 :root[data-telefono="true"] #study-open { display: none !important; }
+
+/* ---------- Barra del versículo ---------- */
+#movil-versiculo { display: none; }
+:root[data-telefono="true"][data-vista-movil="read-view"] #movil-versiculo:not([hidden]) {
+  display: flex; align-items: center; gap: 2px; overflow-x: auto; scrollbar-width: none;
+  position: fixed; left: 6px; right: 6px; z-index: 45;
+  bottom: calc(var(--pie) + var(--hoja-alto) + 8px);
+  padding: 4px 2px; border-radius: 14px;
+  background: var(--fondo-hoja); border: 1px solid var(--borde-hoja);
+  box-shadow: 0 6px 20px color-mix(in srgb, black 18%, transparent);
+}
+#movil-versiculo .movil-tintas { display: flex; gap: 4px; padding-right: 6px; border-right: 1px solid var(--borde-hoja); }
+#movil-versiculo .movil-tintas button { width: 32px; min-width: 32px; height: 32px; min-height: 32px; border-radius: 50%; padding: 0; }
+#movil-versiculo { justify-content: space-between; }
+#movil-versiculo > button { flex: 0 0 auto; min-width: 40px; padding: 0 6px; font-size: .9rem; }
+#movil-versiculo .movil-tintas { gap: 2px; padding-right: 4px; }
+
+/* «Mis notas» como hoja: se abre desde la barra del versículo. */
+:root[data-telefono="true"] .pane-notes:not([open]) { display: none; }
+:root[data-telefono="true"] .pane-notes[open] {
+  position: fixed; left: 0; right: 0; bottom: var(--pie); z-index: 46; margin: 0;
+  max-height: 70dvh; overflow-y: auto; border-radius: 16px 16px 0 0;
+  background: var(--fondo-hoja); padding: 4px 16px 16px;
+  box-shadow: 0 -8px 24px color-mix(in srgb, black 20%, transparent);
+}
+:root[data-telefono="true"] .pane-notes[open] textarea { width: 100%; box-sizing: border-box; }

@@ -168,10 +168,57 @@
     const versiculo = e.target.closest('#verses .verse');
     if (!versiculo) return;
     ultimaY = e.clientY;
-    if (palabra) return; // la palabra abre el popover del original
-    if (!estado.fijada && estado.hoja === 'plegada' && estado.abrirAlTocar) ponerAltura('media');
+    if (palabra && $('#original-dialog')) return; // la palabra abre el popover del original
+    setTimeout(mostrarBarra, 0);
   }
   let ultimaY = 0;
+
+  // ---------- Barra del versículo ----------
+  // Reutiliza los subrayados, las notas y «Preguntar» de la app: solo cambia dónde se muestran.
+  let barra;
+  function construirBarraVersiculo() {
+    barra = crear('div', { id: 'movil-versiculo', role: 'toolbar', 'aria-label': 'Acciones del versículo', hidden: '' });
+    const tintas = crear('div', { class: 'movil-tintas' });
+    for (const b of $$('.ink-colors [data-ink]')) {
+      const copia = crear('button', { type: 'button', class: b.className, 'aria-label': b.getAttribute('aria-label') || b.textContent.trim(), onclick: () => { b.click(); ocultarBarra(); } });
+      if (b.dataset.ink === 'none') copia.textContent = '✕';
+      tintas.append(copia);
+    }
+    const accion = (texto, fn, etiqueta) => crear('button', { type: 'button', class: 'quiet', texto, 'aria-label': etiqueta || texto, onclick: fn });
+    barra.append(
+      tintas,
+      accion('Nota', () => { const n = $('.pane-notes'); if (n) { n.open = true; html.dataset.notas = 'abiertas'; $('#note')?.focus(); } ocultarBarra(); }),
+      accion('Preguntar', () => { $('#ai-verse-ask')?.click(); ocultarBarra(); }, 'Preguntar a la IA sobre este versículo'),
+      accion('↗', compartirVersiculo, 'Compartir versículo'),
+      accion('⧉', copiarVersiculo, 'Copiar versículo')
+    );
+    document.body.append(barra);
+    const notas = $('.pane-notes');
+    if (notas) {
+      notas.addEventListener('toggle', () => { html.dataset.notas = notas.open ? 'abiertas' : 'cerradas'; });
+      notas.querySelector('summary')?.addEventListener('click', () => setTimeout(() => { html.dataset.notas = notas.open ? 'abiertas' : 'cerradas'; }, 0));
+    }
+  }
+  function textoVersiculo() {
+    const v = $('#verses .verse.selected');
+    if (!v) return null;
+    const ref = ($('#note-reference')?.textContent || '').trim();
+    const texto = [...v.childNodes].filter(n => !(n.nodeType === 1 && n.tagName === 'SUP')).map(n => n.textContent).join('').replace(/\s+/g, ' ').trim();
+    return { ref, texto, completo: `«${texto}» ${ref}` };
+  }
+  async function compartirVersiculo() {
+    const t = textoVersiculo(); ocultarBarra();
+    if (!t) return;
+    try { await (window.BibliaPlataforma?.compartir || (async x => navigator.clipboard.writeText(x.texto)))({ titulo: t.ref, texto: t.completo }); }
+    catch { mostrarAviso('No se pudo compartir.'); }
+  }
+  async function copiarVersiculo() {
+    const t = textoVersiculo(); ocultarBarra();
+    if (!t) return;
+    try { await navigator.clipboard.writeText(t.completo); mostrarAviso('Versículo copiado.'); } catch { mostrarAviso('No se pudo copiar.'); }
+  }
+  function mostrarBarra() { if (barra) { barra.hidden = false; html.dataset.barraVersiculo = 'visible'; } }
+  function ocultarBarra() { if (barra) { barra.hidden = true; html.dataset.barraVersiculo = 'oculta'; } }
 
   // ---------- Popover del original ----------
   function vigilarOriginal() {
@@ -196,6 +243,9 @@
   function atras() {
     const dialogoAbierto = $$('dialog[open]').pop();
     if (dialogoAbierto) { dialogoAbierto.close(); return true; }
+    if (barra && !barra.hidden) { ocultarBarra(); return true; }
+    const notas = $('.pane-notes');
+    if (notas && notas.open) { notas.open = false; html.dataset.notas = 'cerradas'; return true; }
     const ia = $('#ai-pane');
     if (ia && !ia.hidden && getComputedStyle(ia).display !== 'none') { $('#ai-pane .pane-close, #ai-pane [data-close-ai], #ai-close')?.click(); return true; }
     if (estado.hoja !== 'plegada' && vistaActiva() === 'read-view') { ponerAltura(estado.hoja === 'completa' ? 'media' : 'plegada'); return true; }
@@ -221,7 +271,9 @@
     construirNavegacion();
     construirMas();
     construirHoja();
+    construirBarraVersiculo();
     vigilarOriginal();
+    $('#verses')?.addEventListener('scroll', ocultarBarra, { passive: true });
     asegurarPanelesVisibles();
     ponerAltura('plegada');
     elegirPestana('comentario', false);
