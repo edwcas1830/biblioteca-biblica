@@ -243,3 +243,18 @@
   box-shadow: 0 -8px 24px color-mix(in srgb, black 20%, transparent);
 }
 :root[data-telefono="true"] .pane-notes[open] textarea { width: 100%; box-sizing: border-box; }
+
+/* ---------- Música (YouTube) en el teléfono ----------
+   Regla de YouTube: mientras suena, el reproductor se ve con al menos 200×200 px.
+   Se ancla sobre la hoja de estudio; el arrastre de escritorio no aplica. */
+:root[data-telefono="true"] #music-panel:not([hidden]) {
+  left: 8px !important; right: 8px !important; top: auto !important;
+  bottom: calc(var(--pie) + var(--hoja-cab) + 8px) !important;
+  width: auto !important; max-width: none; z-index: 55;
+}
+:root[data-telefono="true"] #music-panel #music-frame { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; min-height: 200px; }
+:root[data-telefono="true"] #music-panel[data-mini="true"] { left: auto !important; width: 202px !important; }
+:root[data-telefono="true"] #music-panel[data-mini="true"] #music-frame { width: 200px; height: 200px; aspect-ratio: auto; }
+:root[data-telefono="true"] #music-panel #music-drag span { visibility: hidden; width: 0; overflow: hidden; }
+:root[data-telefono="true"] #music-panel #music-drag { justify-content: flex-end; }
+:root[data-telefono="true"] #music-panel button { min-height: 40px; }
