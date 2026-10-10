@@ -389,7 +389,7 @@
     const llego = typeof storageReady !== 'undefined' && storageReady && dias === c.diasPlan && hechos === c.diasCompletados && devocionales === c.devocionales;
     if (!dialogoTraspaso) { dialogoTraspaso = crear('dialog', { id: 'movil-traspaso', 'aria-label': 'Traer desde la PC' }, [crear('div', { class: 'movil-traspaso-cuerpo' })]); document.body.append(dialogoTraspaso); }
     html.dataset.traspasoConfirmado = llego ? 'si' : 'no';
-    const avisosCatalogo = (typeof catalogData !== 'undefined' && catalogData && Array.isArray(catalogData.warnings)) ? catalogData.warnings : [];
+    const avisosCatalogo = (typeof catalogData !== 'undefined' && catalogData && Array.isArray(catalogData.warnings)) ? catalogData.warnings.filter(w => /no coincide|no se pudo|no admitid|cifrado|no válid|no compatible|cambió/i.test(w)) : []; // solo problemas reales, no avisos informativos
     const fallosModulos = [html.dataset.serviciosFallos || '', ...avisosCatalogo].filter(Boolean).join(' · ');
     if (llego) {
       pasoTraspaso('Tu biblioteca llegó', [`Plan: ${hechos} de ${dias} días leídos.`, `Devocionales: ${devocionales}.`, `Módulos en tu biblioteca: ${modulos}.`, ...(fallosModulos ? ['Aviso de los módulos: ' + fallosModulos] : [])], [['Empezar a leer', () => dialogoTraspaso.close(), true]]);
