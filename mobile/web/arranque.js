@@ -96,26 +96,50 @@
   // Ciclo de vida → evento del contrato (la música se pausa al salir de la app).
   window.addEventListener('biblioteca:pausar-musica', () => { try { adaptador.emit('onMusicPause'); } catch { /* sin suscriptores */ } });
 
-  window.libraryDesktop = adaptador.bridge;
   document.documentElement.dataset.puente = nativo ? 'android' : 'web';
 
-  // Traspaso desde la PC (servicio de Codex). Primero recuperar un traspaso interrumpido,
-  // después registrar sus operaciones. Sin repositorio nativo solo ofrece la revisión (transferScan).
-  if (nativo && window.LibraryAndroidTransfer && cap.registerPlugin) {
-    const listo = (async () => {
-      const servicio = window.LibraryAndroidTransfer.create({
-        filesystem: cap.registerPlugin('Filesystem'),
-        sqlite: cap.registerPlugin('CapacitorSQLite'),
-        books: window.BIBLE && window.BIBLE.books,
-        repository: window.LibraryAndroidRepository || undefined
-      });
-      await servicio.recover();
-      const manejadores = servicio.handlers();
-      if (window.LibraryAndroidServices) window.LibraryAndroidServices.register(manejadores);
-      adaptador.register(manejadores);
-      return Object.keys(manejadores);
-    })();
-    listo.then(ops => window.dispatchEvent(new CustomEvent('biblioteca:capacidades', { detail: { nuevas: ops } })))
-      .catch(e => { html.dataset.traspaso = 'error'; html.dataset.traspasoMotivo = (e && e.message) || 'No se pudo preparar el traspaso.'; });
+  if (!nativo) { window.libraryDesktop = adaptador.bridge; return; }
+
+  // ---------- Android: servicios nativos de Codex, en este orden ----------
+  // 1. recuperar un traspaso interrumpido (antes de abrir nada); 2. repositorio personal, si existe;
+  // 3. lector de módulos y estudio. Mientras tanto, las operaciones del puente ESPERAN a que termine
+  // la preparación (no responden «no disponible» por llegar antes de tiempo). Los eventos se suscriben ya.
+  const registrar = manejadores => {
+    if (window.LibraryAndroidServices) window.LibraryAndroidServices.register(manejadores);
+    adaptador.register(manejadores);
+  };
+  const plugins = cap.registerPlugin ? { filesystem: cap.registerPlugin('Filesystem'), sqlite: cap.registerPlugin('CapacitorSQLite') } : null;
+  const fallos = [];
+  const preparado = (async () => {
+    if (!plugins) return;
+    if (window.LibraryAndroidTransfer) {
+      try {
+        const traspaso = window.LibraryAndroidTransfer.create({ ...plugins, books: window.BIBLE && window.BIBLE.books, repository: window.LibraryAndroidRepository || undefined });
+        await traspaso.recover();
+        registrar(traspaso.handlers());
+      } catch (e) { fallos.push(['traspaso', e]); }
+    }
+    if (window.LibraryAndroidReader) {
+      try {
+        const lector = await window.LibraryAndroidReader.create({ ...plugins, bible: window.BIBLE, manifest: manifiesto });
+        registrar(lector.handlers());
+        window.BibliaLector = lector; // para cerrarlo y recrearlo tras un traspaso
+      } catch (e) { fallos.push(['lector', e]); }
+    }
+  })();
+  preparado.finally(() => {
+    html.dataset.serviciosNativos = fallos.length ? 'con-fallos' : 'listos';
+    if (fallos.length) html.dataset.serviciosFallos = fallos.map(([n, e]) => n + ': ' + ((e && e.message) || e)).join(' · ');
+    window.dispatchEvent(new CustomEvent('biblioteca:capacidades'));
+  });
+
+  const real = adaptador.bridge;
+  const EVENTOS_CONTRATO = new Set(['onFullscreen', 'onAiProgress', 'onAiState', 'onMusicPause', 'onUpdateState']);
+  const puente = {};
+  for (const nombre of Object.keys(real)) {
+    const op = real[nombre];
+    if (typeof op !== 'function') { puente[nombre] = op; continue; }
+    puente[nombre] = EVENTOS_CONTRATO.has(nombre) ? op : async (...args) => { await preparado.catch(() => {}); return real[nombre](...args); };
   }
+  window.libraryDesktop = Object.freeze(puente);
 })();

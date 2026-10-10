@@ -1,7 +1,7 @@
 {
-  "fecha": "2026-10-10T08:24:35.904Z",
-  "archivos": 112,
-  "megabytes": 17,
+  "fecha": "2026-10-10T08:48:27.486Z",
+  "archivos": 120,
+  "megabytes": 17.1,
   "prohibidos": [],
   "modulosLibres": [
     "onbv2008",
@@ -14,12 +14,20 @@
     "shared/personal-model.js",
     "shared/sha256-stream.js",
     "shared/transfer.js",
+    "shared/rtf.js",
+    "shared/library.js",
+    "shared/study-resources.js",
     "platform/web/personal-store.js",
+    "platform/web/resources.js",
+    "platform/web/modules.js",
     "platform/web/library.js",
     "platform/web/bridge.js",
     "platform/android/services.js",
     "platform/android/transfer.js",
+    "platform/android/modules.js",
+    "platform/android/fts.js",
+    "platform/android/library.js",
     "platform/android/bridge.js"
   ],
-  "huellaIndex": "1fef11ca1e6cbdf3"
+  "huellaIndex": "776b002b55ebc330"
 }
