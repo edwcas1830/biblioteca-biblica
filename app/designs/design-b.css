@@ -1,1 +1,152 @@
-/* Placeholder para diseño B. La base common.css permite evaluar los controles. */
+/* Diseño B · página amplia y tres columnas. Solo presentación sobre CONTRATO.md. */
+html[data-design="b"]{
+  --bg:#eeeae2;--paper:#faf7f0;--panel:#f3efe6;--ink:#292d27;--muted:#5b5f55;
+  --line:#d6d0c3;--control-border:#85877b;--accent:#526449;--accent-ink:#fff;
+  --red:#923f36;--strong:#685432;--highlight:#e9d9ab;--focus:#526449;
+  --highlight-sage:#e4ead8;--highlight-rose:#f1ded7;
+  --font-reader:Literata,Georgia,serif;--font-heading:Literata,Georgia,serif;
+  --font-ui:'Source Sans 3','Segoe UI',sans-serif;color-scheme:light;
+}
+html[data-design="b"][data-theme="sepia"]{
+  --bg:#e6d8c2;--paper:#f3e7d3;--panel:#eddfc8;--ink:#382d23;--muted:#5f4d3c;
+  --line:#cabb9f;--control-border:#897456;--accent:#604d34;--accent-ink:#fff;
+  --highlight-sage:#d4ddbe;--highlight-rose:#e9d2bf;
+  --red:#873a30;--strong:#584326;--highlight:#e1c58f;--focus:#604d34;
+}
+html[data-design="b"][data-theme="noche"]{
+  --bg:#211f1b;--paper:#2b2822;--panel:#302d27;--ink:#f1e8d8;--muted:#bcb2a1;
+  --line:#514b40;--control-border:#8b8375;--accent:#b9c89e;--accent-ink:#211f1b;
+  --highlight-sage:#354333;--highlight-rose:#493b34;
+  --red:#f0a398;--strong:#cebd99;--highlight:#4d422b;--focus:#b9c89e;color-scheme:dark;
+}
+html[data-design="b"] body{font:16px/1.5 var(--font-ui)}
+html[data-design="b"] .rail,html[data-design="b"] .night .rail{
+  flex:0 0 192px;align-items:stretch;padding:26px 16px 16px;
+  background:var(--panel);color:var(--ink);border-right:1px solid var(--line);
+}
+html[data-design="b"] .brand-mark{font-size:23px;line-height:28px;color:var(--accent);margin-bottom:12px}
+html[data-design="b"] .brand{font-size:23px;line-height:1.3;letter-spacing:-.6px}
+html[data-design="b"] .brand em{font-size:27px;font-weight:400}
+html[data-design="b"] .rail nav{margin-top:38px;margin-bottom:auto}
+html[data-design="b"] .nav{gap:10px;padding:12px 10px;margin:4px 0;border-radius:8px;font:16px/1.5 var(--font-ui)}
+html[data-design="b"] .nav span{width:18px;text-align:center;font-size:17px}
+html[data-design="b"] .nav.active{color:var(--accent-ink);background:var(--accent);font-weight:600}
+html[data-design="b"] .nav:not(.active):hover{background:var(--paper)}
+html[data-design="b"] .rail .rail-backup{font:13px/1.55 var(--font-ui)!important;padding:8px 6px;color:var(--ink)!important;border-radius:6px}
+html[data-design="b"] .rail .rail-backup:hover{background:var(--paper)}
+html[data-design="b"] .local-label{font:13px/1.5 var(--font-ui);margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+html[data-design="b"] main,html[data-design="b"] .focus main{padding:0 24px}
+html[data-design="b"] .topbar{min-height:64px;padding:10px 0;border-bottom:1px solid var(--line)}
+html[data-design="b"] .topbar>.topbar-actions{gap:10px}
+html[data-design="b"] .topbar>.topbar-actions>.library-menu{margin-right:auto}
+html[data-design="b"] .library-menu summary{border:0;font-size:15px;padding:8px 10px;background:transparent;color:var(--ink)}
+html[data-design="b"] .library-menu-items{left:0;right:auto;border-radius:8px;box-shadow:0 12px 32px #0002}
+html[data-design="b"] .appearance-control{font-size:13px;gap:6px}
+html[data-design="b"] .appearance-control select{max-width:181px;border-radius:8px;font-size:15px;min-height:44px;padding:8px 10px}
+html[data-design="b"] .quiet,html[data-design="b"] .outline,html[data-design="b"] .primary{border-radius:8px;font:15px/1.4 var(--font-ui);min-height:40px}
+html[data-design="b"] .quiet:hover{background:var(--paper);color:var(--ink)}
+html[data-design="b"] #focus{border-color:var(--accent);color:var(--accent)}
+html[data-design="b"] .reader-invitation{color:var(--ink);font:italic 15px/1.6 var(--font-reader)}
+html[data-design="b"] #read-view{gap:8px;padding-top:10px;padding-bottom:10px}
+html[data-design="b"] .reading-toolbar{min-height:40px}
+html[data-design="b"] .reading-actions{gap:4px}
+html[data-design="b"] #study-open{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+html[data-design="b"] #library-controls{gap:6px 16px;margin-bottom:2px;min-height:38px}
+html[data-design="b"] .checkbox-label{font-size:14px}
+html[data-design="b"] .voice-controls select{font-size:14px;border-color:var(--control-border);max-width:176px;min-height:38px;border-radius:8px}
+html[data-design="b"] .voice-controls button{font-size:14px;min-height:38px}
+html[data-design="b"] #voice-status{font-size:13px}
+html[data-design="b"] #panes{grid-template-columns:var(--pane-biblia,42fr) 16px var(--pane-comentario,30fr) 16px var(--pane-diccionario,28fr)}
+html[data-design="b"] .pane,html[data-design="b"] .open-book.pane,html[data-design="b"] .night .open-book.pane{
+  background:var(--paper);border:1px solid var(--line);border-radius:12px;
+  box-shadow:0 6px 20px #292d2708;
+}
+html[data-design="b"] .pane[data-pane="biblia"]{box-shadow:0 2px 0 var(--line),0 8px 24px #292d2710}
+html[data-design="b"] .pane-head{height:172px;padding:16px 18px 12px;gap:8px;border-bottom:1px solid var(--line);background:var(--paper)}
+html[data-design="b"] .pane-heading{min-height:26px}
+html[data-design="b"] .pane-head h2,html[data-design="b"] .pane-head h3{font:500 22px/1.25 var(--font-heading);letter-spacing:-.5px;color:var(--ink)}
+html[data-design="b"] .pane-head select{font:15px/1.4 var(--font-ui);border-radius:8px;min-height:40px;padding:8px 10px;background:var(--paper)}
+html[data-design="b"] .pane-head input{border-radius:8px;font-size:15px}
+html[data-design="b"] .pane-ref{font:600 14px/1.4 var(--font-ui);color:var(--accent)}
+html[data-design="b"] .dictionary-query-row{gap:6px}
+html[data-design="b"] .dictionary-query-row button{font-size:14px;padding:8px 10px}
+html[data-design="b"] .pane-body,html[data-design="b"] .pane-body.module-content{padding:20px 22px;font:16px/1.75 var(--font-reader)}
+html[data-design="b"] .reading-space .verses{padding:22px 24px;font:var(--verse-size)/1.65 var(--font-reader);column-count:auto;column-width:auto}
+html[data-design="b"] .verse{position:relative;padding:4px 6px 4px 27px;margin-bottom:12px;border-radius:5px;line-height:inherit}
+html[data-design="b"] .verse>sup:first-child{position:absolute;left:4px;top:8px;width:18px;margin:0;font:13px/1.5 var(--font-ui);color:var(--muted);text-align:left}
+html[data-design="b"] .verse.selected{box-shadow:inset 2px 0 var(--accent)}
+html[data-design="b"] .verse:hover{background:var(--panel)}
+html[data-design="b"] .verse.highlight-gold,html[data-design="b"] .verse.highlight-gold:hover{background:var(--highlight)}
+html[data-design="b"] .verse.highlight-sage,html[data-design="b"] .verse.highlight-sage:hover{background:var(--highlight-sage)}
+html[data-design="b"] .verse.highlight-rose,html[data-design="b"] .verse.highlight-rose:hover{background:var(--highlight-rose)}
+html[data-design="b"] .jesus-words,html[data-design="b"] .night .jesus-words{color:var(--red)}
+html[data-design="b"] .strong-number,html[data-design="b"] .night .strong-number{font:13px/1.5 var(--font-ui);color:var(--strong);margin:0 3px}
+html[data-design="b"] .module-heading{font:600 16px/1.6 var(--font-reader);margin:10px 0 14px;color:var(--ink)}
+html[data-design="b"] .comment-entry h4{font:600 14px/1.5 var(--font-ui);color:var(--accent);margin-bottom:16px}
+html[data-design="b"] .comment-entry+.comment-entry{margin-top:28px;padding-top:24px}
+html[data-design="b"] .empty-slot{font:16px/1.7 var(--font-ui);color:var(--muted)}
+html[data-design="b"] .dictionary-results{gap:6px;margin-bottom:24px}
+html[data-design="b"] .dictionary-result{font:15px/1.4 var(--font-ui);padding:6px 9px;border-radius:6px;min-height:36px}
+html[data-design="b"] .dictionary-result[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+html[data-design="b"] .dictionary-entry h4{font:500 25px/1.4 var(--font-heading);margin-bottom:8px}
+html[data-design="b"] .dictionary-entry .source-caption{font:13px/1.6 var(--font-ui);margin-bottom:22px}
+html[data-design="b"] .pane-foot{min-height:44px;padding:9px 16px;color:var(--muted);font-size:13px;background:var(--paper)}
+html[data-design="b"] .pane-foot .page-controls button{font-size:14px;min-height:30px;padding:2px 4px}
+html[data-design="b"] .pane-resizer{min-width:16px;--resize-axis:x}
+html[data-design="b"] .pane-resizer::after{left:7px;top:46%;height:8%;width:2px;background:var(--control-border)}
+html[data-design="b"] .pane-resizer:hover::after,html[data-design="b"] .pane-resizer:focus-visible::after{background:var(--focus);width:3px}
+html[data-design="b"] .pane-notes{border-radius:8px;background:var(--panel);border-color:var(--line)}
+html[data-design="b"] .pane-notes>summary{font:600 15px/1.5 var(--font-ui);padding:9px 16px;color:var(--ink)}
+html[data-design="b"] .notes-content{padding:16px 20px;background:var(--paper);border-radius:0 0 8px 8px}
+html[data-design="b"] #note{font:17px/1.7 var(--font-reader);border-radius:8px}
+html[data-design="b"] .study-guide b{font-weight:600}
+html[data-design="b"] .app-footer{padding:10px 0;font:13px/1.5 var(--font-ui);letter-spacing:0;gap:16px}
+html[data-design="b"] .app-footer span:nth-child(2){font:italic 13px/1.5 var(--font-reader)}
+html[data-design="b"] #back-to-top{right:30px;bottom:30px;border-radius:8px;font:14px/1.5 var(--font-ui);box-shadow:0 8px 24px #0002}
+html[data-design="b"] dialog{border-radius:12px;padding:28px;background:var(--paper);font-family:var(--font-ui);box-shadow:0 20px 70px #0003}
+html[data-design="b"] dialog h3,html[data-design="b"] .card h3{font:500 25px/1.4 var(--font-heading)}
+html[data-design="b"] .search-result{font:16px/1.7 var(--font-reader);padding:16px 4px}
+html[data-design="b"] .search-result b{font:600 14px/1.5 var(--font-ui)}
+html[data-design="b"] .source-card h4{font:600 17px/1.5 var(--font-ui);margin-bottom:8px}
+html[data-design="b"] .source-card p,html[data-design="b"] .source-notice{font-size:14px;line-height:1.7}
+html[data-design="b"] .toast{font:15px/1.5 var(--font-ui);background:var(--accent);color:var(--accent-ink);border-radius:8px}
+html[data-design="b"] #dev-view,html[data-design="b"] #plan-view{padding-bottom:24px}
+html[data-design="b"] .intro h1{font:400 34px/1.3 var(--font-heading)}
+html[data-design="b"] .intro>p:last-child{font:16px/1.6 var(--font-ui)}
+html[data-design="b"] .card{border-radius:10px}
+html[data-design="b"] .muted,html[data-design="b"] .fine-print,html[data-design="b"] label,html[data-design="b"] .dev-item small{font-size:14px}
+html[data-design="b"] .day-card button{font-size:14px}
+html[data-design="b"] body.reading-only .pane[data-pane="biblia"],html[data-design="b"] body.focus .pane[data-pane="biblia"]{max-width:880px}
+html[data-design="b"] body.reading-only .reading-space .verses,html[data-design="b"] body.focus .reading-space .verses{padding:28px 42px}
+html[data-design="b"] body.focus .topbar{min-height:64px}
+@media(max-width:1450px){
+  html[data-design="b"] main,html[data-design="b"] .focus main{padding:0 20px}
+  html[data-design="b"] .reader-invitation{display:none}
+  html[data-design="b"] .topbar-actions #night{display:none}
+  html[data-design="b"] .pane-head{padding-left:14px;padding-right:14px}
+  html[data-design="b"] .pane-body,html[data-design="b"] .pane-body.module-content{padding:18px}
+  html[data-design="b"] .reading-space .verses{padding:18px 20px}
+  html[data-design="b"] .app-footer span:nth-child(2){display:none}
+}
+@media(max-width:1200px){
+  html[data-design="b"] .rail{flex-basis:160px;padding:20px 12px 12px}
+  html[data-design="b"] .nav{font-size:15px;padding:10px 6px;gap:7px}
+  html[data-design="b"] .appearance-control select{max-width:170px;font-size:14px}
+  html[data-design="b"] .topbar>.topbar-actions{gap:6px}
+  html[data-design="b"] .pane-body,html[data-design="b"] .pane-body.module-content{padding:16px;font-size:16px}
+  html[data-design="b"] .pane-head{padding:14px 12px 10px;height:174px}
+  html[data-design="b"] .pane-head h2,html[data-design="b"] .pane-head h3{font-size:20px}
+  html[data-design="b"] .pane-foot{padding:8px 10px}
+  html[data-design="b"] #voice-status{display:none}
+}
+@media(max-width:1050px){
+  html[data-design="b"] .rail{display:none}
+  html[data-design="b"] .compact-nav{display:flex;gap:2px}
+  html[data-design="b"] .compact-nav button{font-size:14px;padding:7px}
+  html[data-design="b"] .topbar>.topbar-actions>.library-menu{margin-right:0}
+  html[data-design="b"] .appearance-control{gap:4px}
+  html[data-design="b"] .appearance-control select{max-width:156px}
+}
+
+/* Reserve the full height for reading; the decorative footer remains in the other views. */
+html[data-design="b"] body:has(#read-view:not([hidden])) .app-footer{display:none}
