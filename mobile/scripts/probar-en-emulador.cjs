@@ -18,6 +18,18 @@ const informe = [];
 const anotar = (ok, paso, detalle = '') => { const l = `${ok ? 'OK ' : 'FALLÓ'} ${paso}${detalle ? ' · ' + detalle : ''}`; informe.push(l); console.log(l); if (!ok) throw new Error(paso + ': ' + detalle); };
 const captura = nombre => { try { fs.writeFileSync(path.join(salida, nombre + '.png'), execFileSync('adb', ['exec-out', 'screencap', '-p'], { maxBuffer: 64 * 1024 * 1024 })); } catch { /* sin captura */ } };
 
+// adb exec-in vuelve antes de que el teléfono termine de escribir: se espera a que el archivo tenga su tamaño.
+async function subirACache(nombre, datos) {
+  execFileSync('adb', ['exec-in', `run-as ${PKG} sh -c 'cat > cache/${nombre}'`], { input: datos, maxBuffer: 64 * 1024 * 1024 });
+  for (let i = 0; i < 60; i++) {
+    let tam = -1;
+    try { tam = Number(adb('shell', 'run-as', PKG, 'stat', '-c', '%s', 'cache/' + nombre).trim()); } catch { /* aún no existe */ }
+    if (tam === datos.length) return;
+    await espera(500);
+  }
+  throw new Error(`No se pudo dejar ${nombre} en la caché de la app`);
+}
+
 async function conectar() {
   let pid = '';
   for (let i = 0; i < 60 && !pid; i++) { try { pid = adb('shell', 'pidof', PKG).trim(); } catch { /* aún no */ } if (!pid) await espera(1000); }
@@ -113,7 +125,7 @@ async function esperarLista(app, etiqueta) {
   //    lee con su ContentResolver. El paquete se deja en la caché de la app y se entrega por su FileProvider.
   if (!paquete) throw new Error('Falta el paquete .bbt sintético');
   const bytesPaquete = fs.statSync(paquete).size;
-  execFileSync('adb', ['exec-in', `run-as ${PKG} sh -c 'cat > cache/prueba.bbt'`], { input: fs.readFileSync(paquete), maxBuffer: 64 * 1024 * 1024 });
+  await subirACache('prueba.bbt', fs.readFileSync(paquete));
   const uriPaquete = `content://${PKG}.fileprovider/my_cache_images/prueba.bbt`;
   // 5a. Lo que falló en el teléfono de Edward: FilePicker.copyFile hacia la carpeta de llegada.
   const copia = await app.evaluar(`const fp=window.Capacitor.registerPlugin('FilePicker');const fsys=window.Capacitor.registerPlugin('Filesystem');try{await fsys.rmdir({directory:'DATA',path:'traspaso-entrante',recursive:true});}catch{}await fsys.mkdir({directory:'DATA',path:'traspaso-entrante',recursive:true});const {uri}=await fsys.getUri({directory:'DATA',path:'traspaso-entrante'});try{await fp.copyFile({from:${JSON.stringify(uriPaquete)},to:uri.replace('file://','')+'/copia.bin',overwrite:true});const s=await fsys.stat({directory:'DATA',path:'traspaso-entrante/copia.bin'});return 'ok '+s.size;}catch(e){return 'ERROR '+e.message;}`);
@@ -124,7 +136,7 @@ async function esperarLista(app, etiqueta) {
   anotar(JSON.stringify(seleccion.archivos.map(a => a.nombre).sort()) === JSON.stringify(esperados) && seleccion.avisos > 0, 'desempacar el paquete único (.bbt)', seleccion.archivos.length + ' archivos · avisos de progreso: ' + seleccion.avisos);
   // 5c. Un paquete cortado (descarga incompleta) se rechaza con un mensaje claro y sin dejar restos.
   const cortado = fs.readFileSync(paquete).subarray(0, Math.floor(bytesPaquete / 2));
-  execFileSync('adb', ['exec-in', `run-as ${PKG} sh -c 'cat > cache/cortado.bbt'`], { input: cortado, maxBuffer: 64 * 1024 * 1024 });
+  await subirACache('cortado.bbt', cortado);
   const enCache = adb('shell', 'run-as', PKG, 'ls', '-l', 'cache');
   console.log('  (caché de la app: ' + enCache.split(/\r?\n/).filter(l => /\.bbt/.test(l)).map(l => l.trim()).join(' | ') + ')');
   const rechazo = await app.evaluar(`try{await window.BibliaPlataforma.desempacarPaquete({desde:'content://${PKG}.fileprovider/my_cache_images/cortado.bbt'});return 'aceptado';}catch(e){return e.message;}`, 120000);
