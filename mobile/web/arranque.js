@@ -13,8 +13,12 @@
   if (nativo && window.LibraryAndroidBridge) {
     // Los servicios nativos (SQLite, archivos, cifrado) los aporta platform/android.
     // Sin ellos, cada operación rechaza con UNAVAILABLE: nunca hay respaldo web silencioso.
-    const servicios = window.LibraryAndroidServices && window.LibraryAndroidServices.handlers ? window.LibraryAndroidServices.handlers() : {};
-    adaptador = window.LibraryAndroidBridge.create({ handlers: servicios, events: EVENTOS });
+    const servicios = window.LibraryAndroidServices;
+    adaptador = window.LibraryAndroidBridge.create({
+      handlers: servicios ? servicios.handlers() : {},
+      storage: servicios ? servicios.storage() : 'none',
+      events: EVENTOS
+    });
   } else if (!nativo && window.LibraryWebBridge) {
     adaptador = window.LibraryWebBridge.create({ bible: window.BIBLE, manifest: manifiesto, dbName: 'biblioteca-preview-v1', events: EVENTOS });
   }
@@ -28,7 +32,8 @@
     integraciones.voiceOptions = async () => {
       const { voices } = await TTS.getSupportedVoices();
       return (voices || [])
-        .map((v, i) => ({ id: String(i), name: v.name || `Voz ${i + 1}`, lang: v.lang || '' }))
+        // El id es el índice original del plugin: se conserva aunque se filtre por idioma.
+        .map((v, i) => ({ id: String(i), name: v.name || `Voz ${i + 1}`, lang: v.lang || '', ...(typeof v.localService === 'boolean' ? { localService: v.localService } : {}) }))
         .filter(v => /^es/i.test(v.lang));
     };
     integraciones.playVoice = async ({ text, lang = 'es-ES', voice, rate = 1 }) => {

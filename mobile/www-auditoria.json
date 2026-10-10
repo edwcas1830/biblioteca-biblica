@@ -1,7 +1,7 @@
 {
-  "fecha": "2026-10-10T07:48:48.468Z",
-  "archivos": 106,
-  "megabytes": 16.9,
+  "fecha": "2026-10-10T07:59:47.705Z",
+  "archivos": 109,
+  "megabytes": 17,
   "prohibidos": [],
   "modulosLibres": [
     "onbv2008",
@@ -15,7 +15,8 @@
     "platform/web/personal-store.js",
     "platform/web/library.js",
     "platform/web/bridge.js",
+    "platform/android/services.js",
     "platform/android/bridge.js"
   ],
-  "huellaIndex": "16b4ea4e4bc3f44a"
+  "huellaIndex": "5a62326569a47523"
 }
