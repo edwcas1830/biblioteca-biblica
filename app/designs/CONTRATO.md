@@ -105,3 +105,6 @@ El contexto pasa por `Library.aiContext` y vuelve a comprobar revisión y permis
 # Cuaderno privado v0.5
 
 `prayer.js` usa `#prayer-view`; `privacy.js` coordina el PIN y limpia notas/peticiones del renderer al cerrar. `PersonalStore` conserva mapas privados y oración en un único sobre AES-GCM cuando está activo el candado. Los cambios de lectura mientras está cerrado conservan el sobre. Una recuperación cifrada verifica PIN/autenticidad antes de escribir; exportar no abre el sobre. El PIN y la clave no forman parte del estado UI ni del respaldo. Nuevas reflexiones guiadas deben ir a `guideResponses`, incluido en el sobre privado. Los respaldos anteriores permanecen intactos.
+# Series y guías v0.5
+
+`#series-create` usa los tokens activos. `#guide-card` acompaña la lectura del día, muestra una pregunta y alterna turnos sin cambiar la disposición de paneles bíblicos. `dev.guide` guarda método, modo, personas y paso por día; `guideResponses` conserva respuestas por devocional/día/método/paso/persona dentro del cuaderno privado. La IA recibe los parámetros elegidos y las fuentes permitidas del recorrido, nunca esas respuestas. Todo borrador pasa por la revisión de importación, con su origen visible.

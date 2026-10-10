@@ -39,7 +39,7 @@ app.whenReady().then(() => {
   for(const [name,action] of [['status','status'],['connect','connect'],['disconnect','disconnect'],['models','listModels']])ipcMain.handle('library:ai-'+name,event=>{if(!trusted(event))throw new Error('Origen no autorizado.');return ai[action]();});
   ipcMain.handle('library:ai-prepare',async(event,data)=>{
     if(!trusted(event)||!data||JSON.stringify(data).length>10000)throw new Error('Consulta no válida.');
-    const context=await request('aiContext',data),preview=aiCore.prepare({task:data.task,question:data.question,context}),id=crypto.randomBytes(24).toString('hex');
+    const context=await request(data.series?'aiSeriesContext':'aiContext',data),preview=aiCore.prepare({task:data.task,question:data.question,context}),id=crypto.randomBytes(24).toString('hex');
     if(prepared.size>=5)prepared.delete(prepared.keys().next().value);prepared.set(id,{...preview,context,createdAt:Date.now(),module:data.module});
     return {id,...preview,notices:context.notices};
   });

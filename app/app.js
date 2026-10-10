@@ -10,7 +10,7 @@ const STORE = 'biblioteca-biblica-v1';
 const initial = () => ({ version:1, position:{book:18,chapter:23,verse:1}, notes:{}, highlights:{}, devResponses:{}, planNotes:{}, prayers:[], prayerDrafts:{}, guideResponses:{}, privacyEnabled:false, privateLocked:false, devotionals:[], plans:[], font:20, night:false, appearance:appearanceCore.normalize() });
 let state = initial(), activeView='read', activeDev=null, activeDay=0, toastTimer, searchTimer;
 const desktop=window.libraryDesktop;
-let storageReady=false, saveQueue=Promise.resolve(), selectedVersion='rv1909', catalogData=null, readingGeneration=0, searchGeneration=0, studyGeneration=0, chapterData=null, savePending=0, saveFailed=false;
+let uiReady=false, storageReady=false, saveQueue=Promise.resolve(), selectedVersion='rv1909', catalogData=null, readingGeneration=0, searchGeneration=0, studyGeneration=0, chapterData=null, savePending=0, saveFailed=false;
 let pendingPlan=null, reviewPage=0, activePlanDay=null, readerRange=null, studySelection='chapter', dictionaryGeneration=0, dictionaryEntries=[];
 let suppressReaderSyncUntil=0;
 const paneScrollPositions=new Map();
@@ -43,7 +43,7 @@ function validateState(candidate) {
     ids.add(dev.id);
     const validated=core.importDevotional('copia.json',JSON.stringify({title:dev.title,entries:dev.entries}),books);
     if(dev.completed!==undefined&&(!Array.isArray(dev.completed)||dev.completed.some(i=>!Number.isInteger(i)||i<0||i>=dev.entries.length)))throw new Error('Avance de devocional no válido.');
-    return {...validated,completed:[...new Set(dev.completed||[])],sourceName:String(dev.sourceName||'').slice(0,200),description:String(dev.description||'').slice(0,20000),...(dev.introBlocks?{introBlocks:contentCore.blocks(dev.introBlocks)}:{}),id:dev.id,origin:typeof dev.origin==='string'?dev.origin.slice(0,200):'Devocional recuperado',purpose:typeof dev.purpose==='string'?dev.purpose.slice(0,500):'',minutes:Number.isInteger(dev.minutes)?dev.minutes:undefined};
+    return {...validated,completed:[...new Set(dev.completed||[])],sourceName:String(dev.sourceName||'').slice(0,200),description:String(dev.description||'').slice(0,20000),...(dev.introBlocks?{introBlocks:contentCore.blocks(dev.introBlocks)}:{}),...(dev.guide?{guide:GuideCore.configuration(dev.guide)}:{}),id:dev.id,origin:typeof dev.origin==='string'?dev.origin.slice(0,200):'Devocional recuperado',purpose:typeof dev.purpose==='string'?dev.purpose.slice(0,500):'',minutes:Number.isInteger(dev.minutes)?dev.minutes:undefined};
   });
   result.plans=candidate.plans.map(plan=>{
     if(!plan || !/^plan-\d+(?:-[a-z0-9]+)?$/.test(plan.id) || ids.has(plan.id)) throw new Error('Plan no válido.');
@@ -53,6 +53,7 @@ function validateState(candidate) {
     return {...validated,id:plan.id,dayIds:Array.isArray(plan.dayIds)?plan.dayIds:undefined,completed:[...new Set(plan.completed)]};
   });
   if(candidate.planNotes!==undefined){if(!candidate.planNotes||typeof candidate.planNotes!=='object'||Array.isArray(candidate.planNotes)||Object.keys(candidate.planNotes).length>35000)throw new Error('Notas de días no válidas.');for(const [key,note] of Object.entries(candidate.planNotes)){if(!/^plan-\d+(?:-[a-z0-9]+)?:day-[a-f0-9]{32}$/.test(key)||typeof note!=='string'||note.length>100000)throw new Error('Nota de día no válida.');result.planNotes[key]=note;}}
+  result.guideResponses=GuideCore.responses(candidate.guideResponses||{});
   result.prayers=PrayerCore.validate(candidate.prayers||[]);for(const p of result.prayers)if(p.answer&&!validPosition(p.answer.reference))throw new Error('Versículo del testimonio fuera de rango.');result.prayerDrafts=PrayerCore.drafts(candidate.prayerDrafts||{});result.privacyEnabled=candidate.privacyEnabled===true;result.privateLocked=candidate.privateLocked===true;
   result.font=Number.isInteger(candidate.font)?Math.max(16,Math.min(28,candidate.font)):20;
   result.night=candidate.night===true;
@@ -339,7 +340,7 @@ async function start() {
   $('#books-grid').innerHTML=books.map((book,i)=>`<button data-book="${i}">${esc(book.name)}</button>`).join('');
   $('#note').maxLength=100000;
   settings();renderReader();renderDevList();renderPlans();bind();bindPlanImport();
-  bindLibrary();bindAppearance();bindJourneys();bindAi();bindPrayer();bindPrivacy();
+  bindLibrary();bindAppearance();bindJourneys();bindAi();bindPrayer();bindPrivacy();bindGuides();uiReady=true;
 }
 async function loadCatalog(){catalogData=await desktop.catalog();const versions=catalogData.modules.filter(m=>m.tipo==='biblia'&&m.rol==='version');selectedVersion=versions.some(m=>m.id===state.selectedVersion)?state.selectedVersion:versions.some(m=>m.id==='rv1960')?'rv1960':'rv1909';$('#version-select').innerHTML=versions.map(m=>`<option value="${esc(m.id)}">${esc(m.abreviatura||m.titulo)}</option>`).join('');$('#version-select').value=selectedVersion;const comments=catalogData.modules.filter(m=>m.rol==='comentario');$('#comment-select').innerHTML='<option value="">Elegir comentario</option>'+comments.map(m=>`<option value="${esc(m.id)}">${esc(m.titulo)}</option>`).join('');const options=[['strong-es','Strong español'],['vine','Vine · AT y NT'],['drae','RAE · Diccionario español']].filter(([id])=>id==='vine'?catalogData.modules.some(m=>m.id==='vine-at'||m.id==='vine-nt'):id==='drae'?catalogData.modules.some(m=>/^drae-[123]$/.test(m.id)):catalogData.modules.some(m=>m.id===id));$('#dictionary-select').innerHTML=options.map(([id,title])=>`<option value="${id}">${title}</option>`).join('');$('#show-strong').disabled=selectedVersion!=='rv1960'||!catalogData.modules.some(m=>m.id==='rv1960-strong');if($('#show-strong').disabled)$('#show-strong').checked=false;$('#comment-select').disabled=!comments.length;if(comments.length)$('#comment-select').value=(['diario-vivir','mundo-hispano'].find(id=>comments.some(m=>m.id===id))||comments[0].id);for(const id of ['dictionary-select','dictionary-query','dictionary-submit'])$('#'+id).disabled=!options.length;renderSources();}
 function renderSources(){if(!catalogData)return;$('#sources-list').innerHTML=catalogData.modules.map(m=>`<section class="source-card"><h4>${esc(m.titulo)}</h4><p>${esc(m.origen)} · ${esc(m.rol)}</p><p>${esc(m.licencia)}</p><p class="fine-print">${esc(m.versificacion)} · Revisión ${esc(m.sha256.slice(0,16))}</p>${m.sourceNotice?`<details><summary>Aviso incluido en la fuente</summary><p class="source-notice">${esc(m.sourceNotice)}</p></details>`:''}</section>`).join('');$('#sources-warning').textContent=catalogData.warnings.join('\n');}

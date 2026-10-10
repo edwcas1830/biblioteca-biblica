@@ -31,7 +31,7 @@ function renderJourney(){
   $('#journey-prev').disabled=index===0;$('#journey-next').disabled=index===total-1;
   $('#journey-note').value=(plan?state.planNotes?.[noteKey]:state.devResponses[noteKey])||'';$('#journey-note').disabled=!!state.privateLocked||plan&&!item.dayIds?.[index];
   $('#journey-save-status').textContent=state.privateLocked?'Abre el candado para ver tu reflexión.':'Tu nota permanece en este equipo.';
-  $('#journey-body').scrollTop=0;
+  $('#journey-body').scrollTop=0;renderGuide();
 }
 async function importDevFile(file){
   let dev,warnings=[];
