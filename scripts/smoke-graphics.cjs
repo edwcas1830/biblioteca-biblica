@@ -1,0 +1,14 @@
+'use strict';
+const assert=require('node:assert/strict');
+module.exports=async({evaluate,screenshot,wait})=>{
+ const before=await evaluate('JSON.stringify({plans:state.plans,notes:state.notes,devotionals:state.devotionals})'),report={};
+ await evaluate('go(41,2,1);setGraphics("map")');for(let i=0;i<80;i++){await wait(100);if(await evaluate("document.querySelector('.chapter-map')!==null"))break;}
+ report.map=await evaluate("({places:document.querySelectorAll('.map-places li').length,bethlehem:document.querySelector('#comment-content').textContent.includes('Belén'),svg:document.querySelectorAll('.chapter-map circle').length,bible:document.querySelector('#verses').clientWidth>200})");assert.ok(report.map.bethlehem&&report.map.bible&&report.map.svg>0);
+ for(const design of ['a','b','c']){await evaluate(`state.appearance.design='${design}';state.appearance.theme='marfil';settings();window.libraryTest.resize(1366,729)`);await wait(200);await screenshot('v06-mapa-'+design);assert.equal(await evaluate("document.querySelector('#comment-content').scrollWidth>document.querySelector('#comment-content').clientWidth+2"),false);}
+ await evaluate("graphicsAll=true;setGraphics('kings');graphicsQuery='Saúl';renderGraphics()");await wait(350);assert.match(await evaluate("document.querySelector('#comment-content').textContent"),/Saúl/);await screenshot('v06-reyes');
+ await evaluate("setGraphics('events');renderGraphics()");await wait(300);assert.ok(await evaluate("document.querySelectorAll('.graphic-timeline li').length>20"));await screenshot('v06-cronologia');
+ await evaluate("setGraphics('people');graphicsQuery='Abraham';renderGraphics()");await wait(300);await evaluate("document.querySelector('[data-person]').click()");await wait(250);assert.match(await evaluate("document.querySelector('#genealogy-family').textContent"),/Isaac/);await screenshot('v06-genealogia');await evaluate("[...document.querySelectorAll('#genealogy-family [data-person]')].find(p=>p.textContent.startsWith('Isaac')).click()");await wait(250);assert.match(await evaluate("document.querySelector('#genealogy-family h3').textContent"),/Isaac/);
+ await evaluate("setGraphics('harmony')");await wait(300);assert.equal(await evaluate("document.querySelectorAll('.graphic-card').length"),12);await screenshot('v06-armonia');
+ await evaluate("go(0,37,1);setGraphics('outline')");await wait(300);assert.match(await evaluate("document.querySelector('.current-section').textContent"),/José/);await screenshot('v06-bosquejo');await evaluate("document.querySelector('.graphic-ref').click()");await wait(250);assert.equal(await evaluate('state.position.chapter'),1);
+ await evaluate("setGraphics('comment');state.appearance.design='a';state.appearance.theme='auto';settings();save()");await evaluate('saveQueue');assert.equal(await evaluate('JSON.stringify({plans:state.plans,notes:state.notes,devotionals:state.devotionals})'),before);report.integrity=true;return report;
+};

@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('libraryDesktop',{
   readPdf:bytes=>ipcRenderer.invoke('library:read-pdf',bytes),
   bootstrap:data=>ipcRenderer.invoke('library:data-bootstrap',data),
   savePersonal:data=>ipcRenderer.invoke('library:data-save',data),
+  graphicsChapter:data=>ipcRenderer.invoke('library:data-graphicsChapter',data),graphicsChronology:data=>ipcRenderer.invoke('library:data-graphicsChronology',data),graphicsPeople:data=>ipcRenderer.invoke('library:data-graphicsPeople',data),graphicsGenealogy:data=>ipcRenderer.invoke('library:data-graphicsGenealogy',data),
   connections:data=>ipcRenderer.invoke('library:data-connections',data),compare:data=>ipcRenderer.invoke('library:data-compare',data),studySources:()=>ipcRenderer.invoke('library:data-studySources'),
   catalog:()=>ipcRenderer.invoke('library:data-catalog'),
   metadata:()=>ipcRenderer.invoke('library:data-metadata'),

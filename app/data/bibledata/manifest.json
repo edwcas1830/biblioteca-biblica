@@ -1,0 +1,32 @@
+{
+  "title": "Cronología, reyes y profetas",
+  "author": "Brady Stephenson · BibleData",
+  "license": "CC BY 4.0",
+  "source": "https://github.com/BradyStephenson/bible-data",
+  "date": "2026-10-09",
+  "file": "data.json.gz",
+  "sha256": "e7390f031492a0f8360b49fc7b2e1587caacda1f1ca872869581ff147cf315ed",
+  "changes": "Metadatos cronológicos AH y referencias; no incluye citas bíblicas del conjunto. Fechas e hipótesis de esta fuente, no consenso histórico; nombres originales conservados.",
+  "inputs": [
+    {
+      "file": "BibleData-Book.csv",
+      "sha256": "7ac1626468c434b6e1435fa3f8155b1b1377f8ddf40c4d8d887a7fc1b78e89cf"
+    },
+    {
+      "file": "BibleData-Event.csv",
+      "sha256": "aa7107f50f6cc4666c15698975951ba2284d56292268a27bb13a9df76b1d3413"
+    },
+    {
+      "file": "BibleData-Epoch.csv",
+      "sha256": "02854db4dd2a8339b6a88e09350c51959057e9224194c4acf3abb4d1dc80cfce"
+    },
+    {
+      "file": "BibleData-Person.csv",
+      "sha256": "489b5f588a03df71a51bcb973467e3e2cd9ebc2ad96df46a964d8459cc532963"
+    },
+    {
+      "file": "BibleData-PersonVerse.csv",
+      "sha256": "7eab00f8f6d7f5a769febe65d5ce69671464e03a393f5015b160d17f508e9177"
+    }
+  ]
+}

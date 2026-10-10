@@ -1,6 +1,6 @@
 'use strict';
 let connectionsGeneration=0,connectionItems=[],connectionTarget=null,comparisonOn=false,comparisonGeneration=0,originalGeneration=0,originalQuery='';
-async function renderStudySources(){if(!desktop?.studySources)return;try{const sources=await desktop.studySources();$('#study-sources').innerHTML=sources.map(s=>`<section class="source-card"><h4>${esc(s.title)}</h4><p>${esc(s.author)} · ${esc(s.license)}</p><p>${esc(s.source)}</p><p>${esc(s.changes)}</p><p class="fine-print">${s.count.toLocaleString('es')} conexiones · SHA-256 ${esc(s.sha256)}</p></section>`).join('');}catch(e){$('#study-sources').textContent=e.message;}}
+async function renderStudySources(){if(!desktop?.studySources)return;try{const sources=await desktop.studySources();$('#study-sources').innerHTML=sources.map(s=>`<section class="source-card"><h4>${esc(s.title)}</h4><p>${esc(s.author)} · ${esc(s.license)}</p><p>${esc(s.source)}</p><p>${esc(s.changes)}</p><p class="fine-print">${s.count?s.count.toLocaleString('es')+' conexiones':'Módulo de datos'} · SHA-256 ${esc(s.sha256)}</p></section>`).join('');}catch(e){$('#study-sources').textContent=e.message;}}
 async function renderConnections(){
  if(!desktop?.connections)return;const generation=++connectionsGeneration,p={...state.position},module=$('#comment-select').value;
  $('#connections-reference').textContent=reference(p);if(comparisonOn)renderComparison();

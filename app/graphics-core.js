@@ -1,0 +1,20 @@
+(function(root,factory){const value=factory();if(typeof module==='object'&&module.exports)module.exports=value;else root.GraphicsCore=value;})(typeof window==='object'?window:globalThis,()=>{
+ 'use strict';
+ // Editorial reading divisions written for Biblioteca Bíblica; chapter boundaries,
+ // not borrowed study-Bible headings or claims about dates and authorship.
+ const divisions=[
+ '1 Orígenes|12 Abraham|25 Isaac y Jacob|37 José', '1 Salida de Egipto|19 Pacto y santuario','1 Sacrificios y sacerdocio|11 Santidad y vida cotidiana','1 Preparación|10 Camino por el desierto|26 Nueva generación','1 Memoria del camino|5 Instrucciones del pacto|29 Renovación y despedida',
+ '1 Entrada y conquista|13 Reparto y despedida','1 Jueces de Israel|17 Relatos finales','1 Noemí y Rut|2 Booz y la redención','1 Samuel|8 Saúl|16 David y Saúl','1 Reinado de David|11 Crisis de la casa real|21 Relatos finales',
+ '1 Salomón|12 Reinos divididos','1 Eliseo y los reinos|18 Judá y el exilio','1 Genealogías|10 David','1 Salomón|10 Reyes de Judá','1 Retorno y templo|7 Esdras','1 Reconstrucción|8 Renovación del pacto','1 Ester y Mardoqueo|3 Amenaza y liberación','1 Prueba de Job|3 Diálogos|38 Respuesta y cierre',
+ '1 Libro I|42 Libro II|73 Libro III|90 Libro IV|107 Libro V','1 Instrucciones|10 Proverbios|30 Palabras finales','1 Reflexiones sobre la vida|12 Cierre','1 Poemas de amor','1 Juicio y esperanza|40 Consuelo y restauración','1 Llamamiento y mensajes|26 Conflictos y promesas|46 Mensajes a las naciones','1 Lamentos por Jerusalén','1 Visiones y juicio|25 Naciones|33 Restauración','1 Relatos|7 Visiones',
+ '1 Oseas y su familia|4 Mensajes a Israel','1 Crisis y llamado|3 Restauración y juicio','1 Juicio|7 Visiones','1 Juicio y restauración','1 Huida|3 Nínive','1 Juicio|4 Esperanza','1 Juicio sobre Nínive','1 Preguntas|3 Oración','1 Juicio|3 Restauración','1 Reconstrucción|2 Promesas','1 Visiones|9 Mensajes','1 Diálogo y llamado',
+ '1 Orígenes de Jesús|5 Enseñanza y ministerio|26 Pasión y resurrección','1 Ministerio de Jesús|11 Jerusalén|14 Pasión y resurrección','1 Nacimiento|3 Ministerio|9 Camino a Jerusalén|19 Jerusalén','1 Señales y encuentros|13 Despedida|18 Pasión y resurrección','1 Jerusalén|8 Expansión|13 Viajes y testimonio',
+ '1 Evangelio y justicia|9 Israel|12 Vida en comunidad','1 Vida de la iglesia|7 Respuestas|15 Resurrección','1 Ministerio|8 Generosidad|10 Defensa del ministerio','1 Evangelio|3 Fe y promesa|5 Vida en el Espíritu','1 Gracia y unidad|4 Vida cotidiana','1 Evangelio y gozo|3 Perseverancia','1 Cristo|3 Vida nueva','1 Memoria y ánimo|4 Vida y esperanza','1 Esperanza|2 Perseverancia','1 Encargo|4 Vida y servicio','1 Fidelidad|3 Escritura y despedida','1 Comunidad|2 Enseñanza y obras','1 Petición por Onésimo','1 Cristo y sacerdocio|11 Fe y perseverancia','1 Fe vivida','1 Esperanza|2 Vida y testimonio','1 Crecimiento|2 Advertencias','1 Comunión y amor','1 Verdad y amor','1 Hospitalidad','1 Exhortación a la fidelidad','1 Visión y cartas|4 Visiones|21 Nueva creación'
+ ];
+ function outline(book,count){return divisions[book].split('|').map((item,i,items)=>{const split=item.indexOf(' '),start=Number(item.slice(0,split)),next=items[i+1];return {start,end:next?Number(next.split(' ')[0])-1:count,title:item.slice(split+1)};});}
+ const harmonies=[
+ ['Anuncio y nacimiento',[[39,1,18],[41,1,26],[41,2,1]]],['Juan y el bautismo',[[39,3,1],[40,1,1],[41,3,1],[42,1,19]]],['Tentación',[[39,4,1],[40,1,12],[41,4,1]]],['Llamamiento de discípulos',[[39,4,18],[40,1,16],[41,5,1],[42,1,35]]],['Alimentación de cinco mil',[[39,14,13],[40,6,30],[41,9,10],[42,6,1]]],['Confesión de Pedro',[[39,16,13],[40,8,27],[41,9,18]]],['Transfiguración',[[39,17,1],[40,9,2],[41,9,28]]],['Entrada en Jerusalén',[[39,21,1],[40,11,1],[41,19,28],[42,12,12]]],['Cena y despedida',[[39,26,17],[40,14,12],[41,22,7],[42,13,1]]],['Arresto',[[39,26,47],[40,14,43],[41,22,47],[42,18,1]]],['Crucifixión',[[39,27,32],[40,15,21],[41,23,26],[42,19,16]]],['Resurrección',[[39,28,1],[40,16,1],[41,24,1],[42,20,1]]]
+ ];
+ const fold=s=>String(s).normalize('NFD').replace(/\p{M}/gu,'').toLowerCase();
+ return {outline,harmonies,fold};
+});

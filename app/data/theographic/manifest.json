@@ -1,0 +1,16 @@
+{
+  "title": "Personas y genealogías · módulo separado",
+  "author": "Robert Rouse · Theographic",
+  "license": "CC BY-SA 4.0",
+  "source": "https://github.com/robertrouse/theographic-bible-metadata",
+  "date": "2026-10-09",
+  "file": "data.json.gz",
+  "sha256": "814ea6cbee74d84c14ca563527d799c1cda750f7bb187f909f8f7122da53e8a5",
+  "changes": "Adaptación de nombres y relaciones en un módulo independiente bajo CC BY-SA 4.0. Excluye diccionarios, citas, imágenes y fechas no verificadas. Las relaciones y homónimos siguen la fuente.",
+  "inputs": [
+    {
+      "file": "people.json",
+      "sha256": "76041eba0b6f36c36514802fcfa69a068cbf06ef7b57aaec82909f509e3b6fb4"
+    }
+  ]
+}

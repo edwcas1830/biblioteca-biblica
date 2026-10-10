@@ -1,0 +1,20 @@
+{
+  "title": "Lugares bíblicos",
+  "author": "OpenBible.info",
+  "license": "CC BY 4.0",
+  "source": "https://github.com/openbibleinfo/Bible-Geocoding-Data",
+  "date": "2026-10-09",
+  "file": "data.json.gz",
+  "sha256": "a50c397d5a8a95b818700efb3bfbbbc24b5721bcf2d31540387753a4dc0b6c15",
+  "changes": "Índice por capítulo; nombres españoles editoriales de lugares frecuentes; identificación preferida sin afirmar certeza. Sin imágenes, geometrías OSM ni coordenadas procedentes de OSM.",
+  "inputs": [
+    {
+      "file": "ancient.jsonl",
+      "sha256": "b8187aa4737e8517ccc090f765d2be11da4c548cd2a59d3cdcb62e952cb8c0f2"
+    },
+    {
+      "file": "modern.jsonl",
+      "sha256": "da731f6e110bac4ea66a9f037a0a31cfb11c4f1efc1206aa9e109092b2c60087"
+    }
+  ]
+}

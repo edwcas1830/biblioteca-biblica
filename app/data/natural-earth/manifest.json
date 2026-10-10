@@ -1,0 +1,16 @@
+{
+  "title": "Mapa base simplificado de tierras",
+  "author": "Natural Earth",
+  "license": "Dominio público",
+  "source": "https://www.naturalearthdata.com/about/terms-of-use/",
+  "date": "2026-10-09",
+  "file": "data.json.gz",
+  "sha256": "1f0b1d2332f7a5884319bb35c412be3c251104c0018e79d602c66e5c069f045b",
+  "changes": "Natural Earth 1:110m, sin fronteras políticas; proyección equirectangular para orientación, no navegación.",
+  "inputs": [
+    {
+      "file": "ne-land.geojson",
+      "sha256": "9e0729ee253ca7d7a5c4ae9395fb1902264c5377c52e224d13dd85010e2835d9"
+    }
+  ]
+}
