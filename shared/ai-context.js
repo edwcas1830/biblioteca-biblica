@@ -1,7 +1,7 @@
 (function(root,factory){
-  if(typeof module==='object'&&module.exports)module.exports=factory(require('../platform/bridge-contract.js'),()=>require('../app/guide-core.js'),()=>require('../app/core.js'));
-  else root.LibraryAiContext=factory(root.LibraryBridgeContract,()=>root.GuideCore,()=>root.BibleCore);
-})(typeof globalThis!=='undefined'?globalThis:this,function(contract,guides,bibleCore){
+  if(typeof module==='object'&&module.exports)module.exports=factory(require('../platform/bridge-contract.js'),()=>require('../app/guide-core.js'),()=>require('../app/core.js'),require('./study-actions.js'));
+  else root.LibraryAiContext=factory(root.LibraryBridgeContract,()=>root.GuideCore,()=>root.BibleCore,root.LibraryStudyActions);
+})(typeof globalThis!=='undefined'?globalThis:this,function(contract,guides,bibleCore,actions){
   'use strict';
   const fail=(code,message)=>{throw new contract.BridgeError(code,message);};
   function create({call}={}){
@@ -28,7 +28,9 @@
       if(includeBible===true)await source(module,'bible');if(includeComment===true)await source(comment,'comment');
       return {reference,sources,notices};
     }
+    const actionContext=actions.create({call});
     async function prepare(input){
+      if(input.action!==undefined)return actionContext.assemble(input);
       if(!input.series)return context(input);
       let spec;try{spec=guides().spec(input.series);}catch{fail('VALIDATION','Serie de estudio no válida.');}
       const passages=bibleCore().topics[spec.topic].passages.slice(0,spec.days),contexts=[];
@@ -36,6 +38,7 @@
       return {series:spec,reference:'Serie de '+spec.days+' días · '+bibleCore().topics[spec.topic].title,readings:contexts.map(c=>c.reference),sources:contexts.flatMap(c=>c.sources),notices:[...new Set(contexts.flatMap(c=>c.notices))]};
     }
     async function verify(sources){
+      if(sources.some(s=>s.sourceId!==undefined))return actionContext.verify(sources);
       const catalog=await call('catalog');
       for(const s of sources){
         const m=catalog.modules.find(m=>m.id===s.module);

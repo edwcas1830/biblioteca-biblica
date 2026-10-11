@@ -1,6 +1,8 @@
 [
   "platform/bridge-contract.js",
   "ai-core.js",
+  "shared/study-model.js",
+  "shared/study-actions.js",
   "shared/ai-context.js",
   "shared/ai-image.js",
   "platform/ai/credentials.js",

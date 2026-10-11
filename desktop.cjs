@@ -7,6 +7,7 @@ const {Worker}=require('node:worker_threads');
 const crypto=require('node:crypto');
 const {AiService}=require('./lib/ai-service.cjs');
 const aiCore=require('./app/ai-core.js');
+const actions=require('./shared/study-actions.js');
 const {MusicServer}=require('./lib/music-server.cjs'),musicCore=require('./app/music-core.js');
 app.setName('Biblioteca Bíblica');
 const hiddenTest = process.env.BIBLIOTECA_TEST_HIDDEN === '1';
@@ -58,6 +59,7 @@ app.whenReady().then(async () => {
   ipcMain.handle('library:module-install',async(event,tokens)=>{if(!trusted(event)||!Array.isArray(tokens)||tokens.length>500)throw Error('Selección no autorizada.');return request('moduleInstall',{tokens});});
   const ai=new AiService({root:app.getPath('userData'),safeStorage,openExternal:url=>shell.openExternal(url),notify:status=>{if(!win.isDestroyed())win.webContents.send('library:ai-state',status);}}),prepared=new Map();
   const {PersonalAi}=require('./lib/personal-ai.cjs'),personalAi=new PersonalAi({root:app.getPath('userData'),safeStorage,policy:()=>request('personalAiPolicy'),openExternal:url=>shell.openExternal(url)});
+  const actionContext=require('./shared/ai-context.js').create({call:request});
   const bridgeContract=require('./platform/bridge-contract.js'),imageCore=require('./shared/ai-image.js');
   ipcMain.handle('library:capabilities',event=>{if(!trusted(event))throw Error('Origen no autorizado.');return {version:1,platform:'desktop',storage:'sqlite',nativeVerified:false,operations:Object.fromEntries(Object.keys(bridgeContract.operations).map(name=>[name,{available:bridgeContract.preloadNames.includes(name)}]))};});
   ipcMain.handle('library:ai-image',async(event,data)=>{
@@ -85,13 +87,14 @@ app.whenReady().then(async () => {
   ipcMain.handle('library:ai-prepare',async(event,data)=>{
     if(!trusted(event)||!data||JSON.stringify(data).length>15000)throw new Error('Consulta no válida.');
     if((await request('privacyStatus')).locked)throw Error('Abre tu cuaderno para consultar tu estudio.');
-    const context=await request(data.series?'aiSeriesContext':'aiContext',data),preview=aiCore.prepare({task:data.task,question:data.question,context,study:data.study===true,history:data.history||'',allowLiving:data.allowLiving===true}),id=crypto.randomBytes(24).toString('hex');
+    const context=data.action!==undefined?await actionContext.prepare(data):await request(data.series?'aiSeriesContext':'aiContext',data),preview=data.action!==undefined?actions.prepare(data,context):aiCore.prepare({task:data.task,question:data.question,context,study:data.study===true,history:data.history||'',allowLiving:data.allowLiving===true}),id=crypto.randomBytes(24).toString('hex');
     if(prepared.size>=5)prepared.delete(prepared.keys().next().value);prepared.set(id,{...preview,context,createdAt:Date.now(),module:data.module});
     return {id,...preview,notices:context.notices};
   });
   const getPrepared=id=>{const item=prepared.get(id);if(!item||Date.now()-item.createdAt>30*60*1000)throw new Error('Prepara de nuevo la consulta.');return item;};
   ipcMain.handle('library:ai-ask',async(event,data)=>{
-    if(!trusted(event)||!data)throw new Error('Origen no autorizado.');if((await request('privacyStatus')).locked)throw Error('Abre tu cuaderno para consultar tu estudio.');const item=getPrepared(data.id);await request('verifyAiSources',item.sources);const provider=data.provider||'openrouter';const onProgress=text=>{if(!win.isDestroyed()&&typeof text==='string')win.webContents.send('library:ai-progress',{id:data.id,text:text.slice(0,30000)});};const response=provider==='openrouter'?await ai.ask({prompt:item.prompt,model:data.model,allowData:data.allowData,study:item.study,onProgress}):await personalAi.ask({provider,prompt:item.prompt,model:data.model||'',study:item.study,onProgress});
+    if(!trusted(event)||!data)throw new Error('Origen no autorizado.');if((await request('privacyStatus')).locked)throw Error('Abre tu cuaderno para consultar tu estudio.');const item=getPrepared(data.id);if(item.action)await actionContext.verify(item.context.sources);else await request('verifyAiSources',item.sources);if(data.action!==undefined&&data.action!==item.action)throw Error('La acción cambió. Prepara otra vez la consulta.');const provider=data.provider||'openrouter';const onProgress=text=>{if(!win.isDestroyed()&&typeof text==='string')win.webContents.send('library:ai-progress',{id:data.id,text:text.slice(0,30000)});};const response=provider==='openrouter'?await ai.ask({prompt:item.prompt,model:data.model,allowData:data.allowData,study:item.study,action:item.action,onProgress}):await personalAi.ask({provider,prompt:item.prompt,model:data.model||'',study:item.study,action:item.action,onProgress});
+    if(item.action){if((await request('privacyStatus')).locked)throw Error('Abre tu cuaderno.');await actionContext.verify(item.context.sources);return {...response,...actions.result(response,item.context)};}
     const citations=[];for(const ref of response.citations){try{const result=await request('chapter',{module:item.module||'rv1909',book:ref.book,chapter:ref.chapter}),verse=result.verses.find(v=>v.verse===ref.verse);if(verse)citations.push({...ref,title:result.title,text:verse.text,module:item.module||'rv1909',revision:result.revision});}catch{}}
     if(response.keywords){const actual=new Set(item.context.sources.filter(s=>s.kind==='bible').flatMap(s=>s.text.match(/[HG]\d{1,5}/g)||[]));const verified=[];for(const k of response.keywords.filter(k=>actual.has(k.code))){try{const found=await request('dictionary',{group:'strong-es',query:k.code});if(found.entries.some(e=>e.title===k.code))verified.push(k);}catch{}}response.keywords=verified;}const chat=require('./app/study-chat-core.js');return {...response,...(item.study?chat.result(response,item.allowLiving):{}),citations,sources:item.sources,allowLiving:item.allowLiving};
   });

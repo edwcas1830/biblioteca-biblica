@@ -22,8 +22,8 @@ export interface Source { kind:string; module:string; title:string; reference:st
 export interface AiStatus { connected:boolean; waiting:boolean; secure:boolean; authorizationUrl?:string; requiresCode?:boolean; expiresAt?:number; }
 export interface PersonalAiStatus { available:boolean; enabled:boolean; providers:{id:string; installed:boolean; connected?:boolean; session?:string}[]; }
 export interface AiPrepared { id:string; prompt:string; sources:Source[]; notices:string[]; [key:string]:unknown; }
-export interface AiReply { text:string; model:string; structured:boolean; citations:(Ref & {text?:string})[]; sources:Source[]; allowLiving?:boolean; sections?:Record<'brief'|'context'|'meaning'|'keywords'|'connections'|'prayer',string>; keywords?:{code:string; label:string}[]; sourceIds?:number[]; followups?:string[]; living?:string; [key:string]:unknown; }
-export interface AiSelection extends Ref { module?:string; comment?:string; scope?:'verse'|'chapter'|'book'|'general'; includeBible?:boolean; includeComment?:boolean; task:string; question?:string; study?:boolean; history?:string; allowLiving?:boolean; series?:JSONValue; }
+export interface AiReply extends Partial<ActionReply> { text:string; model:string; structured:boolean; citations:(Ref & {text?:string})[]; sources:Source[]; allowLiving?:boolean; sections?:Record<'brief'|'context'|'meaning'|'keywords'|'connections'|'prayer',string>; keywords?:{code:string; label:string}[]; sourceIds?:number[]; followups?:string[]; living?:string; [key:string]:unknown; }
+export interface AiSelection extends Ref { module?:string; comment?:string; scope?:'verse'|'chapter'|'book'|'general'; includeBible?:boolean; includeComment?:boolean; task?:string; action?:StudyAction; ref?:Ref; question?:string; study?:boolean; history?:string; allowLiving?:boolean; series?:JSONValue; }
 export interface YoutubeStatus { personal:boolean; connected:boolean; secure:boolean; }
 export interface UpdateState { status:string; [key:string]:unknown; }
 export interface CircleStatus { connected:boolean; [key:string]:unknown; }
@@ -71,7 +71,7 @@ export interface LibraryBridge {
   aiStatus():Promise<AiStatus>; aiConnect(data?:{code?:string}):Promise<AiStatus>;
   aiDisconnect():Promise<AiStatus>; aiModels():Promise<{id:string; name:string}[]>;
   aiPrepare(data:AiSelection):Promise<AiPrepared>;
-  aiAsk(data:{id:string; provider?:string; model:string; allowData?:boolean}):Promise<AiReply>;
+  aiAsk(data:{id:string; action?:StudyAction; provider?:string; model:string; allowData?:boolean}):Promise<AiReply>;
   /** One OpenRouter background; uses account credits, never the free text model list. */
   aiImage(data:{prompt:string; aspect:'4:5'|'1:1'|'9:16'}):Promise<{dataUrl:string; model:string}>;
   aiCopy(data:{id:string; provider?:string}):Promise<{copied:boolean; opened:boolean}>;
@@ -103,3 +103,6 @@ export interface LibraryBridge {
   transferInstall(data:{token:string; confirmado:true}):Promise<TransferResult>;
 }
 declare global { interface Window { libraryDesktop:LibraryBridge; } }
+
+export type StudyAction = 'contexto'|'exegesis'|'paralelos'|'originales'|'dios'|'vida'|'pregunta';
+export interface ActionReply { action:StudyAction; brief:string; texto:string; interpretacion:string; conexiones:string; fuentes:{sourceId:number; ref?:Ref; modulo?:string; strong?:string; extracto:string; title?:string; license?:string; attribution?:string}[]; seguimientos:[string,string,string]; }

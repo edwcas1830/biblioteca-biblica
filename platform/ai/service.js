@@ -1,7 +1,7 @@
 (function(root,factory){
-  if(typeof module==='object'&&module.exports)module.exports=factory(require('../bridge-contract.js'),require('../../shared/ai-context.js'),require('./openrouter.js'),require('../../app/ai-core.js'),require('../../app/study-chat-core.js'),require('./gemini.js'),require('./credentials.js'));
-  else root.LibraryMobileAi=factory(root.LibraryBridgeContract,root.LibraryAiContext,root.LibraryOpenRouter,root.AiCore,root.StudyChatCore,root.LibraryGemini,root.LibraryAiCredentials);
-})(typeof globalThis!=='undefined'?globalThis:this,function(contract,contexts,providers,core,chat,geminis,credentials){
+  if(typeof module==='object'&&module.exports)module.exports=factory(require('../bridge-contract.js'),require('../../shared/ai-context.js'),require('./openrouter.js'),require('../../app/ai-core.js'),require('../../app/study-chat-core.js'),require('./gemini.js'),require('./credentials.js'),require('../../shared/study-actions.js'));
+  else root.LibraryMobileAi=factory(root.LibraryBridgeContract,root.LibraryAiContext,root.LibraryOpenRouter,root.AiCore,root.StudyChatCore,root.LibraryGemini,root.LibraryAiCredentials,root.LibraryStudyActions);
+})(typeof globalThis!=='undefined'?globalThis:this,function(contract,contexts,providers,core,chat,geminis,credentials,actions){
   'use strict';
   const fail=(code,message)=>{throw new contract.BridgeError(code,message);};
   function create({call,emit=()=>{},epoch=()=>0,crypto=globalThis.crypto,fetchImpl,now=()=>Date.now(),openExternal,reporter,credentialStore}={}){
@@ -22,7 +22,7 @@
     async function prepare(input){
       if(!input||JSON.stringify(input).length>15000)fail('VALIDATION','Consulta no válida o demasiado grande.');const at=epoch();await guard(at);
       const chosen=await context.prepare(input);await guard(at);let preview;
-      try{preview=core.prepare({task:input.task,question:input.question,context:chosen,study:input.study===true,history:input.history||'',allowLiving:input.allowLiving===true});}catch{fail('VALIDATION','Revisa la tarea y el contexto elegido; resumir requiere un comentario permitido.');}
+      try{preview=input.action!==undefined?actions.prepare(input,chosen):core.prepare({task:input.task,question:input.question,context:chosen,study:input.study===true,history:input.history||'',allowLiving:input.allowLiving===true});}catch{fail('VALIDATION','Revisa la tarea y el contexto elegido; resumir requiere un comentario permitido.');}
       if(preview.prompt.length>50000)fail('VALIDATION','El contexto es demasiado grande. Elige menos días o fuentes.');
       const key=id();if(prepared.size>=5)prepared.delete(prepared.keys().next().value);prepared.set(key,{...structuredClone(preview),context:structuredClone(chosen),createdAt:now(),module:input.module||'rv1909',epoch:at});
       return {id:key,...preview,notices:chosen.notices};
@@ -37,10 +37,12 @@
         const item=await getPrepared(input.id);if(at!==generation)fail('CANCELLED','La consulta se canceló.');
         if(input.provider==='gemini-api')await requireGemini();
         if(at!==generation)fail('CANCELLED','La consulta se canceló.');
+        if(input.action!==undefined&&input.action!==item.action)fail('CONFLICT','La acción cambió. Prepara otra vez el estudio.');
         const beforeSend=async()=>{await getPrepared(input.id);if(input.provider==='gemini-api')await requireGemini();if(at!==generation)fail('CANCELLED','La consulta se canceló.');};
-        const response=await selected.ask({prompt:item.prompt,model:input.model,allowData:input.allowData===true,study:item.study,allowLiving:item.allowLiving,beforeSend});
+        const response=await selected.ask({prompt:item.prompt,model:input.model,allowData:input.allowData===true,study:item.study,allowLiving:item.allowLiving,action:item.action,beforeSend});
         if(input.provider==='gemini-api')await requireGemini();
         await guard(item.epoch);await context.verify(item.context.sources);if(at!==generation)fail('CANCELLED','La consulta se canceló.');
+        if(item.action){if(input.action!==undefined&&input.action!==item.action)fail('CONFLICT','La acción cambió. Prepara otra vez el estudio.');return {...response,...actions.result(response,item.context)};}
         const citations=[];
         for(const ref of response.citations){try{const result=await call('chapter',{module:item.module,book:ref.book,chapter:ref.chapter}),v=result.verses.find(v=>v.verse===ref.verse||(v.verse<ref.verse&&v.endVerse>=ref.verse));if(v)citations.push({...ref,title:result.title,text:v.text,module:item.module,revision:result.revision});}catch(e){if(e?.code==='LOCKED'||e?.code==='CONFLICT')throw e;}}
         if(response.keywords){const codes=new Set(item.context.sources.filter(s=>s.kind==='bible').flatMap(s=>s.text.match(/[HG]\d{1,5}/g)||[])),valid=[];

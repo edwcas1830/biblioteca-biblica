@@ -41,7 +41,7 @@
     aiTextCopy: value => text(value), youtubeExternal: value => text(value, 200), musicPlayer: value => text(value, 2000), musicExternal: value => text(value, 2000),
     youtubeKey: value => text(value, 200), aiGeminiKey: value => { if (value !== null) text(value, 200); }, aiPersonalEnable: bool, aiPersonalLogin: value => text(value, 40),
     aiConnect: optional(payload), moduleScan: optional(payload),
-    aiPrepare: payload, aiAsk: payload, aiCopy: payload, aiShare: payload, aiReport: payload, youtubeSearch: payload,
+    aiPrepare: value=>{payload(value);if(value.action!==undefined&&!['contexto','exegesis','paralelos','originales','dios','vida','pregunta'].includes(value.action))fail('Acción no válida.');if(value.ref!==undefined)ref(value.ref);if(value.endVerse!==undefined&&(!Number.isInteger(value.endVerse)||value.endVerse<(value.verse||1)))fail('Rango no válido.');}, aiAsk: value=>{payload(value);if(value.action!==undefined&&!['contexto','exegesis','paralelos','originales','dios','vida','pregunta'].includes(value.action))fail('Acción no válida.');}, aiCopy: payload, aiShare: payload, aiReport: payload, youtubeSearch: payload,
     aiImage: value => { payload(value); if(Object.keys(value).some(k=>!['prompt','aspect'].includes(k))||typeof value.prompt!=='string'||!value.prompt.trim()||value.prompt.length>600||!['4:5','1:1','9:16'].includes(value.aspect)) fail('Describe el fondo en hasta 600 caracteres y elige 4:5, 1:1 o 9:16.'); },
     graphicsChronology: payload, graphicsPeople: payload, graphicsGenealogy: payload,
     circleConnect: payload, circlePreview: payload, circleShare: payload, circleResolve: payload, circleReading: payload,

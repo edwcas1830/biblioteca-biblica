@@ -1,5 +1,5 @@
 (function(root,factory){
-  if(typeof module==='object'&&module.exports)module.exports=factory(require('./references.js'),require('../platform/bridge-contract.js'),require('../app/prayer-core.js'),require('../app/guide-core.js'),require('../app/study-chat-core.js'));
+  if(typeof module==='object'&&module.exports)module.exports=factory(require('./references.js'),require('../platform/bridge-contract.js'),require('../app/prayer-core.js'),require('../app/guide-core.js'),require('./study-model.js'));
   else root.LibraryPersonalModel=factory(root.LibraryReferences,root.LibraryBridgeContract,root.PrayerCore,root.GuideCore,root.StudyChatCore);
 })(typeof globalThis!=='undefined'?globalThis:this,function(refs,contract,prayer,guide,chat){
   'use strict';
