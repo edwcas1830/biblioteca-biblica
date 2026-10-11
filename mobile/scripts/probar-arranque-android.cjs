@@ -121,6 +121,8 @@ function cargarPagina(plugins) {
   const html = fs.readFileSync(path.join(www, 'index.html'), 'utf8');
   const scripts = [...html.matchAll(/<script defer src="([^"]+)"/g)].map(m => m[1]);
   for (const f of scripts.slice(0, scripts.indexOf('mobile/movil.js'))) vm.runInContext(fs.readFileSync(path.join(www, f), 'utf8'), ctx, { filename: f });
+  // Núcleos de la app sin DOM que usan los servicios (lugares y cronología para «Contexto histórico»).
+  for (const f of ['graphics-core.js']) if (scripts.includes(f)) vm.runInContext(fs.readFileSync(path.join(www, f), 'utf8'), ctx, { filename: f });
   return ventana;
 }
 
@@ -246,6 +248,10 @@ function cargarPagina(plugins) {
       await paso('guardar clave', () => puente.aiGeminiKey(process.env.GEMINI_API_KEY));
       const modelos = await paso('modelos', () => puente.aiGeminiModels());
       const modelo = modelos[0].id;
+      const ideas = await paso('ideas de imagen', () => puente.aiImageIdeas({ ref: 'Salmos 23:1', texto: 'Jehová es mi pastor; nada me faltará.', provider: 'gemini-api' }));
+      console.log('GEMINI ideas: ' + (Array.isArray(ideas) ? ideas : ideas.ideas || []).map(i => i.titulo + ': ' + i.prompt.slice(0, 90)).join(' || '));
+      const mejor = await paso('mejorar idea', () => puente.aiImagePrompt({ idea: 'un león en la montaña', provider: 'gemini-api' }));
+      console.log('GEMINI mejorar: ' + String(mejor.prompt || '').slice(0, 220));
       for (const [nombre, accion, ref] of [['Exégesis', 'exegesis', { book: 18, chapter: 23, verse: 1 }], ['Pasajes paralelos', 'paralelos', { book: 42, chapter: 3, verse: 16 }], ['Contexto histórico', 'contexto', { book: 44, chapter: 8, verse: 28 }]]) {
         const t0 = Date.now();
         const prep = await paso('preparar ' + nombre, () => puente.aiPrepare({ ...ref, action: accion, module: 'rv1909', scope: 'verse', task: 'explain', question: '', includeBible: true, includeComment: false, study: true, allowLiving: accion === 'vida', history: '' }));
