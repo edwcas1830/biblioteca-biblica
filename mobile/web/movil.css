@@ -359,3 +359,16 @@
 .movil-ia-cuota { display: flex; align-items: center; gap: 6px; margin: 4px 0; font-size: .82rem; opacity: .9; }
 .movil-ia-cuota-texto { flex: 1 1 auto; min-width: 0; }
 .movil-ia-cuota-refrescar { min-width: 40px; min-height: 40px; padding: 0; }
+
+/* ---------- Estudiar con IA en el teléfono: que la respuesta tenga lugar ----------
+   Las seis acciones en una sola fila deslizable, la pregunta en una línea que crece al escribir, y la cabecera
+   compacta: antes las acciones y la caja de pregunta ocupaban casi toda la pantalla. */
+:root[data-telefono="true"] #ai-acciones { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-bottom: 6px; padding-bottom: 2px; }
+:root[data-telefono="true"] #ai-acciones::-webkit-scrollbar { display: none; }
+:root[data-telefono="true"] #ai-acciones .ai-accion { flex: 0 0 auto; white-space: nowrap; }
+:root[data-telefono="true"] #ai-question { min-height: 44px; height: 44px; transition: height .15s; }
+:root[data-telefono="true"] #ai-question:focus, :root[data-telefono="true"] #ai-question:not(:placeholder-shown) { height: 96px; }
+:root[data-telefono="true"] #ai-compose { max-height: 38%; padding: 8px 12px; }
+:root[data-telefono="true"] #ai-thread { min-height: 40%; }
+:root[data-telefono="true"] .ai-pane-head { padding-bottom: 4px; }
+:root[data-telefono="true"] .ai-pane-head > small, :root[data-telefono="true"] #ai-studies-open { display: inline-block; margin-right: 8px; }
