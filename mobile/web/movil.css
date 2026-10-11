@@ -372,7 +372,7 @@
 :root[data-telefono="true"] #ai-thread { min-height: 40%; }
 :root[data-telefono="true"] .ai-pane-head { padding-bottom: 4px; }
 :root[data-telefono="true"] .ai-pane-head > small, :root[data-telefono="true"] #ai-studies-open { display: inline-block; margin-right: 8px; }
-:root[data-telefono="true"] #ai-thread .ai-section p { font-size: 1rem; line-height: 1.5; }
+:root[data-telefono="true"] #ai-thread .ai-bubble p, :root[data-telefono="true"] #ai-thread .ai-section p { font-size: 16px; line-height: 1.5; }
 :root[data-telefono="true"] #ai-thread .ai-section h4 { font-size: .8rem; letter-spacing: .04em; text-transform: uppercase; margin: 10px 0 2px; }
 :root[data-telefono="true"] #ai-compose { display: flex; flex-wrap: wrap; align-items: center; column-gap: 10px; }
 :root[data-telefono="true"] #ai-compose > #ai-acciones, :root[data-telefono="true"] #ai-compose > textarea, :root[data-telefono="true"] #ai-compose > #ai-preview, :root[data-telefono="true"] #ai-compose > #ai-status { flex: 1 1 100%; }
