@@ -240,7 +240,13 @@
       estado.pestana = id; html.dataset.pestana = id;
       if (id !== 'biblia') { asegurarPanelesVisibles(); ocultarBarra(); }
       if (id === 'referencias') { const caja = $('#connections-box'); if (caja) caja.open = true; }
-      if (id === 'original' && $('#original-inline')?.hidden && !$('#original-inline').childElementCount) mostrarAviso('Toca una palabra del texto (con números Strong) para ver su original.');
+      // Diccionario: busca la palabra elegida si quedó pendiente (con la RV1960 la palabra abre primero su original).
+      if (id === 'diccionario' && typeof consultarPendiente === 'function') consultarPendiente();
+      if (id === 'original') {
+        const p = typeof palabraElegida !== 'undefined' ? palabraElegida : null;
+        if (p?.codigo && typeof openOriginal === 'function' && ($('#original-inline')?.hidden || !$('#original-inline').childElementCount)) openOriginal(p.codigo, p.text);
+        else if ($('#original-inline')?.hidden && !$('#original-inline').childElementCount) mostrarAviso('Toca una palabra del texto (con números Strong) para ver su original.');
+      }
     }
     setTimeout(() => { marcarDestino(); ajustarAltoLectura(); }, 60);
   }
