@@ -12,7 +12,7 @@ const [apk, traspaso, salida, paquete] = process.argv.slice(2);
 const PKG = 'com.edward.bibliotecabiblica';
 fs.mkdirSync(salida, { recursive: true });
 console.log('prueba en emulador · apk:', apk, '· traspaso:', traspaso, '· resultados:', salida);
-const adb = (...a) => execFileSync('adb', a, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+const adb = (...a) => execFileSync('adb', a, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, timeout: 180000 });
 const espera = ms => new Promise(r => setTimeout(r, ms));
 const informe = [];
 // Mantiene vivo el proceso mientras dura la prueba y deja constancia si Node termina sin pasar por el final.
@@ -20,11 +20,11 @@ const vigilia = setInterval(() => {}, 30000);
 let terminada = false;
 process.on('exit', codigo => { if (!terminada) { try { fs.writeFileSync(path.join(salida, 'informe.txt'), informe.concat('ERROR: la prueba terminó sin llegar al final (código ' + codigo + ')').join('\n') + '\n'); } catch { /* sin disco */ } } });
 const anotar = (ok, paso, detalle = '') => { const l = `${ok ? 'OK ' : 'FALLÓ'} ${paso}${detalle ? ' · ' + detalle : ''}`; informe.push(l); console.log(l); if (!ok) throw new Error(paso + ': ' + detalle); };
-const captura = nombre => { try { fs.writeFileSync(path.join(salida, nombre + '.png'), execFileSync('adb', ['exec-out', 'screencap', '-p'], { maxBuffer: 64 * 1024 * 1024 })); } catch { /* sin captura */ } };
+const captura = nombre => { try { fs.writeFileSync(path.join(salida, nombre + '.png'), execFileSync('adb', ['exec-out', 'screencap', '-p'], { maxBuffer: 64 * 1024 * 1024, timeout: 60000 })); } catch { /* sin captura */ } };
 
 // adb exec-in vuelve antes de que el teléfono termine de escribir: se espera a que el archivo tenga su tamaño.
 async function subirACache(nombre, datos) {
-  execFileSync('adb', ['exec-in', `run-as ${PKG} sh -c 'cat > cache/${nombre}'`], { input: datos, maxBuffer: 64 * 1024 * 1024 });
+  execFileSync('adb', ['exec-in', `run-as ${PKG} sh -c 'cat > cache/${nombre}'`], { input: datos, maxBuffer: 64 * 1024 * 1024, timeout: 300000 });
   for (let i = 0; i < 60; i++) {
     let tam = -1;
     try { tam = Number(adb('shell', 'run-as', PKG, 'stat', '-c', '%s', 'cache/' + nombre).trim()); } catch { /* aún no existe */ }

@@ -7,11 +7,11 @@ const { execFileSync } = require('node:child_process');
 const fs = require('node:fs'), path = require('node:path');
 const [apk, salida] = process.argv.slice(2);
 const PKG = 'com.castillodigital.bibliotecabiblica';
-const adb = (...a) => execFileSync('adb', a, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+const adb = (...a) => execFileSync('adb', a, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, timeout: 180000 });
 const espera = ms => new Promise(r => setTimeout(r, ms));
 const lineas = [];
 const anotar = (ok, paso, detalle = '') => { const l = `${ok ? 'OK ' : 'FALLÓ'} tienda: ${paso}${detalle ? ' · ' + detalle : ''}`; lineas.push(l); console.log(l); return ok; };
-const captura = nombre => { try { fs.writeFileSync(path.join(salida, 'tienda-' + nombre + '.png'), execFileSync('adb', ['exec-out', 'screencap', '-p'], { maxBuffer: 64 * 1024 * 1024 })); } catch { /* sin captura */ } };
+const captura = nombre => { try { fs.writeFileSync(path.join(salida, 'tienda-' + nombre + '.png'), execFileSync('adb', ['exec-out', 'screencap', '-p'], { maxBuffer: 64 * 1024 * 1024, timeout: 60000 })); } catch { /* sin captura */ } };
 const vigilia = setInterval(() => {}, 30000);
 
 async function conectar() {

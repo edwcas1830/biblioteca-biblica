@@ -7,7 +7,7 @@ const { execFileSync } = require('node:child_process');
 const fs = require('node:fs'), path = require('node:path');
 const [apk, salida] = process.argv.slice(2);
 const PKG = 'com.edward.bibliotecabiblica';
-const adb = (...a) => execFileSync('adb', a, { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
+const adb = (...a) => execFileSync('adb', a, { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024, timeout: 180000 });
 const intentar = (...a) => { try { return { ok: true, salida: adb(...a) }; } catch (e) { return { ok: false, salida: String(e.stdout || '') + String(e.stderr || '') }; } };
 const espera = ms => new Promise(r => setTimeout(r, ms));
 const lineas = [];
@@ -23,7 +23,7 @@ const anotar = (ok, paso, detalle = '') => { const l = `${ok ? 'OK ' : 'FALLÓ'}
   for (let i = 0; i < 30 && !pid; i++) { await espera(1000); pid = intentar('shell', 'pidof', PKG).salida.trim(); }
   await espera(6000);
   pid = intentar('shell', 'pidof', PKG).salida.trim();
-  try { fs.writeFileSync(path.join(salida, 'version-final.png'), execFileSync('adb', ['exec-out', 'screencap', '-p'], { maxBuffer: 64 * 1024 * 1024 })); } catch { /* sin captura */ }
+  try { fs.writeFileSync(path.join(salida, 'version-final.png'), execFileSync('adb', ['exec-out', 'screencap', '-p'], { maxBuffer: 64 * 1024 * 1024, timeout: 60000 })); } catch { /* sin captura */ }
   const paquete = adb('shell', 'dumpsys', 'package', PKG);
   const banderas = (paquete.match(/pkgFlags=\[[^\]]*\]/) || [''])[0];
   const runAs = intentar('shell', 'run-as', PKG, 'ls');
