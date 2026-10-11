@@ -182,6 +182,7 @@ jobs:
           grep -q "^OK  paso 2: pestañas abajo, una cosa a la vez a pantalla completa" prueba-emulador/informe.txt
           grep -q "^OK  paso 3: acciones del versículo y elegir varios (Juan 3:16-18)" prueba-emulador/informe.txt
           grep -q "^OK  la palabra elegida sigue al cambiar de diccionario" prueba-emulador/informe.txt
+          grep -q "^OK  paso 4: Mi estudio guarda marcadores, etiquetas, memoria, colores e historial" prueba-emulador/informe.txt
 
       - name: Resultados de la prueba en el emulador
         if: always()

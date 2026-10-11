@@ -498,3 +498,31 @@ html[data-edicion="tienda"] #sources-dialog > p.muted { display: none !important
 .movil-seleccion-cuenta { flex: 1 0 auto; padding: 0 8px; font-weight: 700; white-space: nowrap; }
 :root[data-telefono="true"] #verses .verse.movil-elegido { background: color-mix(in srgb, var(--accent) 16%, transparent); box-shadow: inset 4px 0 var(--accent); }
 :root[data-telefono="true"][data-seleccion="varios"] #movil-versiculo { display: none !important; }
+
+/* ---------- Paso 4 (CONSENSO-MOVIL.md): Mi estudio ---------- */
+#mi-estudio, #movil-etiquetar { width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; margin: 0; border: 0; border-radius: 0; padding: calc(8px + var(--seguro-arriba, 0px)) 16px calc(16px + var(--seguro-abajo, 0px)); background: var(--paper); color: inherit; display: none; flex-direction: column; }
+#mi-estudio[open], #movil-etiquetar[open] { display: flex; }
+#movil-etiquetar { height: auto; margin: auto 0 0; border-radius: 18px 18px 0 0; }
+.mi-estudio-filtros { display: flex; gap: 8px; overflow-x: auto; padding: 8px 0; scrollbar-width: none; flex: none; }
+.mi-estudio-filtros button { flex: none; min-height: 48px; padding: 0 16px; border: 1px solid var(--line); border-radius: 24px; background: var(--bg); color: var(--ink); font-weight: 600; white-space: nowrap; }
+.mi-estudio-filtros button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+.mi-estudio-lista { flex: 1; overflow-y: auto; padding: 8px 0 24px; }
+.mi-estudio-fila { display: grid; gap: 4px; width: 100%; min-height: 48px; padding: 12px 0; text-align: left; border: 0; border-bottom: 1px solid var(--line); background: none; color: var(--ink); font: inherit; }
+.mi-estudio-fila b { color: var(--accent); font-size: .95rem; }
+.mi-estudio-fila span { font-size: .95rem; line-height: 1.5; overflow-wrap: anywhere; }
+.mi-estudio-vacio { color: var(--muted); padding: 24px 0; line-height: 1.6; }
+.mi-estudio-grupo { margin: 24px 0 8px; font-size: .8rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.mi-estudio-colores { display: grid; gap: 8px; margin: 8px 0 16px; }
+.mi-estudio-color { display: flex; align-items: center; gap: 12px; margin: 0; }
+.mi-estudio-color .ink { flex: none; width: 32px; height: 32px; border-radius: 50%; }
+.mi-estudio-color input { flex: 1; min-width: 0; min-height: 48px; margin: 0; }
+.movil-etiquetas { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 16px; }
+.movil-etiquetas button { min-height: 48px; padding: 0 16px; border-radius: 24px; }
+.movil-etiquetas button.activa { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+.movil-etiquetar-form { display: flex; gap: 8px; margin: 8px 0; }
+.movil-etiquetar-form input { flex: 1; min-width: 0; min-height: 48px; margin: 0; }
+.movil-etiquetar-form button { min-height: 48px; }
+/* Barra de varios versículos: la cuenta arriba y las acciones repartidas abajo (no se desliza de lado). */
+:root[data-telefono="true"] #movil-seleccion:not([hidden]) { flex-wrap: wrap; overflow-x: visible; }
+:root[data-telefono="true"] #movil-seleccion .movil-seleccion-cuenta { flex: 1 1 100%; padding: 8px; }
+:root[data-telefono="true"] #movil-seleccion button { flex: 1 1 0; min-width: 48px; padding: 0 4px; }

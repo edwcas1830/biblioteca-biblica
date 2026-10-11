@@ -124,7 +124,10 @@
     // Secciones (paso 2): Mi camino · Herramientas · Mi biblioteca y ajustes.
     const plan = crear('button', { type: 'button', class: 'quiet', texto: '📅 Plan de lectura', onclick: () => { cerrarMas(); botonPorTexto('.compact-nav button', 'mi plan')?.click(); } });
     lista.prepend(plan);
+    const miEstudio = VISTAS_ESTUDIO.map(v => crear('button', { type: 'button', class: 'quiet', 'data-estudio': v.id, texto: { historial: '🕘 ', marcador: '🔖 ', resaltados: '🖍 ', etiqueta: '🏷 ', notas: '✎ ', memoria: '🧠 ' }[v.id] + v.texto, onclick: () => { cerrarMas(); abrirMiEstudio(v.id); } }));
+    lista.prepend(...miEstudio);
     const SECCIONES = [
+      ['Mi estudio', /^(🕘|🔖|🖍|🏷|✎|🧠) /],
       ['Mi camino', /plan de lectura|oración|círculo/i],
       ['Herramientas', /imagen|estudio con ia|atlas|pantalla completa|escuchar|música/i],
       ['Mi biblioteca y ajustes', /./]
@@ -358,6 +361,7 @@
       crear('button', { type: 'button', class: 'quiet movil-mas-acciones', id: 'movil-mas-acciones', texto: '⋯', 'aria-label': 'Más acciones del versículo', onclick: abrirAcciones })
     );
     document.body.append(barra);
+    setTimeout(pintarColores, 0);
     construirHojaAcciones();
     construirSeleccion();
     const puente = window.libraryDesktop;
@@ -370,6 +374,106 @@
       notas.querySelector('summary')?.addEventListener('click', () => setTimeout(() => { html.dataset.notas = notas.open ? 'abiertas' : 'cerradas'; }, 0));
     }
   }
+
+  // ---------- Paso 4 (CONSENSO-MOVIL.md): Mi estudio ----------
+  // Historial · Marcadores · Resaltados (con nombre por color) · Etiquetas · Notas · Para memorizar.
+  // Los datos viven en state.estudio (EstudioCore) y en state.highlights / state.notes de siempre.
+  const VISTAS_ESTUDIO = [
+    { id: 'historial', texto: 'Historial' }, { id: 'marcador', texto: 'Marcadores' }, { id: 'resaltados', texto: 'Resaltados' },
+    { id: 'etiqueta', texto: 'Etiquetas' }, { id: 'notas', texto: 'Notas' }, { id: 'memoria', texto: 'Para memorizar' }
+  ];
+  const NOMBRE_COLOR = { gold: 'Dorado', sage: 'Verde', rose: 'Rosa' };
+  let hojaEstudio, filtroEstudio = 'historial', etiquetaElegida = '';
+  const est = () => { if (!state.estudio) state.estudio = window.EstudioCore.vacio(); return state.estudio; };
+  const refActual = () => { const sel = window.BibliaSeleccion?.elegidos || []; const p = state.position; return sel.length > 1 ? { book: p.book, chapter: p.chapter, verse: Math.min(...sel), endVerse: Math.max(...sel) } : { book: p.book, chapter: p.chapter, verse: p.verse || 1 }; };
+  const textoDe = r => { try { const c = books[r.book].chapters[r.chapter - 1]; if (!r.verse) return ''; return c.slice(r.verse - 1, r.endVerse || r.verse).join(' '); } catch { return ''; } };
+  const nombreColor = c => (state.estudio?.colores?.[c] || '').trim() || NOMBRE_COLOR[c];
+  function guardarEstudio(nuevo, aviso) { state.estudio = nuevo; save(); if (aviso) mostrarAviso(aviso); if (hojaEstudio?.open) pintarEstudio(); pintarColores(); }
+  function marcar(tipo) {
+    const r = refActual(), E = window.EstudioCore, ya = E.tiene(est(), tipo, r);
+    guardarEstudio(E.alternar(est(), tipo, r), (ya ? 'Quitado de ' : 'Agregado a ') + (tipo === 'marcador' ? 'Marcadores' : 'Para memorizar') + ': ' + E.nombreRef(r, books));
+  }
+  function etiquetar() {
+    const r = refActual(), E = window.EstudioCore;
+    const dlg = crear('dialog', { id: 'movil-etiquetar', 'aria-label': 'Etiquetar' });
+    const campo = crear('input', { type: 'text', maxlength: '40', placeholder: 'Nombre de la etiqueta (ej.: Promesas)', 'aria-label': 'Nombre de la etiqueta' });
+    const poner = nombre => { try { guardarEstudio(E.alternar(est(), 'etiqueta', r, nombre), (E.tiene(state.estudio, 'etiqueta', r, nombre.trim()) ? 'Etiqueta «' : 'Quitada la etiqueta «') + nombre.trim() + '»'); dlg.close(); } catch (e) { mostrarAviso(e.message); } };
+    const existentes = E.etiquetas(est()).map(n => crear('button', { type: 'button', class: 'outline' + (E.tiene(est(), 'etiqueta', r, n) ? ' activa' : ''), texto: n, onclick: () => poner(n) }));
+    dlg.append(
+      crear('div', { class: 'movil-mas-cabecera' }, [crear('h2', { texto: 'Etiquetar ' + E.nombreRef(r, books) }), crear('button', { type: 'button', class: 'quiet', 'aria-label': 'Cerrar', texto: '✕', onclick: () => dlg.close() })]),
+      crear('form', { class: 'movil-etiquetar-form', onsubmit: e => { e.preventDefault(); if (campo.value.trim()) poner(campo.value); } }, [campo, crear('button', { type: 'submit', class: 'outline', texto: 'Agregar' })]),
+      ...(existentes.length ? [crear('p', { class: 'muted', texto: 'Tus etiquetas (toca para poner o quitar):' }), crear('div', { class: 'movil-etiquetas' }, existentes)] : [])
+    );
+    dlg.addEventListener('close', () => dlg.remove());
+    document.body.append(dlg); dlg.showModal(); setTimeout(() => campo.focus(), 50);
+  }
+  function construirMiEstudio() {
+    hojaEstudio = crear('dialog', { id: 'mi-estudio', 'aria-label': 'Mi estudio' }, [
+      crear('div', { class: 'movil-mas-cabecera' }, [crear('h2', { texto: 'Mi estudio' }), crear('button', { type: 'button', class: 'quiet', 'aria-label': 'Cerrar', texto: '✕', onclick: () => hojaEstudio.close() })]),
+      crear('div', { class: 'mi-estudio-filtros', role: 'tablist', 'aria-label': 'Qué ver' }, VISTAS_ESTUDIO.map(v => crear('button', { type: 'button', role: 'tab', 'data-filtro': v.id, texto: v.texto, onclick: () => { filtroEstudio = v.id; etiquetaElegida = ''; pintarEstudio(); } }))),
+      crear('div', { class: 'mi-estudio-lista', role: 'region', 'aria-live': 'polite' })
+    ]);
+    document.body.append(hojaEstudio);
+  }
+  function abrirMiEstudio(filtro) { if (!hojaEstudio) construirMiEstudio(); filtroEstudio = filtro || filtroEstudio; etiquetaElegida = ''; pintarEstudio(); hojaEstudio.showModal(); }
+  function filaEstudio(r, detalle, extra) {
+    const E = window.EstudioCore;
+    return crear('button', { type: 'button', class: 'mi-estudio-fila', onclick: () => { hojaEstudio.close(); go(r.book, r.chapter, r.verse || 1, r.endVerse); elegirVista('biblia'); } }, [
+      crear('b', { texto: E.nombreRef(r, books) + (extra ? ' · ' + extra : '') }),
+      crear('span', { texto: (detalle || textoDe(r)).slice(0, 160) })
+    ]);
+  }
+  function pintarEstudio() {
+    const lista = $('.mi-estudio-lista', hojaEstudio), E = window.EstudioCore, e = est();
+    for (const b of $$('.mi-estudio-filtros button', hojaEstudio)) b.setAttribute('aria-selected', String(b.dataset.filtro === filtroEstudio));
+    lista.replaceChildren();
+    const vacio = t => lista.append(crear('p', { class: 'mi-estudio-vacio', texto: t }));
+    if (filtroEstudio === 'historial') {
+      if (!e.historial.length) return vacio('Aquí aparecerán los capítulos que vayas leyendo.');
+      for (const h of e.historial) lista.append(filaEstudio({ book: h.book, chapter: h.chapter }, new Date(h.t).toLocaleString('es', { dateStyle: 'medium', timeStyle: 'short' })));
+    } else if (filtroEstudio === 'resaltados') {
+      // Nombres de los colores (e-Sword: «Highlight Labels»): se escriben aquí y se ven al resaltar.
+      const nombres = crear('div', { class: 'mi-estudio-colores' }, window.EstudioCore.COLORES.map(c => crear('label', { class: 'mi-estudio-color' }, [
+        crear('span', { class: 'ink ' + c, 'aria-hidden': 'true' }),
+        (() => { const i = crear('input', { type: 'text', maxlength: '30', value: e.colores[c] || '', placeholder: 'Nombre del ' + NOMBRE_COLOR[c].toLowerCase() + ' (ej.: ' + { gold: 'Promesa', sage: 'Mandato', rose: 'Pecado' }[c] + ')', 'aria-label': 'Nombre del color ' + NOMBRE_COLOR[c] }); i.addEventListener('change', () => { guardarEstudio({ ...est(), colores: { ...est().colores, [c]: i.value.trim().slice(0, 30) } }); }); return i; })()
+      ])));
+      lista.append(nombres);
+      const items = E.desdeClaves(state.highlights);
+      if (!items.length) return vacio('Todavía no resaltaste versículos. Toca un versículo y elige un color.');
+      for (const c of E.COLORES) {
+        const delColor = items.filter(x => x.valor === c);
+        if (!delColor.length) continue;
+        lista.append(crear('h3', { class: 'mi-estudio-grupo', texto: nombreColor(c) + ' · ' + delColor.length }));
+        for (const x of delColor) lista.append(filaEstudio(x));
+      }
+    } else if (filtroEstudio === 'notas') {
+      if (state.privateLocked) return vacio('Tu cuaderno está cerrado con PIN. Ábrelo para ver tus notas.');
+      const items = E.desdeClaves(state.notes);
+      if (!items.length) return vacio('Todavía no escribiste notas. Toca un versículo y elige «Nota».');
+      for (const x of items) lista.append(filaEstudio(x, x.valor));
+    } else if (filtroEstudio === 'etiqueta') {
+      const nombres = E.etiquetas(e);
+      if (!nombres.length) return vacio('Todavía no tienes etiquetas. Toca un versículo › ⋯ › Etiquetar.');
+      lista.append(crear('div', { class: 'movil-etiquetas' }, nombres.map(n => crear('button', { type: 'button', class: 'outline' + (n === etiquetaElegida ? ' activa' : ''), texto: n, onclick: () => { etiquetaElegida = etiquetaElegida === n ? '' : n; pintarEstudio(); } }))));
+      for (const m of e.marcas.filter(m => m.tipo === 'etiqueta' && (!etiquetaElegida || m.etiqueta === etiquetaElegida))) lista.append(filaEstudio(m, '', m.etiqueta));
+    } else {
+      const items = e.marcas.filter(m => m.tipo === filtroEstudio);
+      if (!items.length) return vacio(filtroEstudio === 'marcador' ? 'Todavía no hay marcadores. Toca un versículo › ⋯ › Marcar.' : 'Todavía no hay versículos para memorizar. Toca un versículo › ⋯ › Memorizar.');
+      for (const m of items) lista.append(filaEstudio(m));
+    }
+  }
+  // Los botones de color muestran su nombre (si se lo pusiste).
+  function pintarColores() {
+    for (const b of $$('#movil-versiculo .movil-tintas button, .ink-colors [data-ink]')) {
+      const c = ['gold', 'sage', 'rose'].find(x => b.classList.contains(x)) || b.dataset?.ink;
+      if (!['gold', 'sage', 'rose'].includes(c)) continue;
+      const n = (state.estudio?.colores?.[c] || '').trim();
+      b.title = n ? 'Resaltar: ' + n : 'Resaltar en ' + NOMBRE_COLOR[c].toLowerCase();
+      b.setAttribute('aria-label', b.title);
+    }
+  }
+  window.BibliaEstudio = { abrir: abrirMiEstudio, marcar, etiquetar };
+
   // ---------- Paso 3 (CONSENSO-MOVIL.md): «⋯» con todas las acciones y varios versículos a la vez ----------
   let hojaAcciones;
   function construirHojaAcciones() {
@@ -377,6 +481,9 @@
     hojaAcciones = crear('dialog', { id: 'movil-acciones', 'aria-label': 'Acciones del versículo' }, [
       crear('div', { class: 'movil-mas-cabecera' }, [crear('h2', { id: 'movil-acciones-titulo', texto: 'Versículo' }), crear('button', { type: 'button', class: 'quiet', 'aria-label': 'Cerrar', texto: '✕', onclick: () => hojaAcciones.close() })]),
       crear('div', { class: 'movil-mas-lista' }, [
+        fila('🔖 Marcar / quitar marcador', () => marcar('marcador')),
+        fila('🏷 Etiquetar…', etiquetar),
+        fila('🧠 Para memorizar / quitar', () => marcar('memoria')),
         fila('☑ Elegir varios versículos', () => entrarSeleccion($('#verses .verse.selected'))),
         fila('🖼 Imagen con este versículo', () => window.BibliaImagen?.abrir()),
         fila('✦ Preguntar a la IA', () => $('#ai-verse-ask')?.click(), { id: 'movil-preguntar' }),
@@ -403,6 +510,8 @@
       boton('⧉ Copiar', () => copiarSeleccion(false), 'Copiar los versículos elegidos'),
       boton('↗ Compartir', () => copiarSeleccion(true), 'Compartir los versículos elegidos'),
       boton('🖼 Imagen', imagenSeleccion, 'Imagen con los versículos elegidos'),
+      boton('🧠', () => { marcar('memoria'); salirSeleccion(); }, 'Memorizar los versículos elegidos'),
+      boton('🏷', () => { etiquetar(); }, 'Etiquetar los versículos elegidos'),
       boton('✕', salirSeleccion, 'Terminar la selección')
     ]);
     document.body.append(barraSeleccion);

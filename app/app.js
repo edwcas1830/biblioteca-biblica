@@ -7,7 +7,7 @@ const planCore = window.PlanCore;
 const appearanceCore=window.AppearanceCore;
 const paneCore=window.PaneLayoutCore;
 const STORE = 'biblioteca-biblica-v1';
-const initial = () => ({ version:1, position:{book:18,chapter:23,verse:1}, notes:{}, highlights:{}, devResponses:{}, planNotes:{}, prayers:[], prayerDrafts:{}, guideResponses:{}, aiStudies:[], aiPrefs:{}, privacyEnabled:false, privateLocked:false, music:{url:''}, devotionals:[], plans:[], font:20, night:false, appearance:appearanceCore.normalize() });
+const initial = () => ({ version:1, position:{book:18,chapter:23,verse:1}, notes:{}, highlights:{}, devResponses:{}, planNotes:{}, prayers:[], prayerDrafts:{}, guideResponses:{}, aiStudies:[], aiPrefs:{}, estudio:(window.EstudioCore?EstudioCore.vacio():{marcas:[],colores:{},historial:[]}), privacyEnabled:false, privateLocked:false, music:{url:''}, devotionals:[], plans:[], font:20, night:false, appearance:appearanceCore.normalize() });
 let state = initial(), activeView='read', activeDev=null, activeDay=0, toastTimer, searchTimer;
 const desktop=window.libraryDesktop;
 let uiReady=false, storageReady=false, saveQueue=Promise.resolve(), selectedVersion='rv1909', catalogData=null, readingGeneration=0, searchGeneration=0, studyGeneration=0, chapterData=null, savePending=0, saveFailed=false;
@@ -58,6 +58,8 @@ function validateState(candidate) {
   result.prayers=PrayerCore.validate(candidate.prayers||[]);for(const p of result.prayers)if(p.answer&&!validPosition(p.answer.reference))throw new Error('Versículo del testimonio fuera de rango.');result.prayerDrafts=PrayerCore.drafts(candidate.prayerDrafts||{});result.privacyEnabled=candidate.privacyEnabled===true;result.privateLocked=candidate.privateLocked===true;
   result.aiStudies=StudyChatCore.validate(candidate.aiStudies);result.aiPrefs={provider:['openrouter','codex','claude','gemini-cli','gemini-api'].includes(candidate.aiPrefs?.provider)?candidate.aiPrefs.provider:'openrouter',width:Math.max(300,Math.min(600,Number(candidate.aiPrefs?.width)||350))};
   result.music=MusicCore.preference(candidate.music);
+  // «Mi estudio» (paso 4 del teléfono): marcadores, etiquetas, memoria, nombres de colores e historial.
+  if(window.EstudioCore)result.estudio=EstudioCore.validar(candidate.estudio,validPosition);
   result.font=Number.isInteger(candidate.font)?Math.max(16,Math.min(28,candidate.font)):20;
   result.night=candidate.night===true;
   result.appearance=appearanceCore.normalize(candidate.appearance);
@@ -137,7 +139,9 @@ function renderNote() {
 function go(book,chapter,verse=1,endVerse) {
   if(!validPosition({book,chapter,verse})) { toast('No se encontró ese pasaje.'); return; }
   readerRange=endVerse?{book,chapter,start:verse,end:endVerse}:null;
-  studySelection=endVerse?'range':verse!==1?'verse':'chapter';state.position={book,chapter,verse}; renderReader(); save(); showView('read');
+  studySelection=endVerse?'range':verse!==1?'verse':'chapter';state.position={book,chapter,verse};
+  if(window.EstudioCore)state.estudio=EstudioCore.alHistorial(state.estudio||EstudioCore.vacio(),{book,chapter,verse});
+  renderReader(); save(); showView('read');
   if(verse!==1) $('#verses').querySelector(`[data-verse="${verse}"]`)?.scrollIntoView({block:'center'});
 }
 function changeChapter(direction) {
