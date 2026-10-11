@@ -52,6 +52,17 @@ async function conectar() {
   anotar(estado === 'lista', 'arranca', estado);
   const caps = await app.evaluar("const c=await window.libraryDesktop.getCapabilities();const o=c.operations;const v=n=>!!o[n]?.available;return {edicion:window.BIBLIA_EDICION,capitulo:v('chapter'),ia:['aiStatus','aiAsk','aiPrepare','aiImage'].filter(v),musica:['musicPlayer','youtubeSearch'].filter(v),traspaso:['transferScan','transferInstall'].filter(v),circulo:['circleConnect','circleShare'].filter(v),modulos:['moduleInstall','moduleScan'].filter(v)};");
   anotar(caps.edicion === 'tienda' && caps.capitulo && !caps.ia.length && !caps.musica.length && !caps.traspaso.length && !caps.circulo.length && !caps.modulos.length, 'sin IA, música, traspaso, círculo ni importar módulos', JSON.stringify(caps));
+  // Que la app termine de prepararse antes de tocar nada (si no, avisa «La copia anterior está protegida»).
+  const listo = await app.evaluar("for(let i=0;i<90&&!(typeof storageReady!=='undefined'&&storageReady);i++)await new Promise(r=>setTimeout(r,500));return typeof storageReady!=='undefined'&&storageReady;", 70000);
+  anotar(listo, 'almacenamiento listo para guardar');
+  // Una nota escrita en la pantalla se guarda y sigue después de recargar.
+  const escrita = await app.evaluar("go(42,3,16);await new Promise(r=>setTimeout(r,900));const n=document.querySelector('#note');n.value='Nota de prueba de la tienda';n.dispatchEvent(new Event('input',{bubbles:true}));n.dispatchEvent(new Event('change',{bubbles:true}));await new Promise(r=>setTimeout(r,2500));await saveQueue;return document.querySelector('#save-status')?.textContent||'';");
+  await app.evaluar("setTimeout(()=>location.reload(),50);return true;").catch(() => {});
+  await espera(4000); try { app.cerrar(); } catch {}
+  app = await conectar();
+  let tras = null;
+  for (let i = 0; i < 60 && !tras; i++) { try { tras = await app.evaluar("if(!(typeof storageReady!=='undefined'&&storageReady))return null;return JSON.stringify(state.notes||{});", 5000); } catch { try { app.cerrar(); } catch {} app = await conectar(); } if (!tras) await espera(1000); }
+  anotar(!!tras && /Nota de prueba de la tienda/.test(tras), 'una nota escrita en pantalla sigue tras recargar', escrita);
   await app.evaluar("go(42,3,16);await new Promise(r=>setTimeout(r,1200));return true;");
   captura('1-lectura');
   const mas = await app.evaluar("document.querySelector('#movil-nav [data-destino=\"mas\"]').click();await new Promise(r=>setTimeout(r,700));return [...document.querySelectorAll('#movil-mas .movil-mas-lista button')].filter(b=>!b.hidden).map(b=>b.textContent.trim());");
@@ -60,10 +71,10 @@ async function conectar() {
   const apoyo = await app.evaluar("[...document.querySelectorAll('#movil-mas .movil-mas-lista button')].find(b=>/Apoyar/.test(b.textContent)).click();await new Promise(r=>setTimeout(r,700));const d=document.querySelector('#movil-apoyo');return {abierto:!!d?.open,montos:[...d.querySelectorAll('.movil-apoyo-montos button')].map(b=>b.textContent)};");
   captura('3-apoyar');
   anotar(apoyo.abierto && apoyo.montos.length === 4, 'pantalla «Apoyar el proyecto»', JSON.stringify(apoyo));
-  await app.evaluar("document.querySelector('#movil-apoyo').close();go(18,23,1);await new Promise(r=>setTimeout(r,800));window.BibliaImagen.abrir();await new Promise(r=>setTimeout(r,900));return true;");
-  const img = await app.evaluar("return {bloqueIa:!document.querySelector('#imagen-ia')?.hidden};");
+  await app.evaluar("document.querySelector('#movil-apoyo').close();go(18,23,1);await new Promise(r=>setTimeout(r,1000));window.BibliaImagen.abrir();for(let i=0;i<20&&!document.querySelector('dialog[open] #imagen-texto');i++)await new Promise(r=>setTimeout(r,300));await window.BibliaImagen.dibujar?.();await new Promise(r=>setTimeout(r,800));return true;");
+  const img = await app.evaluar("return {abierto:!!document.querySelector('dialog[open] #imagen-texto'),bloqueIa:!document.querySelector('#imagen-ia')?.hidden};");
   captura('4-imagen');
-  anotar(!img.bloqueIa, 'imagen con versículos sin el bloque de IA', JSON.stringify(img));
+  anotar(img.abierto && !img.bloqueIa, 'imagen con versículos abre sin el bloque de IA', JSON.stringify(img));
   await app.evaluar("document.querySelector('#imagen-cerrar')?.click();const b=[...document.querySelectorAll('.library-menu-items button')].find(x=>/fuentes/i.test(x.textContent));b&&b.click();await new Promise(r=>setTimeout(r,900));return true;");
   captura('5-fuentes');
   const ocultos = await app.evaluar("const oculto=s=>{const e=document.querySelector(s);return !e||getComputedStyle(e).display==='none'||e.hidden;};return {musica:oculto('#music-quick'),importar:oculto('#module-import-open'),paquetes:oculto('#sources-refresh')};");
