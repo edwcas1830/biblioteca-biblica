@@ -8,9 +8,11 @@ module.exports=async({evaluate,screenshot,wait})=>{
  await evaluate("document.querySelector('#ai-question').value='¿Qué puedo observar?';document.querySelector('#ai-prepare').click()");
  for(let i=0;i<100;i++){await wait(50);if(await evaluate('!!aiPrepared'))break;}
  report.context=await evaluate("({sources:aiPrepared.sources.map(s=>({module:s.module,license:s.license,attribution:s.attribution,origin:s.origin,licenseUrl:s.licenseUrl})),prompt:aiPrepared.prompt,preview:document.querySelector('#ai-sources').textContent})");
- assert.equal(report.context.sources.length,1);assert.equal(report.context.sources[0].module,'onbv2008');
- for(const key of ['license','attribution','origin','licenseUrl'])assert.ok(report.context.prompt.includes(report.context.sources[0][key]));
- assert.match(report.context.preview,/Biblica, Inc/);await screenshot('v06-ia-fuente-libre-atribucion');
+ const onbv=report.context.sources.find(s=>s.module==='onbv2008');assert.ok(onbv,'la fuente ONBV va en la consulta');
+ for(const key of ['license','attribution','origin','licenseUrl'])assert.ok(report.context.prompt.includes(onbv[key]));
+ report.vista={pedida:await evaluate("!document.querySelector('#ai-preview').hidden")};await evaluate('prepareAi()');await wait(400);report.vista.sinPedir=await evaluate("document.querySelector('#ai-preview').hidden");assert.ok(report.vista.pedida&&report.vista.sinPedir,'la vista de lo enviado solo aparece si se pide');await evaluate("document.querySelector('#ai-prepare').click()");await wait(400);
+ // La atribución viaja con la fuente (se guarda y está en «Fuentes y licencias»); la vista previa solo nombra fuentes y referencias.
+ assert.ok(report.context.sources.some(s=>/Biblica, Inc/.test(s.attribution||'')));assert.doesNotMatch(report.context.preview,/CC BY|Uso personal/);await screenshot('v06-ia-fuente-libre-atribucion');
  await evaluate(`closeAi();selectedVersion=${JSON.stringify(before)};document.querySelector('#version-select').value=selectedVersion;go(42,3,16)`);
  report.providerContacted=false;return report;
 };
