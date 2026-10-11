@@ -155,7 +155,7 @@
           <div class="imagen-fila"><label>Estilo <select id="imagen-estilo">${Object.entries(ESTILOS).map(([id, e]) => `<option value="${id}">${e.nombre}</option>`).join('')}</select></label>
           <label>Tamaño <select id="imagen-formato">${Object.entries(FORMATOS).map(([id, f]) => `<option value="${id}">${f.nombre}</option>`).join('')}</select></label></div>
           <div class="imagen-fila"><label class="imagen-foto">Foto de fondo (opcional)<input id="imagen-foto" type="file" accept="image/*"></label><button type="button" class="quiet" id="imagen-sin-foto" hidden>Quitar foto</button></div>
-          <div id="imagen-ia" class="imagen-ia" hidden><label>Fondo creado con IA (usa tu conexión de OpenRouter)<textarea id="imagen-ia-texto" rows="2" maxlength="600"></textarea></label><button type="button" class="quiet" id="imagen-ia-crear">✦ Crear fondo con IA</button></div>
+          <div id="imagen-ia" class="imagen-ia" hidden><label>Fondo creado con IA (con tu clave de Gemini o tu conexión de OpenRouter)<textarea id="imagen-ia-texto" rows="2" maxlength="600"></textarea></label><button type="button" class="quiet" id="imagen-ia-crear">✦ Crear fondo con IA</button></div>
           <div class="imagen-acciones"><button type="button" class="primary" id="imagen-guardar"></button></div>
           <p id="imagen-estado" class="muted" role="status"></p>
         </div>
@@ -194,7 +194,7 @@
       aviso.textContent = 'Fondo creado' + (r.model ? ' con ' + r.model : '') + '. Si no te gusta, cambia la descripción y vuelve a crearlo.';
     } catch (e) {
       const m = (e && e.message) || 'No se pudo crear el fondo.';
-      aviso.textContent = !/OpenRouter/.test(m) && /conex|conect|LOCKED|UNAVAILABLE/i.test(m + (e && e.code || '')) ? m + ' Conecta OpenRouter en Mi biblioteca › Inteligencia artificial.' : m;
+      aviso.textContent = !/OpenRouter|Gemini/.test(m) && /conex|conect|LOCKED|UNAVAILABLE/i.test(m + (e && e.code || '')) ? m + ' Conecta Gemini u OpenRouter en Inteligencia artificial.' : m;
     } finally { boton.disabled = false; }
   }
   async function mostrarIA() {

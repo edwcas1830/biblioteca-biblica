@@ -71,5 +71,37 @@
     // Neither provider prose nor arbitrary model IDs/URLs cross this contract.
     return {dataUrl:png(message.images[0]?.image_url?.url),model:MODEL};
   }
-  return Object.freeze({MODEL,MAX_RESPONSE,MAX_IMAGE,ImageError,validate,body,read,result});
+  // Gemini con la clave del usuario (AI Studio): los modelos de imagen devuelven JPEG o PNG integrado.
+  // Se prueban en orden; si Google retira uno (404) se pasa al siguiente.
+  const GEMINI_MODELS=['gemini-nano-banana-2.1','nano-banana-pro-preview','gemini-2.5-flash-image'];
+  const SISTEMA='Genera exactamente UNA imagen de fondo para una tarjeta de lectura bíblica. No dibujes texto, letras, números, citas, logotipos ni marcas visibles. Deja espacio tranquilo para que la aplicación escriba el versículo encima. Descripción: ';
+  function geminiBody(input){
+    const chosen=validate(input);
+    return {contents:[{role:'user',parts:[{text:SISTEMA+chosen.prompt}]}],generationConfig:{responseModalities:['IMAGE'],imageConfig:{aspectRatio:chosen.aspect}}};
+  }
+  function jpeg(url){
+    if(typeof url!=='string'||!url.startsWith('data:image/jpeg;base64,'))fail('CORRUPT','Gemini no devolvió un fondo JPEG integrado.');
+    const encoded=url.slice(23);
+    if(!encoded.length||encoded.length>Math.ceil(MAX_IMAGE/3)*4||encoded.length%4||!/^[A-Za-z0-9+/]*={0,2}$/.test(encoded))fail('CORRUPT','El fondo JPEG no tiene una codificación válida.');
+    let raw;try{raw=atob(encoded);}catch{fail('CORRUPT','El fondo JPEG no tiene una codificación válida.');}
+    if(raw.length>MAX_IMAGE)fail('QUOTA','El fondo supera los 5 MB permitidos.');
+    const b=i=>raw.charCodeAt(i);
+    if(raw.length<128||b(0)!==0xFF||b(1)!==0xD8||b(2)!==0xFF||b(raw.length-2)!==0xFF||b(raw.length-1)!==0xD9)fail('CORRUPT','El archivo no es un fondo JPEG válido.');
+    return url;
+  }
+  function geminiResult(value,model){
+    if(value?.error)fail('UNAVAILABLE','Gemini no pudo crear el fondo. Puedes usar una foto o un fondo local.');
+    const candidate=value?.candidates?.[0],parts=candidate?.content?.parts;
+    if(value?.promptFeedback?.blockReason||candidate?.finishReason&&!['STOP','MAX_TOKENS'].includes(candidate.finishReason))fail('UNAVAILABLE','Gemini bloqueó o no terminó el fondo. Cambia la descripción o usa una foto.');
+    const images=Array.isArray(parts)?parts.filter(p=>p?.inlineData&&typeof p.inlineData.data==='string'):[];
+    if(images.length!==1)fail('UNAVAILABLE','Gemini no devolvió un único fondo. No se reintentó.');
+    const {mimeType,data}=images[0].inlineData,url='data:'+mimeType+';base64,'+data;
+    return {dataUrl:mimeType==='image/png'?png(url):mimeType==='image/jpeg'?jpeg(url):fail('CORRUPT','Gemini devolvió un tipo de imagen no admitido.'),model:'gemini · '+model};
+  }
+  function geminiHttpError(status){
+    if(status===429)fail('QUOTA','Gemini alcanzó el límite de tu clave por ahora. Espera un rato o usa una foto.');
+    if(status===401||status===403)fail('LOCKED','Revisa tu clave de Gemini en Inteligencia artificial.');
+    fail('UNAVAILABLE','El modelo de imagen de Gemini no está disponible. Puedes usar una foto o un fondo local.');
+  }
+  return Object.freeze({MODEL,MAX_RESPONSE,MAX_IMAGE,ImageError,validate,body,read,result,GEMINI_MODELS,geminiBody,geminiResult,geminiHttpError});
 });

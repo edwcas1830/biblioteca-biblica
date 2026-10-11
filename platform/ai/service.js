@@ -74,7 +74,9 @@
       if(busy)fail('CONFLICT','Espera a que termine la consulta o el fondo anterior.');
       busy=true;const at=generation,session=epoch();
       const check=async()=>{await guard(session);if(at!==generation)fail('CANCELLED','La generación del fondo se canceló.');};
-      try{await check();const result=await provider.image(input,{beforeSend:check});await check();return result;}finally{busy=false;}
+      // Con Gemini conectado en modo personal, el fondo sale de la clave de Gemini; si no, de OpenRouter.
+      const conGemini=!!gemini&&personalEnabled&&gemini.status().connected&&await personalMode();
+      try{await check();const result=await (conGemini?gemini.image(input,{beforeSend:check}):provider.image(input,{beforeSend:check}));await check();return result;}finally{busy=false;}
     }
     const handlers={aiStatus:async()=>{await provider.ready;return {...provider.status(),reporting};},aiConnect:input=>provider.connect(input),aiDisconnect:()=>{cancel();prepared.clear();return provider.disconnect();},aiModels:()=>provider.listModels(),aiQuota:()=>provider.refreshQuota(),aiCancel:cancel,aiPrepare:prepare,aiAsk:ask,aiImage:image,aiCopy:copy,aiShare:share,aiReport:report,aiPersonalStatus:personalStatus};
     if(gemini)Object.assign(handlers,{

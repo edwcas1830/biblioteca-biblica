@@ -65,7 +65,9 @@ app.whenReady().then(async () => {
     try{
       imageCore.validate(data);
       const check=async()=>{if((await request('privacyStatus')).locked)throw new imageCore.ImageError('LOCKED','Abre tu cuaderno antes de generar un fondo.');if(personalAi.busy)throw new imageCore.ImageError('CONFLICT','Espera a que termine la consulta anterior.');};
-      await check();const value=await ai.image(data,{beforeSend:check});await check();return {ok:true,value};
+      // Con Gemini guardado en modo personal, el fondo sale de esa clave; si no, de OpenRouter.
+      const conGemini=await personalAi.geminiReady();
+      await check();const value=conGemini?await personalAi.image(data,{beforeSend:async()=>{if((await request('privacyStatus')).locked)throw new imageCore.ImageError('LOCKED','Abre tu cuaderno antes de generar un fondo.');}}):await ai.image(data,{beforeSend:check});await check();return {ok:true,value};
     }catch(error){return {ok:false,error:error instanceof imageCore.ImageError?{code:error.code,message:error.message}:{code:'UNAVAILABLE',message:'No se pudo generar el fondo. Puedes usar una foto o un fondo local.'}};}
   });
   app.on('before-quit',()=>{ai.stop();personalAi.stop();});

@@ -1,10 +1,10 @@
 (function(root,factory){
-  if(typeof module==='object'&&module.exports)module.exports=factory(require('../bridge-contract.js'),require('./credentials.js'),require('../../app/study-chat-core.js'));
-  else root.LibraryGemini=factory(root.LibraryBridgeContract,root.LibraryAiCredentials,root.StudyChatCore);
-})(typeof globalThis!=='undefined'?globalThis:this,function(contract,credentials,chat){
+  if(typeof module==='object'&&module.exports)module.exports=factory(require('../bridge-contract.js'),require('./credentials.js'),require('../../app/study-chat-core.js'),require('../../shared/ai-image.js'));
+  else root.LibraryGemini=factory(root.LibraryBridgeContract,root.LibraryAiCredentials,root.StudyChatCore,root.LibraryAiImage);
+})(typeof globalThis!=='undefined'?globalThis:this,function(contract,credentials,chat,images){
   'use strict';
   const API='https://generativelanguage.googleapis.com/v1beta',fail=(code,message)=>{throw new contract.BridgeError(code,message);};
-  const validKey=k=>typeof k==='string'&&/^[A-Za-z0-9_-]{20,200}$/.test(k);
+  const validKey=k=>typeof k==='string'&&/^[A-Za-z0-9._-]{20,200}$/.test(k);
   async function json(response,max){
     if(Number(response.headers.get('content-length'))>max)fail('QUOTA','La respuesta de Gemini es demasiado grande.');
     const reader=response.body?.getReader();if(!reader)fail('CORRUPT','Gemini no devolvió datos.');
@@ -53,12 +53,13 @@
         const params=new URLSearchParams({pageSize:'100'});if(page)params.set('pageToken',page);
         const result=await request('/models?'+params,{signal},1000000);if(at!==generation||closed||signal?.aborted)cancelled();
         if(!Array.isArray(result.models))fail('CORRUPT','Gemini no devolvió una lista de modelos válida.');
-        for(const m of result.models)if(m?.supportedGenerationMethods?.includes('generateContent')&&/^models\/[a-zA-Z0-9._-]{1,100}$/.test(m.name)&&!/(?:image|tts|audio|robotics|computer-use)/i.test(m.name))found.push({id:m.name.slice(7),name:typeof m.displayName==='string'?m.displayName.slice(0,200):m.name.slice(7)});
+        for(const m of result.models)if(m?.supportedGenerationMethods?.includes('generateContent')&&/^models\/[a-zA-Z0-9._-]{1,100}$/.test(m.name)&&!/(?:image|tts|audio|robotics|computer-use|lyria|banana|transcribe|antigravity|deep-research|omni|customtools|embedding|veo|imagen)/i.test(m.name))found.push({id:m.name.slice(7),name:typeof m.displayName==='string'?m.displayName.slice(0,200):m.name.slice(7)});
         if(!result.nextPageToken)break;
         if(typeof result.nextPageToken!=='string'||result.nextPageToken.length>1000||seen.has(result.nextPageToken)||n===4)fail('CORRUPT','La lista de modelos de Gemini está incompleta. Reintenta.');
         page=result.nextPageToken;seen.add(page);
       }
-      models=[...new Map(found.map(m=>[m.id,m])).values()].sort((a,b)=>Number(/flash/i.test(b.id))-Number(/flash/i.test(a.id))).slice(0,40);return structuredClone(models);
+      // Primero los alias que Google mantiene al día (las claves nuevas ya no pueden usar gemini-2.5-*), luego por versión.
+      const ordenGemini=id=>{const fijo=['gemini-flash-latest','gemini-pro-latest','gemini-flash-lite-latest'].indexOf(id);if(fijo>=0)return [fijo,0];const v=/^gemini-(\d+(?:\.\d+)?)-(flash|pro)(-lite)?(-preview)?$/.exec(id);return v?[3,-Number(v[1])*10+(v[3]?1:0)+(v[4]?0.5:0)]:[4,0];},porGemini=(a,b)=>{const x=ordenGemini(a.id),y=ordenGemini(b.id);return x[0]-y[0]||x[1]-y[1]||a.id.localeCompare(b.id);};models=[...new Map(found.map(m=>[m.id,m])).values()].sort(porGemini).slice(0,40);return structuredClone(models);
     }
     async function ask({prompt,model,study=false,allowLiving=false,beforeSend}={}){
       await ensure();if(busy)fail('CONFLICT','Espera a que termine la consulta anterior.');
@@ -82,7 +83,24 @@
         return {text:parsed.text.slice(0,12000),citations:(Array.isArray(parsed.citations)?parsed.citations:[]).filter(chat.ref).slice(0,5),model:typeof result.modelVersion==='string'&&/^[a-zA-Z0-9._-]{1,100}$/.test(result.modelVersion)?result.modelVersion:model,structured,...(study?chat.result(parsed,allowLiving):{})};
       }finally{busy=false;if(controller===current)controller=null;}
     }
-    return Object.freeze({status,ready,storeKey,disconnect,listModels,ask,cancel,close});
+    // Fondo con IA usando la clave de Gemini (sin OpenRouter). Solo imagen, sin texto: el versículo lo dibuja la app.
+    async function image(input,{beforeSend}={}){
+      await ensure();if(busy)fail('CONFLICT','Espera a que termine la consulta anterior.');
+      let body;try{body=images.geminiBody(input);}catch(e){fail('VALIDATION',e.message);}
+      busy=true;controller=new AbortController();const current=controller;
+      try{
+        for(const model of images.GEMINI_MODELS){
+          if(beforeSend)await beforeSend();
+          const response=await fetchImpl(API+'/models/'+model+':generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify(body),signal:AbortSignal.any([current.signal,AbortSignal.timeout(120000)]),redirect:'error'});
+          if(response.status===404){await response.body?.cancel().catch(()=>{});continue;}
+          if(!response.ok){await response.body?.cancel().catch(()=>{});images.geminiHttpError(response.status);}
+          return images.geminiResult(await json(response,images.MAX_RESPONSE),model);
+        }
+        fail('UNAVAILABLE','Ningún modelo de imagen de Gemini está disponible para tu clave.');
+      }catch(e){if(current.signal.aborted)cancelled();if(e instanceof images.ImageError)fail(e.code,e.message);throw e;}
+      finally{busy=false;if(controller===current)controller=null;}
+    }
+    return Object.freeze({status,ready,storeKey,disconnect,listModels,ask,image,cancel,close});
   }
   return Object.freeze({create});
 });

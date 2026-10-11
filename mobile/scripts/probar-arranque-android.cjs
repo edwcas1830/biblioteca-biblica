@@ -231,7 +231,7 @@ function cargarPagina(plugins) {
     // IA en el teléfono: credenciales en el llavero y Gemini personal que sobrevive a recargar.
     const estIa = await puente.aiStatus();
     await puente.aiPersonalEnable(true);
-    await puente.aiGeminiKey('AIzaSy' + 'A'.repeat(33));
+    await puente.aiGeminiKey('AQ.Ab8RN6' + 'A'.repeat(44));
     ventana = cargarPagina(plugins); puente = ventana.libraryDesktop; await ventana.BibliaPreparacion.modulos;
     await puente.bootstrap({ initial: inicial, legacy: null, legacyValid: true });
     const personal = await puente.aiPersonalStatus();

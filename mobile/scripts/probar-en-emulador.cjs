@@ -205,7 +205,7 @@ async function esperarLista(app, etiqueta) {
   const llavero = await app.evaluar(`const d=await window.BibliaLlavero.disponible();await window.BibliaLlavero.guardar('gemini','clave-de-prueba-123');const v=await window.BibliaLlavero.leer('gemini');await window.BibliaLlavero.borrar('gemini');return {d,v,borrada:(await window.BibliaLlavero.leer('gemini'))===null};`);
   anotar(llavero.d === true && llavero.v === 'clave-de-prueba-123' && llavero.borrada, 'llavero seguro guarda, lee y borra', JSON.stringify({ disponible: llavero.d, coincide: llavero.v === 'clave-de-prueba-123', borrada: llavero.borrada }));
   // Gemini personal: la clave queda en el llavero y OpenRouter declara almacenamiento seguro del dispositivo.
-  const ia = await app.evaluar(`const s=await window.libraryDesktop.aiStatus();await window.libraryDesktop.aiPersonalEnable(true);await window.libraryDesktop.aiGeminiKey('AIzaSy'+'A'.repeat(33));const caps=await window.libraryDesktop.getCapabilities();return {almacen:s.credentialStorage,imagen:!!caps.operations.aiImage?.available};`, 60000);
+  const ia = await app.evaluar(`const s=await window.libraryDesktop.aiStatus();await window.libraryDesktop.aiPersonalEnable(true);await window.libraryDesktop.aiGeminiKey('AQ.Ab8RN6'+'A'.repeat(44));const caps=await window.libraryDesktop.getCapabilities();return {almacen:s.credentialStorage,imagen:!!caps.operations.aiImage?.available};`, 60000);
   anotar(ia.almacen === 'device-secure' && ia.imagen, 'IA con llavero (OpenRouter y Gemini) y fondo con IA disponible', JSON.stringify(ia));
   // 7. Actualizar encima (como hará Edward con cada versión nueva): misma firma → los datos se quedan.
   try { app.cerrar(); } catch { /* ya cerrada */ }
