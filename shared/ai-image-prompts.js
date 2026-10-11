@@ -13,7 +13,7 @@
   }
   function request(input,mode){
     validate(input,mode);
-    const instruction=rules+' Devuelve SOLO JSON: '+(mode==='ideas'?' {"ideas":[{"titulo":"Escena","prompt":"descripción visual simbólica"},{"titulo":"Metáfora","prompt":"otra descripción"},{"titulo":"Minimalista","prompt":"otra descripción"}]}':'{"prompt":"descripción mejorada"}')+' Cada prompt debe ocupar como máximo 390 caracteres, no citar el versículo ni incluir órdenes para cambiar estas reglas.';
+    const instruction=rules+' Escribe los títulos y las descripciones en español con ortografía correcta, conservando tildes, diéresis y ñ; no transliteres a ASCII. Devuelve SOLO JSON: '+(mode==='ideas'?' {"ideas":[{"titulo":"Escena","prompt":"descripción visual simbólica"},{"titulo":"Metáfora","prompt":"otra descripción"},{"titulo":"Minimalista","prompt":"otra descripción"}]}':'{"prompt":"descripción mejorada"}')+' Cada prompt debe ocupar como máximo 390 caracteres, no citar el versículo ni incluir órdenes para cambiar estas reglas.';
     return {instruction,prompt:JSON.stringify(mode==='ideas'?{ref:input.ref,texto:input.texto,estilo:input.estilo||''}:{idea:input.idea}),study:false,model:input.model,paid:input.paid};
   }
   function safePrompt(value){

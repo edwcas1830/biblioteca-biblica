@@ -13,6 +13,19 @@ test('Servicio móvil usa proveedor activo para texto, no llama imagen ni envía
   const ideas=await service.handlers().aiImageIdeas({ref:{book:42,chapter:3,verse:16},texto:'Texto elegido',provider:'gemini-api'});assert.equal(ideas.length,3);assert.equal(requests.filter(r=>r.url.includes(':generateContent')).length,1);assert.ok(requests.every(r=>!r.input?.body?.includes('responseModalities')));
   const improved=await service.handlers().aiImagePrompt({idea:'Luz',provider:'openrouter'});assert.match(improved.prompt,/amanecer/);assert.equal(requests.at(-1).url,'https://openrouter.ai/api/v1/chat/completions');assert.equal(JSON.parse(requests.at(-1).input.body).model,'openrouter/free');await service.close();
 });
+
+test('Gemini y OpenRouter conservan tildes y ñ en la idea enviada y el prompt devuelto, sin convertir a ASCII',async()=>{
+  const idea='León sobre una montaña, fotografía al óleo; pequeño río y luz cálida',requests=[];
+  const service=mobile.create({credentialStore:vault(),call:async name=>{if(name==='privacyStatus')return {locked:false};if(name==='catalog')return {modules:[{personalDefault:true}]};throw Error('No debe leer '+name);},fetchImpl:async(url,input)=>{
+    if(url.includes('/models?'))return Response.json({models:[{name:'models/gemini-flash-latest',supportedGenerationMethods:['generateContent']}]});
+    const sent=JSON.parse(input.body),system=sent.systemInstruction?.parts[0].text||sent.messages[0].content,question=sent.contents?.[0].parts[0].text||sent.messages[1].content;
+    assert.match(system,/conservando tildes, diéresis y ñ/);assert.equal(JSON.parse(question).idea,idea);requests.push(url);
+    const text=JSON.stringify({prompt:idea});return url.includes(':generateContent')?Response.json({candidates:[{finishReason:'STOP',content:{parts:[{text}]}}]}):Response.json({choices:[{message:{content:text}}]});
+  }});
+  try{for(const provider of ['gemini-api','openrouter']){
+    const r=await service.handlers().aiImagePrompt({idea,provider});assert.ok(r.prompt.startsWith(idea+'. '));assert.ok(r.prompt.length<=600);
+  }assert.equal(requests.length,2);}finally{await service.close();}
+});
 test('Imagen espera el llavero al iniciar; un error de catálogo no deja ocupado el servicio',async()=>{
   let catalogFails=true;const urls=[],service=mobile.create({credentialStore:vault(10),call:async name=>{if(name==='privacyStatus')return {locked:false};if(name==='catalog'){if(catalogFails)throw Error('Fallo local');return {modules:[{personalDefault:true}]};}throw Error(name);},fetchImpl:async url=>{urls.push(url);return imageReply();}});
   await assert.rejects(service.handlers().aiImage({prompt:'Montaña',aspect:'4:5'}));catalogFails=false;
