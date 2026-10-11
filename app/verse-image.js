@@ -160,6 +160,7 @@
             <div id="imagen-ideas" class="imagen-ideas"></div>
             <p id="imagen-ideas-origen" class="muted"></p><button type="button" class="quiet" id="imagen-otras-ideas">Pedir otras ideas</button>
             <label>Mi idea (o la idea elegida)<textarea id="imagen-ia-texto" rows="3" maxlength="500" placeholder="Describe el fondo que imaginas…"></textarea></label>
+            <label>Modelo de imagen<select id="imagen-calidad"><option value="economica">Rápido · Gemini Flash Lite (recomendado)</option><option value="alta">Detallado · Nano Banana 2.1</option></select></label>
             <label class="imagen-check" id="imagen-mejorar-fila"><input id="imagen-mejorar" type="checkbox"> Mejorar mi idea con IA antes de crear</label>
             <button type="button" class="quiet" id="imagen-ia-crear">✦ Crear este fondo</button>
           </div>
@@ -191,7 +192,7 @@
   // con «Mejorar con IA», costo antes de crear y aviso al pasar de 30 fondos al mes. La IA crea SOLO el fondo:
   // el versículo lo dibuja la app. Sin texto y sin representar a Dios ni el rostro de Jesús (decisión de Edward).
   const ASPECTO = { vertical: '4:5', cuadrado: '1:1', historia: '9:16' };
-  const COSTO = 'unos US$0,03';
+  const COSTO = 'unos US$0,034'; // los dos modelos cobran la imagen igual: 1.120 tokens × US$30/M (verificado 11-oct)
   const AVISO_MES = 30;
   const REGLAS = ' Sin texto, letras ni logotipos. Sin representar a Dios ni el rostro de Jesús: usa símbolos como luz, camino, agua, cruz vacía o paloma.';
   let ideasDe = '';
@@ -261,7 +262,7 @@
     }
     boton.disabled = true; aviso.textContent = 'Creando el fondo… puede tardar unos segundos.';
     try {
-      const r = await window.libraryDesktop.aiImage({ prompt: (prompt + REGLAS).slice(0, 600), aspect: ASPECTO[$('#imagen-formato').value] || '4:5', ...proveedor() });
+      const r = await window.libraryDesktop.aiImage({ prompt: (prompt + REGLAS).slice(0, 600), aspect: ASPECTO[$('#imagen-formato').value] || '4:5', calidad: $('#imagen-calidad').value || 'economica', ...proveedor() });
       await new Promise((ok, mal) => { const img = new Image(); img.onload = () => { fotoFondo = img; ok(); }; img.onerror = () => mal(new Error('La imagen recibida no se pudo abrir.')); img.src = r.dataUrl; });
       contar();
       $('#imagen-sin-foto').hidden = false; await dibujar();
