@@ -16,7 +16,12 @@ const vigilia = setInterval(() => {}, 30000);
 
 async function conectar() {
   let pid = '';
-  for (let i = 0; i < 60 && !pid; i++) { try { pid = adb('shell', 'pidof', PKG).trim(); } catch { /* aún no */ } if (!pid) await espera(1000); }
+  for (let i = 0; i < 60 && !pid; i++) {
+    try { pid = adb('shell', 'pidof', PKG).trim(); } catch { /* aún no */ }
+    // El emulador a veces cierra la app (servicios de Google): se reabre una vez y queda anotado.
+    if (!pid && i === 25) { lineas.push('AVISO tienda: el emulador cerró la app; se reabrió'); adb('shell', 'monkey', '-p', PKG, '-c', 'android.intent.category.LAUNCHER', '1'); }
+    if (!pid) await espera(1000);
+  }
   if (!pid) throw new Error('La app de la tienda no arrancó');
   let socket = '';
   for (let i = 0; i < 60 && !socket; i++) { const m = adb('shell', 'cat', '/proc/net/unix').match(new RegExp('@(webview_devtools_remote_' + pid + ')')); if (m) socket = m[1]; else await espera(1000); }
