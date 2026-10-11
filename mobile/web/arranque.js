@@ -49,8 +49,9 @@
   const Share = nativo && cap.registerPlugin ? cap.registerPlugin('Share') : null;
   const TTS = nativo && cap.registerPlugin ? cap.registerPlugin('TextToSpeech') : null;
   // Edición tienda (Google Play): lo que no va en la v1 ni siquiera se registra; la interfaz oculta lo que no existe.
-  if (window.BIBLIA_EDICION === 'tienda') {
-    const FUERA = /^(ai(?!TextCopy)|youtube|music|circle|transfer|module)/;
+  if (window.BIBLIA_EDICION === 'tienda' || window.BIBLIA_EDICION === 'web') {
+    // Web: la música sí (en el navegador YouTube funciona); la IA espera a que la mesa decida dónde guardar claves en el navegador.
+    const FUERA = window.BIBLIA_EDICION === 'web' ? /^(ai(?!TextCopy)|circle|transfer|module)/ : /^(ai(?!TextCopy)|youtube|music|circle|transfer|module)/;
     const base = adaptador;
     adaptador = { ...base, register: h => base.register(Object.fromEntries(Object.entries(h || {}).filter(([k]) => !FUERA.test(k)))) };
   }

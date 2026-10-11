@@ -514,6 +514,7 @@
   }
   // Los botones de color muestran su nombre (si se lo pusiste).
   function pintarColores() {
+    if (typeof state === 'undefined') return void setTimeout(pintarColores, 200); // app.js aún no cargó
     for (const b of $$('#movil-versiculo .movil-tintas button, .ink-colors [data-ink]')) {
       const c = ['gold', 'sage', 'rose'].find(x => b.classList.contains(x)) || b.dataset?.ink;
       if (!['gold', 'sage', 'rose'].includes(c)) continue;

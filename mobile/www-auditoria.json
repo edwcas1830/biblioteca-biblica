@@ -1,8 +1,9 @@
 {
-  "fecha": "2026-10-11T02:19:41.482Z",
-  "archivos": 365,
-  "megabytes": 23.8,
+  "fecha": "2026-10-11T23:09:32.115Z",
+  "archivos": 386,
+  "megabytes": 24,
   "prohibidos": [],
+  "edicion": "completa",
   "modulosLibres": [
     "onbv2008",
     "step-greek",
@@ -11,8 +12,13 @@
   "puentes": [
     "platform/bridge-contract.js",
     "ai-core.js",
+    "shared/study-model.js",
+    "shared/study-actions.js",
+    "shared/ai-citations.js",
     "shared/ai-context.js",
+    "shared/ai-pricing.js",
     "shared/ai-image.js",
+    "shared/ai-image-prompts.js",
     "platform/ai/credentials.js",
     "platform/ai/openrouter.js",
     "platform/ai/gemini.js",
@@ -42,5 +48,5 @@
     "platform/android/documents.js",
     "platform/android/bridge.js"
   ],
-  "huellaIndex": "365a45ddce80e154"
+  "huellaIndex": "e11e8a1d55e41778"
 }
