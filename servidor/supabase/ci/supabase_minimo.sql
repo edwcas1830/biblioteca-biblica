@@ -1,9 +1,12 @@
 -- Lo mínimo de Supabase para probar las migraciones _bb en un Postgres desechable de CI.
 -- No es el proyecto real: roles, auth.users, auth.uid()/auth.jwt(), el esquema extensions con pgcrypto,
 -- y una tabla profiles con el disparador del Centro de Mando (correo obligatorio), como estaba antes de 002.
-create role anon nologin;
-create role authenticated nologin;
-create role service_role nologin bypassrls;
+-- Los roles son del servidor entero: se crean una vez aunque se prueben varias bases.
+do $$ begin
+  if not exists (select 1 from pg_roles where rolname = 'anon') then create role anon nologin; end if;
+  if not exists (select 1 from pg_roles where rolname = 'authenticated') then create role authenticated nologin; end if;
+  if not exists (select 1 from pg_roles where rolname = 'service_role') then create role service_role nologin bypassrls; end if;
+end $$;
 create schema auth;
 create schema extensions;
 create extension pgcrypto with schema extensions;
