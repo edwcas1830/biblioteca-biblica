@@ -1,12 +1,12 @@
 (function(root,factory){
-  if(typeof module==='object'&&module.exports)module.exports=factory(require('../bridge-contract.js'),require('../../shared/ai-context.js'),require('./openrouter.js'),require('../../app/ai-core.js'),require('../../app/study-chat-core.js'),require('./gemini.js'),require('./credentials.js'),require('../../shared/study-actions.js'),require('../../shared/ai-image-prompts.js'));
-  else root.LibraryMobileAi=factory(root.LibraryBridgeContract,root.LibraryAiContext,root.LibraryOpenRouter,root.AiCore,root.StudyChatCore,root.LibraryGemini,root.LibraryAiCredentials,root.LibraryStudyActions,root.LibraryAiImagePrompts);
-})(typeof globalThis!=='undefined'?globalThis:this,function(contract,contexts,providers,core,chat,geminis,credentials,actions,imagePrompts){
+  if(typeof module==='object'&&module.exports)module.exports=factory(require('../bridge-contract.js'),require('../../shared/ai-context.js'),require('./openrouter.js'),require('../../app/ai-core.js'),require('../../app/study-chat-core.js'),require('./gemini.js'),require('./credentials.js'),require('../../shared/study-actions.js'),require('../../shared/ai-image-prompts.js'),require('../../shared/ai-citations.js'));
+  else root.LibraryMobileAi=factory(root.LibraryBridgeContract,root.LibraryAiContext,root.LibraryOpenRouter,root.AiCore,root.StudyChatCore,root.LibraryGemini,root.LibraryAiCredentials,root.LibraryStudyActions,root.LibraryAiImagePrompts,root.LibraryAiCitations);
+})(typeof globalThis!=='undefined'?globalThis:this,function(contract,contexts,providers,core,chat,geminis,credentials,actions,imagePrompts,citations){
   'use strict';
   const fail=(code,message)=>{throw new contract.BridgeError(code,message);};
   function create({call,emit=()=>{},epoch=()=>0,crypto=globalThis.crypto,fetchImpl,now=()=>Date.now(),openExternal,reporter,credentialStore}={}){
-    const reporting=reporter?'developer-channel':'not-configured',context=contexts.create({call}),prepared=new Map(),provider=providers.create({fetchImpl,crypto,now,credentialStore,notify:s=>emit('onAiState',{...s,reporting})});let closed=false,busy=false,generation=0,personalEnabled=true;
-    const gemini=credentials.supported(credentialStore)?geminis.create({fetchImpl,now,credentialStore,notify:s=>emit('onAiState',{...provider.status(),gemini:s,reporting})}):null;
+    const reporting=reporter?'developer-channel':'not-configured',context=contexts.create({call}),prepared=new Map(),provider=providers.create({books:()=>call('metadata'),fetchImpl,crypto,now,credentialStore,notify:s=>emit('onAiState',{...s,reporting})});let closed=false,busy=false,generation=0,personalEnabled=true;
+    const gemini=credentials.supported(credentialStore)?geminis.create({books:()=>call('metadata'),fetchImpl,now,credentialStore,notify:s=>emit('onAiState',{...provider.status(),gemini:s,reporting})}):null;
     const personalMode=async()=>!!gemini&&(await call('catalog')).modules.some(m=>m.personalDefault===true);
     const personalStatus=async()=>{if(gemini)await gemini.ready;const available=await personalMode();return {available,enabled:available&&personalEnabled,providers:available&&personalEnabled?[{id:'gemini-api',installed:true,connected:gemini.status().connected,session:'key',credentialStorage:'device-secure',retryAt:gemini.status().retryAt,...(gemini.status().credentialError?{credentialError:gemini.status().credentialError}:{})}]:[]};};
     const requireGemini=async()=>{if(!gemini)fail('UNAVAILABLE','El llavero seguro del dispositivo no está disponible.');if(!await personalMode()||!personalEnabled)fail('UNAVAILABLE','Gemini API requiere el modo personal de tu biblioteca.');};
@@ -23,6 +23,7 @@
       if(!input||JSON.stringify(input).length>15000)fail('VALIDATION','Consulta no válida o demasiado grande.');const at=epoch();await guard(at);
       const chosen=await context.prepare(input);await guard(at);let preview;
       try{preview=input.action!==undefined?actions.prepare(input,chosen):core.prepare({task:input.task,question:input.question,context:chosen,study:input.study===true,history:input.history||'',allowLiving:input.allowLiving===true});}catch{fail('VALIDATION','Revisa la tarea y el contexto elegido; resumir requiere un comentario permitido.');}
+      preview.prompt=citations.prompt(preview.prompt);
       if(preview.prompt.length>50000)fail('VALIDATION','El contexto es demasiado grande. Elige menos días o fuentes.');
       const key=id();if(prepared.size>=5)prepared.delete(prepared.keys().next().value);prepared.set(key,{...structuredClone(preview),context:structuredClone(chosen),createdAt:now(),module:input.module||'rv1909',epoch:at});
       return {id:key,...preview,notices:chosen.notices};

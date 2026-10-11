@@ -57,8 +57,8 @@ app.whenReady().then(async () => {
   const circleTimer=setInterval(()=>{if(circle.config)circle.sync();},20000);circleTimer.unref();app.on('will-quit',()=>{clearInterval(circleTimer);circle.close();});
   ipcMain.handle('library:module-scan',async(event,{choose=false}={})=>{if(!trusted(event))throw Error('Origen no autorizado.');let directory=path.join(process.env['ProgramFiles(x86)']||'C:\\Program Files (x86)','e-Sword');if(hiddenTest&&testProfile&&fs.existsSync(path.join(testProfile,'fixture-import')))directory=path.join(testProfile,'fixture-import');if(choose||!fs.existsSync(directory)){const selected=await dialog.showOpenDialog(win,{title:'Carpeta de tu biblioteca e-Sword',properties:['openDirectory']});if(selected.canceled)return null;directory=selected.filePaths[0];}return request('moduleScan',{directory});});
   ipcMain.handle('library:module-install',async(event,tokens)=>{if(!trusted(event)||!Array.isArray(tokens)||tokens.length>500)throw Error('Selección no autorizada.');return request('moduleInstall',{tokens});});
-  const ai=new AiService({root:app.getPath('userData'),safeStorage,openExternal:url=>shell.openExternal(url),notify:status=>{if(!win.isDestroyed())win.webContents.send('library:ai-state',status);}}),prepared=new Map();
-  const {PersonalAi}=require('./lib/personal-ai.cjs'),personalAi=new PersonalAi({root:app.getPath('userData'),safeStorage,policy:()=>request('personalAiPolicy'),openExternal:url=>shell.openExternal(url)});
+  const ai=new AiService({books:()=>request('metadata'),root:app.getPath('userData'),safeStorage,openExternal:url=>shell.openExternal(url),notify:status=>{if(!win.isDestroyed())win.webContents.send('library:ai-state',status);}}),prepared=new Map();
+  const {PersonalAi}=require('./lib/personal-ai.cjs'),personalAi=new PersonalAi({books:()=>request('metadata'),root:app.getPath('userData'),safeStorage,policy:()=>request('personalAiPolicy'),openExternal:url=>shell.openExternal(url)});
   const actionContext=require('./shared/ai-context.js').create({call:request});
   const bridgeContract=require('./platform/bridge-contract.js'),imageCore=require('./shared/ai-image.js'),imagePrompts=require('./shared/ai-image-prompts.js');
   let aiEpoch=0;
@@ -101,6 +101,7 @@ app.whenReady().then(async () => {
     if(!trusted(event)||!data||JSON.stringify(data).length>15000)throw new Error('Consulta no válida.');
     if((await request('privacyStatus')).locked)throw Error('Abre tu cuaderno para consultar tu estudio.');
     const context=data.action!==undefined?await actionContext.prepare(data):await request(data.series?'aiSeriesContext':'aiContext',data),preview=data.action!==undefined?actions.prepare(data,context):aiCore.prepare({task:data.task,question:data.question,context,study:data.study===true,history:data.history||'',allowLiving:data.allowLiving===true}),id=crypto.randomBytes(24).toString('hex');
+    preview.prompt=require('./shared/ai-citations.js').prompt(preview.prompt);
     if(prepared.size>=5)prepared.delete(prepared.keys().next().value);prepared.set(id,{...preview,context,createdAt:Date.now(),module:data.module});
     return {id,...preview,notices:context.notices};
   });

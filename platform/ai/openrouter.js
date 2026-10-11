@@ -1,7 +1,7 @@
 (function(root,factory){
-  if(typeof module==='object'&&module.exports)module.exports=factory(require('../bridge-contract.js'),require('../../app/ai-core.js'),require('../../app/study-chat-core.js'),require('./credentials.js'),require('../../shared/ai-image.js'),require('../../shared/ai-pricing.js'));
-  else root.LibraryOpenRouter=factory(root.LibraryBridgeContract,root.AiCore,root.StudyChatCore,root.LibraryAiCredentials,root.LibraryAiImage,root.LibraryAiPricing);
-})(typeof globalThis!=='undefined'?globalThis:this,function(contract,core,chat,credentials,images,pricing){
+  if(typeof module==='object'&&module.exports)module.exports=factory(require('../bridge-contract.js'),require('../../app/ai-core.js'),require('../../app/study-chat-core.js'),require('./credentials.js'),require('../../shared/ai-image.js'),require('../../shared/ai-pricing.js'),require('../../shared/ai-citations.js'));
+  else root.LibraryOpenRouter=factory(root.LibraryBridgeContract,root.AiCore,root.StudyChatCore,root.LibraryAiCredentials,root.LibraryAiImage,root.LibraryAiPricing,root.LibraryAiCitations);
+})(typeof globalThis!=='undefined'?globalThis:this,function(contract,core,chat,credentials,images,pricing,citations){
   'use strict';
   const API='https://openrouter.ai/api/v1',fail=(code,message)=>{throw new contract.BridgeError(code,message);};
   const b64=bytes=>btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
@@ -14,7 +14,7 @@
     catch(e){await reader.cancel().catch(()=>{});throw e;}finally{reader.releaseLock();}
     try{const result=JSON.parse(body);if(!result||typeof result!=='object'||Array.isArray(result))throw Error();return result;}catch{fail('CORRUPT','El proveedor devolvió un formato no válido.');}
   }
-  function create({fetchImpl=globalThis.fetch,crypto=globalThis.crypto,now=()=>Date.now(),notify=()=>{},timeout=90000,credentialStore}={}){
+  function create({fetchImpl=globalThis.fetch,crypto=globalThis.crypto,now=()=>Date.now(),notify=()=>{},timeout=90000,books,credentialStore}={}){
     if(credentialStore!==undefined&&!credentials.supported(credentialStore))fail('UNAVAILABLE','El llavero seguro del dispositivo no está disponible.');
     const vault=credentialStore?credentials.create({store:credentialStore,name:'openrouter',valid:validKey}):null;
     let key=null,login=null,generation=0,busy=false,controller=null,quota=null,retryAt=0,credentialError=null,closed=false,models=[{id:'openrouter/free',name:'Selección gratuita automática'}];
@@ -84,14 +84,15 @@
       if(retryAt>now())fail('QUOTA','Espera a que termine el límite temporal del proveedor.');
       busy=true;controller=new AbortController();const current=controller,at=generation;
       try{
+        const canon=instruction?undefined:typeof books==='function'?await books():books||globalThis.BIBLE?.books||globalThis.window?.BIBLE?.books;
         if(beforeSend)await beforeSend();if(at!==generation||current.signal.aborted||closed)cancelled();
-        const result=await request('/chat/completions',{method:'POST',headers:{Authorization:'Bearer '+key,'Content-Type':'application/json','X-OpenRouter-Title':'Biblioteca Bíblica'},body:JSON.stringify({model,stream:false,max_tokens:cost.maxTokens,provider:{...cost.provider,data_collection:allowData===true?'allow':'deny'},messages:[{role:'system',content:system},{role:'user',content:prompt}]}),signal:current.signal},200000);
+        const result=await request('/chat/completions',{method:'POST',headers:{Authorization:'Bearer '+key,'Content-Type':'application/json','X-OpenRouter-Title':'Biblioteca Bíblica'},body:JSON.stringify({model,stream:false,max_tokens:cost.maxTokens,provider:{...cost.provider,data_collection:allowData===true?'allow':'deny'},messages:[{role:'system',content:instruction?system:citations.instruction(system)},{role:'user',content:instruction?prompt:citations.prompt(prompt)}]}),signal:current.signal},200000);
         if(at!==generation||current.signal.aborted)cancelled();
         const raw=result.choices?.[0]?.message?.content;if(typeof raw!=='string'||!raw.trim()||raw.length>30000)fail('CORRUPT','El modelo no devolvió una respuesta de texto válida.');
         let parsed,structured=true;try{parsed=JSON.parse(raw.replace(/^```(?:json)?\s*/,'').replace(/\s*```$/,''));}catch{structured=false;parsed={text:raw,citations:[]};}
         if(action||instruction)return {...parsed,text:typeof parsed.text==='string'?parsed.text:parsed.texto||parsed.brief||'',citations:[],model:result.model||model,structured,estimatedCostUsd:cost.estimatedCostUsd,costNotice:cost.notice};
         if(typeof parsed?.text!=='string')fail('CORRUPT','Falta el texto de la respuesta. Prueba otro modelo.');
-        return {text:parsed.text.slice(0,12000),citations:(Array.isArray(parsed.citations)?parsed.citations:[]).filter(chat.ref).slice(0,5),model:typeof result.model==='string'?result.model.slice(0,200):model,structured,estimatedCostUsd:cost.estimatedCostUsd,costNotice:cost.notice,...(study?chat.result(parsed,allowLiving):{})};
+        return {text:parsed.text.slice(0,12000),citations:citations.normalize(parsed.citations,canon),model:typeof result.model==='string'?result.model.slice(0,200):model,structured,estimatedCostUsd:cost.estimatedCostUsd,costNotice:cost.notice,...(study?chat.result(parsed,allowLiving):{})};
       }finally{busy=false;if(controller===current)controller=null;}
     }
     async function image(input,{beforeSend}={}){
