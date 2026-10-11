@@ -28,7 +28,7 @@ test('Extractos provienen de la biblioteca, no del modelo; citas sin fuente se r
 });
 test('Migración compatible: ID antiguo intacto, rango nuevo distinto y respuesta nueva conservada',()=>{
   const old={scope:'verse',book:0,chapter:1,verse:16,module:'rv1909'},a=model.anchor({...old,endVerse:18});assert.equal(model.key(old),'rv1909:verse:0:1:16');assert.equal(model.key(a),'rv1909:verse:0:1:16-18');
-  const thread={id:model.key(a),anchor:a,messages:[{id:'msg-fixture',role:'assistant',text:'Resumen',action:'exegesis',texto:'Observación',interpretacion:'Hipótesis',fuentes:[{sourceId:1,extracto:'Local'}],seguimientos:['Uno','Dos','Tres']} ]};const saved=model.validate([thread])[0];assert.equal(saved.anchor.endVerse,18);assert.equal(saved.messages[0].texto,'Observación');assert.equal(saved.messages[0].fuentes[0].extracto,'Local');assert.throws(()=>model.validate([{...thread,id:model.key(old)}]));
+  const thread={id:model.key(a),anchor:a,messages:[{id:'msg-fixture',role:'assistant',text:'Resumen',action:'exegesis',texto:'Observación',interpretacion:'Hipótesis',fuentes:[{sourceId:1,extracto:'Local'}],seguimientos:['Uno','Dos','Tres']} ]};const saved=model.validate([thread])[0];assert.equal(saved.anchor.endVerse,18);assert.equal(saved.messages[0].texto,'Observación');assert.match(model.history(saved),/Observación/);assert.doesNotMatch(model.history(saved),/El proveedor no aportó/);assert.equal(saved.messages[0].fuentes[0].extracto,'Local');assert.throws(()=>model.validate([{...thread,id:model.key(old)}]));
 });
 
 test('RV1960 no envía códigos del apoyo sin permiso; revisa también la huella del apoyo autorizado',async()=>{
