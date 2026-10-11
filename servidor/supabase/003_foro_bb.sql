@@ -74,6 +74,15 @@ create policy hilos_bb_crear on public.hilos_bb for insert to authenticated
 --               o cualquiera para un dispositivo activo de su misma persona (su teléfono nuevo, su papel).
 -- Épocas pasadas (historia): igual, pero solo si mi persona ya tiene esa época (no se inventan claves viejas).
 -- Nunca se pisa: la clave primaria (grupo, época, dispositivo) impide una segunda envoltura y no hay UPDATE.
+-- ¿Algún dispositivo de mi persona (otro teléfono, el papel) tiene ya esa época? Sin RLS: cada
+-- dispositivo solo ve sus propias envolturas, y el teléfono restaurado necesita ver las del papel.
+create function public.mi_persona_tiene_epoca_bb(g uuid, e int) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (
+    select 1 from public.claves_grupo_bb k join public.dispositivos_bb d on d.id = k.dispositivo_id
+    where k.grupo_id = g and k.epoca = e and d.persona_id = public.mi_persona_bb())
+$$;
+
 drop policy claves_grupo_bb_entregar on public.claves_grupo_bb;
 create policy claves_grupo_bb_entregar on public.claves_grupo_bb for insert to authenticated
   with check (
@@ -86,10 +95,7 @@ create policy claves_grupo_bb_entregar on public.claves_grupo_bb for insert to a
     and (
       epoca = (select g.epoca from public.grupos_bb g where g.id = grupo_id)
       or (epoca < (select g.epoca from public.grupos_bb g where g.id = grupo_id)
-          and exists (
-            select 1 from public.claves_grupo_bb k join public.dispositivos_bb dk on dk.id = k.dispositivo_id
-            where k.grupo_id = claves_grupo_bb.grupo_id and k.epoca = claves_grupo_bb.epoca
-              and dk.persona_id = public.mi_persona_bb()))));
+          and public.mi_persona_tiene_epoca_bb(grupo_id, epoca))));
 
 -- ── 4. Aprobar fijando la huella ─────────────────────────────────────────────────────────────────
 -- El admin manda la huella que vio en pantalla; el servidor comprueba que corresponde a las claves
@@ -295,12 +301,14 @@ end $$;
 
 -- ── 8. Permisos ──────────────────────────────────────────────────────────────────────────────────
 revoke all on function public.claves_inmutables_bb(), public.huella_al_alta_bb(), public.huella_bb(uuid, text, text),
+  public.mi_persona_tiene_epoca_bb(uuid, int),
   public.resolver_solicitud_bb(uuid, boolean, text), public.enviar_mensaje_bb(uuid, uuid, uuid, int, text),
   public.crear_recuperacion_bb(text, text), public.texto_desafio_bb(public.desafios_bb),
   public.pedir_desafio_bb(uuid, text), public.datos_desafio_bb(uuid), public.consumir_revinculacion_bb(uuid),
   public.consumir_recuperacion_bb(uuid, text, text, text), public.aprobar_restaurado_bb(uuid, text)
   from public, anon, authenticated;
-grant execute on function public.huella_bb(uuid, text, text), public.resolver_solicitud_bb(uuid, boolean, text),
+grant execute on function public.huella_bb(uuid, text, text), public.mi_persona_tiene_epoca_bb(uuid, int),
+  public.resolver_solicitud_bb(uuid, boolean, text),
   public.enviar_mensaje_bb(uuid, uuid, uuid, int, text), public.crear_recuperacion_bb(text, text),
   public.pedir_desafio_bb(uuid, text), public.aprobar_restaurado_bb(uuid, text)
   to authenticated;
