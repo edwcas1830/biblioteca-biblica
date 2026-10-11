@@ -531,3 +531,28 @@ html[data-edicion="tienda"] #sources-dialog > p.muted { display: none !important
 .movil-mas-strong { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 48px; margin: 8px 0 0; font-size: 1rem; color: inherit; }
 .movil-mas-strong input { width: 48px; height: 28px; margin: 0; accent-color: var(--accent); }
 :root[data-telefono="true"] #module-status:not(:empty) { margin: 0; padding: 8px 16px; font-size: .85rem; line-height: 1.4; }
+
+/* Fila de herramientas de lectura: visible por defecto, una sola fila, minimizable. */
+:root[data-telefono="true"][data-controles-lectura="abiertos"] #library-controls {
+  display: flex !important; flex-wrap: nowrap; align-items: center; gap: 8px; padding: 4px 16px; margin: 0;
+  overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--line); background: var(--paper);
+}
+:root[data-telefono="true"] #library-controls .voice-controls { display: flex; flex-wrap: nowrap; gap: 4px; width: auto; flex: none; }
+:root[data-telefono="true"] #library-controls #voice-select,
+:root[data-telefono="true"] #library-controls #voice-status { display: none !important; }
+:root[data-telefono="true"] #library-controls label.checkbox-label { display: flex; align-items: center; gap: 8px; margin: 0; min-height: 48px; flex: none; font-size: .95rem; color: inherit; white-space: nowrap; }
+:root[data-telefono="true"] #library-controls label.checkbox-label input { width: 24px; height: 24px; margin: 0; }
+:root[data-telefono="true"] #library-controls button { min-width: 48px; min-height: 48px; padding: 0 8px; flex: none; font-size: 1rem; white-space: nowrap; }
+:root[data-telefono="true"] #movil-herr-completa { margin-left: auto; font-size: 1.25rem; }
+:root[data-telefono="true"] #movil-herr-plegar { font-size: 1.1rem; }
+/* Minimizada: solo una franja con ⌄ para volver a abrirla. */
+:root[data-telefono="true"][data-herramientas="mini"] #library-controls > :not(#movil-herr-plegar) { display: none !important; }
+:root[data-telefono="true"][data-herramientas="mini"] #library-controls { padding: 0 16px; }
+:root[data-telefono="true"][data-herramientas="mini"] #movil-herr-plegar { min-height: 32px; font-size: .85rem; color: var(--muted); }
+:root[data-telefono="true"]:not([data-pestana="biblia"]) #library-controls { display: none !important; }
+
+/* La fila cabe en 360 px: sin «■ detener» (⏸ pausa y continúa), separaciones de 4 y botones de icono de 44 de ancho. */
+:root[data-telefono="true"] #library-controls #voice-stop { display: none !important; }
+:root[data-telefono="true"][data-controles-lectura="abiertos"] #library-controls { gap: 4px; padding: 4px 12px; flex-wrap: wrap; overflow-x: visible; }
+:root[data-telefono="true"] #library-controls button { min-width: 44px; padding: 0 6px; }
+:root[data-telefono="true"] #library-controls .voice-controls { gap: 4px; }

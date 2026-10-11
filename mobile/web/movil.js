@@ -112,7 +112,7 @@
       ['Estudio con IA', () => botonPorTexto('.reading-actions button', 'ia')?.click()],
       ['◎ Atlas y contexto', () => $('#graphics-open')?.click()],
       ['⤢ Pantalla completa', () => $('#pane-biblia .enfoque-abrir')?.click()],
-      ['🔊 Escuchar en voz alta', () => { const abiertos = html.dataset.controlesLectura !== 'abiertos'; html.dataset.controlesLectura = abiertos ? 'abiertos' : 'cerrados'; setTimeout(ajustarAltoLectura, 0); }]
+      ['🔊 Mostrar Strong y escuchar', () => { html.dataset.herramientas = 'abiertas'; try { localStorage.setItem('biblia-herramientas', 'abiertas'); } catch { /* sin almacenamiento */ } $('#movil-herr-plegar') && ($('#movil-herr-plegar').textContent = '⌃'); setTimeout(ajustarAltoLectura, 0); }]
     ];
     // Edición tienda: «Apoyar el proyecto» (CONSENSO-PLAY: aporte con Google Play Billing; hasta que la app esté en
     // Google Play, la pantalla es una vista previa y no cobra nada).
@@ -190,6 +190,41 @@
   }
   function abrirMas() { const c = $('#movil-strong'), o = $('#show-strong'); if (c && o) c.checked = o.checked; if (!hojaMas.open) hojaMas.showModal(); }
   function cerrarMas() { if (hojaMas?.open) hojaMas.close(); }
+
+
+  // ---------- Fila de herramientas de lectura (Edward, 11-oct) ----------
+  // Visible por defecto en la Biblia: Strong · ▷ Escuchar · ⏸ · ■ · ⤢ pantalla completa · ⌃ minimizar.
+  // Minimizada queda una franja delgada con ⌄ para volver al mismo tamaño; se recuerda la elección.
+  function construirHerramientas() {
+    const fila = $('#library-controls');
+    if (!fila || $('#movil-herr-plegar')) return;
+    html.dataset.controlesLectura = 'abiertos';
+    let guardado = 'abiertas'; try { guardado = localStorage.getItem('biblia-herramientas') || 'abiertas'; } catch { /* sin almacenamiento */ }
+    html.dataset.herramientas = guardado === 'mini' ? 'mini' : 'abiertas';
+    // Textos cortos en el teléfono (los botones son los de la app: conservan sus eventos).
+    const etiqueta = fila.querySelector('label.checkbox-label');
+    if (etiqueta) { for (const n of [...etiqueta.childNodes]) if (n.nodeType === 3) n.textContent = ' Strong'; etiqueta.title = 'Ver números Strong'; }
+    const corto = (sel, texto, nombre) => { const b = $(sel); if (b) { b.textContent = texto; b.setAttribute('aria-label', nombre); b.title = nombre; } };
+    corto('#voice-play', '▷ Escuchar', 'Escuchar el capítulo');
+    corto('#voice-pause', '⏸', 'Pausa o continuar');
+    corto('#voice-stop', '■', 'Detener la lectura');
+    const completa = crear('button', { type: 'button', id: 'movil-herr-completa', class: 'quiet', 'aria-label': 'Pantalla completa: solo el texto', title: 'Pantalla completa', texto: '⤢', onclick: () => $('#pane-biblia .enfoque-abrir')?.click() });
+    const plegar = crear('button', { type: 'button', id: 'movil-herr-plegar', class: 'quiet', onclick: () => {
+      const mini = html.dataset.herramientas !== 'mini';
+      html.dataset.herramientas = mini ? 'mini' : 'abiertas';
+      try { localStorage.setItem('biblia-herramientas', html.dataset.herramientas); } catch { /* sin almacenamiento */ }
+      pintarPlegar(); setTimeout(ajustarAltoLectura, 0);
+    } });
+    const pintarPlegar = () => {
+      const mini = html.dataset.herramientas === 'mini';
+      plegar.textContent = mini ? '⌄ Strong y escuchar' : '⌃';
+      plegar.setAttribute('aria-expanded', String(!mini));
+      plegar.setAttribute('aria-label', mini ? 'Mostrar Strong y escuchar' : 'Minimizar la fila');
+    };
+    fila.append(completa, plegar);
+    pintarPlegar();
+    setTimeout(ajustarAltoLectura, 0);
+  }
 
   // ---------- Barra superior de una fila (CONSENSO-MOVIL.md, paso 1): ☰ · referencia · buscar ----------
   function textoReferencia() {
@@ -957,6 +992,7 @@
     if (!consulta.matches) return;
     estado.construida = true;
     construirBarraSuperior();
+    construirHerramientas();
     construirMas();
     construirPestanas();
     construirFlechas();
