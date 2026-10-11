@@ -24,3 +24,5 @@
 .buscador-vacio { color: var(--muted); padding: 12px 0; }
 :root[data-telefono="true"] #buscador { width: 100vw; height: 100dvh; border: 0; border-radius: 0; }
 :root[data-telefono="true"] .buscador-cab { padding-top: calc(8px + var(--seguro-arriba, 0px)); }
+/* La regla general del teléfono pone 44 px; el buscador cumple el mínimo acordado de 48 px. */
+:root #buscador button, :root #buscador input { min-height: 48px; }
