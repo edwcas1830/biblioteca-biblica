@@ -325,6 +325,13 @@
     const palabra = e.target.closest('.reading-word');
     const versiculo = e.target.closest('#verses .verse');
     if (!versiculo) return;
+    if (estado.ignorarClic) { estado.ignorarClic = false; e.preventDefault(); e.stopPropagation(); return; }
+    if (html.dataset.seleccion === 'varios') {
+      e.preventDefault(); e.stopPropagation();
+      const n = numeroDe(versiculo); if (elegidos.has(n)) elegidos.delete(n); else elegidos.add(n);
+      if (!elegidos.size) salirSeleccion(); else pintarSeleccion();
+      return;
+    }
     ultimaY = e.clientY;
     if (palabra && $('#original-dialog')) return; // la palabra abre el popover del original
     setTimeout(mostrarBarra, 0);
@@ -346,15 +353,16 @@
     barra.append(
       tintas,
       accion('Nota', () => { const n = $('.pane-notes'); if (n) { n.open = true; html.dataset.notas = 'abiertas'; $('#note')?.focus(); } ocultarBarra(); }),
-      crear('button', { type: 'button', class: 'quiet', id: 'movil-preguntar', texto: 'Preguntar', 'aria-label': 'Preguntar a la IA sobre este versículo', onclick: () => { $('#ai-verse-ask')?.click(); ocultarBarra(); } }),
-      accion('🖼 Imagen', () => { ocultarBarra(); window.BibliaImagen?.abrir(); }, 'Crear imagen con este versículo'),
+      accion('⧉ Copiar', copiarVersiculo, 'Copiar versículo'),
       accion('↗ Compartir', compartirVersiculo, 'Compartir versículo'),
-      accion('⧉ Copiar', copiarVersiculo, 'Copiar versículo')
+      crear('button', { type: 'button', class: 'quiet movil-mas-acciones', id: 'movil-mas-acciones', texto: '⋯', 'aria-label': 'Más acciones del versículo', onclick: abrirAcciones })
     );
     document.body.append(barra);
+    construirHojaAcciones();
+    construirSeleccion();
     const puente = window.libraryDesktop;
     if (puente && typeof puente.getCapabilities === 'function') {
-      puente.getCapabilities().then(caps => { if (caps.operations.aiPrepare && !caps.operations.aiPrepare.available) $('#movil-preguntar').hidden = true; }).catch(() => {});
+      puente.getCapabilities().then(caps => { if (caps.operations.aiPrepare && !caps.operations.aiPrepare.available) { const p = $('#movil-preguntar'); if (p) p.hidden = true; } }).catch(() => {});
     }
     const notas = $('.pane-notes');
     if (notas) {
@@ -362,6 +370,97 @@
       notas.querySelector('summary')?.addEventListener('click', () => setTimeout(() => { html.dataset.notas = notas.open ? 'abiertas' : 'cerradas'; }, 0));
     }
   }
+  // ---------- Paso 3 (CONSENSO-MOVIL.md): «⋯» con todas las acciones y varios versículos a la vez ----------
+  let hojaAcciones;
+  function construirHojaAcciones() {
+    const fila = (texto, fn, extra = {}) => crear('button', { type: 'button', class: 'quiet', texto, ...extra, onclick: () => { hojaAcciones.close(); fn(); } });
+    hojaAcciones = crear('dialog', { id: 'movil-acciones', 'aria-label': 'Acciones del versículo' }, [
+      crear('div', { class: 'movil-mas-cabecera' }, [crear('h2', { id: 'movil-acciones-titulo', texto: 'Versículo' }), crear('button', { type: 'button', class: 'quiet', 'aria-label': 'Cerrar', texto: '✕', onclick: () => hojaAcciones.close() })]),
+      crear('div', { class: 'movil-mas-lista' }, [
+        fila('☑ Elegir varios versículos', () => entrarSeleccion($('#verses .verse.selected'))),
+        fila('🖼 Imagen con este versículo', () => window.BibliaImagen?.abrir()),
+        fila('✦ Preguntar a la IA', () => $('#ai-verse-ask')?.click(), { id: 'movil-preguntar' }),
+        fila('⇄ Comparar versiones', () => { if ($('#compare-toggle')?.getAttribute('aria-pressed') !== 'true') $('#compare-toggle')?.click(); }),
+        fila('✎ Nota del versículo', () => { const n = $('.pane-notes'); if (n) { n.open = true; html.dataset.notas = 'abiertas'; $('#note')?.focus(); } })
+      ])
+    ]);
+    hojaAcciones.addEventListener('click', e => { if (e.target === hojaAcciones) hojaAcciones.close(); });
+    document.body.append(hojaAcciones);
+  }
+  function abrirAcciones() {
+    ocultarBarra();
+    const t = textoVersiculo();
+    $('#movil-acciones-titulo').textContent = t?.ref || 'Versículo';
+    hojaAcciones.showModal();
+  }
+  // Varios versículos: se entra manteniendo pulsado un versículo o desde «⋯». Tocar suma o quita.
+  const elegidos = new Set();
+  let barraSeleccion;
+  function construirSeleccion() {
+    const boton = (texto, fn, etiqueta) => crear('button', { type: 'button', class: 'quiet', texto, 'aria-label': etiqueta || texto, onclick: fn });
+    barraSeleccion = crear('div', { id: 'movil-seleccion', role: 'toolbar', 'aria-label': 'Versículos elegidos', hidden: '' }, [
+      crear('span', { class: 'movil-seleccion-cuenta', role: 'status' }),
+      boton('⧉ Copiar', () => copiarSeleccion(false), 'Copiar los versículos elegidos'),
+      boton('↗ Compartir', () => copiarSeleccion(true), 'Compartir los versículos elegidos'),
+      boton('🖼 Imagen', imagenSeleccion, 'Imagen con los versículos elegidos'),
+      boton('✕', salirSeleccion, 'Terminar la selección')
+    ]);
+    document.body.append(barraSeleccion);
+    const versos = $('#verses');
+    let reloj = null, inicio = null;
+    versos?.addEventListener('touchstart', e => {
+      const v = e.target.closest('.verse'); if (!v || html.dataset.seleccion === 'varios') return;
+      const t = e.touches[0]; inicio = { x: t.clientX, y: t.clientY };
+      reloj = setTimeout(() => { reloj = null; entrarSeleccion(v); estado.ignorarClic = true; }, 550);
+    }, { passive: true });
+    const cancelar = e => { if (!reloj) return; const t = e.touches?.[0]; if (!t || Math.hypot(t.clientX - inicio.x, t.clientY - inicio.y) > 10) { clearTimeout(reloj); reloj = null; } };
+    versos?.addEventListener('touchmove', cancelar, { passive: true });
+    versos?.addEventListener('touchend', () => { if (reloj) { clearTimeout(reloj); reloj = null; } }, { passive: true });
+  }
+  function numeroDe(v) { return Number(v?.dataset.verse); }
+  function pintarSeleccion() {
+    for (const v of $$('#verses .verse')) v.classList.toggle('movil-elegido', elegidos.has(numeroDe(v)));
+    const n = elegidos.size;
+    $('.movil-seleccion-cuenta', barraSeleccion).textContent = n === 1 ? '1 versículo' : n + ' versículos';
+  }
+  function entrarSeleccion(v) {
+    elegidos.clear(); if (v && numeroDe(v)) elegidos.add(numeroDe(v));
+    html.dataset.seleccion = 'varios'; ocultarBarra(); barraSeleccion.hidden = false; pintarSeleccion();
+    mostrarAviso('Toca otros versículos para sumarlos.');
+  }
+  function salirSeleccion() {
+    elegidos.clear(); html.dataset.seleccion = ''; barraSeleccion.hidden = true; pintarSeleccion();
+  }
+  function textoSeleccion() {
+    const nums = [...elegidos].sort((a, b) => a - b);
+    if (!nums.length) return null;
+    const p = state.position, libro = books[p.book].name + ' ' + p.chapter;
+    const tramos = []; for (const n of nums) { const u = tramos[tramos.length - 1]; if (u && n === u[1] + 1) u[1] = n; else tramos.push([n, n]); }
+    const ref = libro + ':' + tramos.map(([a, b]) => a === b ? a : a + '-' + b).join(', ');
+    const textos = nums.map(n => { const v = $(`#verses .verse[data-verse="${n}"]`); const t = v ? [...v.childNodes].filter(x => !(x.nodeType === 1 && x.tagName === 'SUP')).map(x => x.textContent).join('').replace(/\s+/g, ' ').trim() : ''; return nums.length > 1 ? n + ' ' + t : t; });
+    return { ref, nums, contiguo: tramos.length === 1, completo: `«${textos.join(' ')}» ${ref}` };
+  }
+  async function copiarSeleccion(compartir) {
+    const t = textoSeleccion(); if (!t) return;
+    try {
+      if (compartir) await (window.BibliaPlataforma?.compartir || (async x => navigator.clipboard.writeText(x.texto)))({ titulo: t.ref, texto: t.completo });
+      else { await navigator.clipboard.writeText(t.completo); mostrarAviso(t.nums.length === 1 ? 'Versículo copiado.' : t.nums.length + ' versículos copiados.'); }
+      salirSeleccion();
+    } catch { mostrarAviso(compartir ? 'No se pudo compartir.' : 'No se pudo copiar.'); }
+  }
+  async function imagenSeleccion() {
+    const t = textoSeleccion(); if (!t) return;
+    salirSeleccion();
+    await window.BibliaImagen?.abrir();
+    const desde = $('#imagen-desde'), hasta = $('#imagen-hasta');
+    if (desde && hasta) {
+      desde.value = String(t.nums[0]); desde.dispatchEvent(new Event('change', { bubbles: true }));
+      hasta.value = String(t.contiguo ? t.nums[t.nums.length - 1] : t.nums[0]); hasta.dispatchEvent(new Event('change', { bubbles: true }));
+      if (!t.contiguo) mostrarAviso('La imagen usa versículos seguidos: tomé desde el ' + t.nums[0] + '.');
+    }
+  }
+  window.BibliaSeleccion = { entrar: v => entrarSeleccion(v), salir: salirSeleccion, texto: textoSeleccion, get elegidos() { return [...elegidos]; } };
+
   function textoVersiculo() {
     const v = $('#verses .verse.selected');
     if (!v) return null;
@@ -405,6 +504,7 @@
   // ---------- Atrás (lo usa plataforma.js con el botón de Android) ----------
   function atras() {
     if (window.BibliaEnfoque && window.BibliaEnfoque.salir()) return true; // primero sale de la pantalla completa
+    if (html.dataset.seleccion === 'varios') { salirSeleccion(); return true; }
     const dialogoAbierto = $$('dialog[open]').pop();
     if (dialogoAbierto) { dialogoAbierto.close(); return true; }
     if (barra && !barra.hidden) { ocultarBarra(); return true; }
