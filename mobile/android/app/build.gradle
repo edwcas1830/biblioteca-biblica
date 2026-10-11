@@ -4,7 +4,10 @@ android {
     namespace = "com.edward.bibliotecabiblica"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.edward.bibliotecabiblica"
+        // Edición tienda (Google Play): paquete y nombre propios, así convive con la completa de Edward y Laura.
+        applicationId(System.getenv('BIBLIOTECA_APP_ID') ?: "com.edward.bibliotecabiblica")
+        resValue "string", "app_name", (System.getenv('BIBLIOTECA_APP_NAME') ?: "Biblioteca Bíblica")
+        resValue "string", "title_activity_main", (System.getenv('BIBLIOTECA_APP_NAME') ?: "Biblioteca Bíblica")
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // En GitHub: número de corrida, siempre creciente, para que cada APK se instale como actualización.

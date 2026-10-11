@@ -94,6 +94,9 @@
       ['🖼 Imagen con versículos', () => window.BibliaImagen?.abrir()],
       ['Estudio con IA', () => botonPorTexto('.reading-actions button', 'ia')?.click()]
     ];
+    // Edición tienda: «Apoyar el proyecto» (CONSENSO-PLAY: aporte con Google Play Billing; hasta que la app esté en
+    // Google Play, la pantalla es una vista previa y no cobra nada).
+    if (window.BIBLIA_EDICION === 'tienda') extras.unshift(['♡ Apoyar el proyecto', abrirApoyo]);
     for (const [texto, fn] of extras) lista.append(crear('button', { type: 'button', class: 'quiet', texto, onclick: () => { cerrarMas(); fn(); } }));
     for (const b of $$('.library-menu-items button')) {
       const t = b.textContent.trim();
@@ -129,6 +132,22 @@
     for (const b of $$('.reading-actions button')) {
       if (/\bIA\b/.test(b.textContent) && caps.operations.aiStatus && !caps.operations.aiStatus.available) b.hidden = true;
     }
+  }
+  let hojaApoyo;
+  function abrirApoyo() {
+    if (!hojaApoyo) {
+      const montos = crear('div', { class: 'movil-apoyo-montos' }, ['US$1', 'US$3', 'US$5', 'US$10'].map(m => crear('button', { type: 'button', class: 'outline', texto: m, disabled: true })));
+      hojaApoyo = crear('dialog', { id: 'movil-apoyo', 'aria-labelledby': 'movil-apoyo-titulo' }, [
+        crear('div', { class: 'movil-mas-cabecera' }, [crear('h2', { id: 'movil-apoyo-titulo', texto: 'Apoyar el proyecto' }), crear('button', { type: 'button', class: 'quiet', 'aria-label': 'Cerrar', texto: '✕', onclick: () => hojaApoyo.close() })]),
+        crear('p', { texto: 'Biblioteca Bíblica es gratis y sin anuncios. Si te sirve, puedes apoyar su desarrollo con un aporte voluntario.' }),
+        montos,
+        crear('p', { class: 'muted', texto: 'Aporte voluntario para mantener Biblioteca Bíblica. No desbloquea funciones ni es deducible de impuestos. El pago lo procesa Google Play.' }),
+        crear('p', { class: 'movil-apoyo-aviso', role: 'status', texto: 'Vista previa: los aportes se activan cuando la app esté publicada en Google Play.' })
+      ]);
+      hojaApoyo.addEventListener('click', e => { if (e.target === hojaApoyo) hojaApoyo.close(); });
+      document.body.append(hojaApoyo);
+    }
+    hojaApoyo.showModal();
   }
   function abrirMas() { if (!hojaMas.open) hojaMas.showModal(); }
   function cerrarMas() { if (hojaMas?.open) hojaMas.close(); }

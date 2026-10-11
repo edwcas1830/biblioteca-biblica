@@ -1,7 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Biblioteca Bíblica</string>
-    <string name="title_activity_main">Biblioteca Bíblica</string>
+    <!-- app_name y title_activity_main los pone build.gradle (resValue): cambian en la edición tienda. -->
     <string name="package_name">com.edward.bibliotecabiblica</string>
     <string name="custom_url_scheme">com.edward.bibliotecabiblica</string>
 </resources>

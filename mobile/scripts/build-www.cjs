@@ -8,6 +8,10 @@ const crypto = require('node:crypto');
 const repo = path.resolve(__dirname, '..', '..');
 const mobile = path.join(repo, 'mobile');
 const out = path.join(mobile, 'www');
+// Edición: «completa» (Edward y Laura) o «tienda» (Google Play, CONSENSO-PLAY.md): sin IA, foro, música,
+// traspaso ni importar módulos; solo textos libres.
+const EDICION = process.env.BIBLIA_EDICION === 'tienda' ? 'tienda' : 'completa';
+const LIBRES_TIENDA = new Set(['onbv2008', 'step-greek', 'step-hebrew']);
 const PROHIBIDAS = /\.(bblx|cmtx|dctx|bbli|cmti|dcti|topx|mybible|sqlite|sqlite3|db)$/i;
 const CARPETAS_PROHIBIDAS = new Set(['modulos', 'personal', 'paquete-personal', 'respaldos']);
 // app/music/ es el reproductor intermedio del escritorio; en el teléfono YouTube va directo en su origen (auditoría 11-oct).
@@ -72,7 +76,9 @@ if (fs.existsSync(manifiestoRv)) {
 const capacitorCore = path.join(mobile, 'node_modules', '@capacitor', 'core', 'dist', 'capacitor.js');
 if (!fs.existsSync(capacitorCore)) throw new Error('Falta @capacitor/core/dist/capacitor.js: ejecuta npm ci en mobile/.');
 fs.copyFileSync(capacitorCore, path.join(out, 'mobile', 'capacitor.js'));
-const scriptsMovil = [...nucleos, ...puentes, 'mobile/manifiestos.js', 'mobile/plataforma.js', 'mobile/arranque.js', 'mobile/movil.js']
+fs.writeFileSync(path.join(out, 'mobile', 'edicion.js'), `'use strict';\nwindow.BIBLIA_EDICION = ${JSON.stringify(EDICION)};\n`);
+html = html.replace('<html', `<html data-edicion="${EDICION}"`);
+const scriptsMovil = [...nucleos, ...puentes, 'mobile/manifiestos.js', 'mobile/edicion.js', 'mobile/plataforma.js', 'mobile/arranque.js', 'mobile/movil.js']
   .filter(f => fs.existsSync(path.join(out, f)))
   .map(f => `<script defer src="${f}"></script>`).join('\n  ');
 const ancla = '<script defer src="bible-data.js"></script>';
@@ -115,10 +121,15 @@ const auditoria = {
   archivos: total,
   megabytes: +(bytes / 1048576).toFixed(1),
   prohibidos: encontrados.map(p => path.relative(out, p)),
+  edicion: EDICION,
   modulosLibres: (libre.modules || libre.modulos || []).map(m => m.id),
   puentes,
   huellaIndex: crypto.createHash('sha256').update(html).digest('hex').slice(0, 16)
 };
 fs.writeFileSync(path.join(mobile, 'www-auditoria.json'), JSON.stringify(auditoria, null, 2));
 if (encontrados.length) { console.error('PROHIBIDOS en www:', auditoria.prohibidos); process.exit(1); }
-console.log(`www listo: ${total} archivos, ${auditoria.megabytes} MB, prohibidos 0, puentes: ${puentes.join(', ') || 'ninguno todavía'}`);
+if (EDICION === 'tienda') {
+  const ajenos = auditoria.modulosLibres.filter(id => !LIBRES_TIENDA.has(id));
+  if (ajenos.length) { console.error('La edición tienda solo admite textos libres verificados; sobran:', ajenos); process.exit(1); }
+}
+console.log(`www listo (${EDICION}): ${total} archivos, ${auditoria.megabytes} MB, prohibidos 0, puentes: ${puentes.join(', ') || 'ninguno todavía'}`);
