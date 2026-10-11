@@ -28,7 +28,7 @@
 :root[data-telefono="true"] button,
 :root[data-telefono="true"] select,
 :root[data-telefono="true"] input,
-:root[data-telefono="true"] summary { min-height: 44px; }
+:root[data-telefono="true"] summary { min-height: 48px; }
 :root[data-telefono="true"] small,
 :root[data-telefono="true"] .fine-print,
 :root[data-telefono="true"] .pane-kicker,
