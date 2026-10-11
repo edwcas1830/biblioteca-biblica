@@ -385,3 +385,10 @@
 .movil-apoyo-montos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0 0 16px; }
 .movil-apoyo-montos button { min-height: 48px; font-weight: 600; }
 .movil-apoyo-aviso { font-weight: 600; }
+
+/* Edición tienda: sin música ni módulos personales (CONSENSO-PLAY.md). */
+html[data-edicion="tienda"] #music-quick,
+html[data-edicion="tienda"] #module-import-open,
+html[data-edicion="tienda"] #sources-refresh,
+html[data-edicion="tienda"] #sources-warning,
+html[data-edicion="tienda"] #sources-dialog > p.muted { display: none !important; }

@@ -66,6 +66,8 @@ async function conectar() {
   anotar(!img.bloqueIa, 'imagen con versículos sin el bloque de IA', JSON.stringify(img));
   await app.evaluar("document.querySelector('#imagen-cerrar')?.click();const b=[...document.querySelectorAll('.library-menu-items button')].find(x=>/fuentes/i.test(x.textContent));b&&b.click();await new Promise(r=>setTimeout(r,900));return true;");
   captura('5-fuentes');
+  const ocultos = await app.evaluar("const oculto=s=>{const e=document.querySelector(s);return !e||getComputedStyle(e).display==='none'||e.hidden;};return {musica:oculto('#music-quick'),importar:oculto('#module-import-open'),paquetes:oculto('#sources-refresh')};");
+  anotar(ocultos.musica && ocultos.importar && ocultos.paquetes, 'sin botón de música ni importar módulos personales', JSON.stringify(ocultos));
   app.cerrar();
 })().catch(e => { lineas.push('ERROR tienda: ' + e.message); console.error(e); process.exitCode = 1; }).finally(() => {
   fs.appendFileSync(path.join(salida, 'informe.txt'), lineas.join('\n') + '\n');
