@@ -109,8 +109,9 @@ function cargarPagina(plugins) {
     dispatchEvent(e) { for (const fn of eventos[e.type] || []) fn(e); },
     CustomEvent: class { constructor(type, o = {}) { this.type = type; this.detail = o.detail; } },
     navigator: {}, location: { href: 'https://localhost/', origin: 'https://localhost', reload() {} }, URL, crypto: globalThis.crypto,
-    TextEncoder, TextDecoder, setTimeout, clearTimeout, queueMicrotask, structuredClone, DecompressionStream: globalThis.DecompressionStream,
-    fetch: async u => { const p = new URL(u, 'https://localhost/').pathname; return new Response(fs.readFileSync(path.join(www, decodeURIComponent(p)))); }, Response, Request, Headers, Blob,
+    TextEncoder, TextDecoder, setTimeout, clearTimeout, queueMicrotask, structuredClone, DecompressionStream: globalThis.DecompressionStream, AbortController, AbortSignal, URLSearchParams,
+    // Archivos de la app desde www; con GEMINI_REAL, lo externo (Google) va a la red de verdad.
+    fetch: async (u, o) => { const url = new URL(u, 'https://localhost/'); if (url.hostname !== 'localhost') { if (!process.env.GEMINI_REAL) throw new Error('Sin red en la simulación'); return fetch(url.href, o); } return new Response(fs.readFileSync(path.join(www, decodeURIComponent(url.pathname)))); }, Response, Request, Headers, Blob,
     atob, btoa, MutationObserver: class { observe() {} disconnect() {} }, matchMedia: () => ({ matches: true, addEventListener() {} })
   };
   const nodo = () => ({ id: '', dataset: {}, hidden: false, innerHTML: '', textContent: '', append() {}, setAttribute() {}, addEventListener() {}, querySelector: () => nodo(), classList: { toggle() {}, contains: () => false, remove() {} } });
@@ -238,6 +239,21 @@ function cargarPagina(plugins) {
     const gem = (personal.providers || []).find(p => p.id === 'gemini-api');
     console.log('IA · credenciales:', estIa.credentialStorage, '· modo personal:', personal.enabled, '· Gemini conectado tras recargar:', !!(gem && gem.connected), '· imagen IA disponible:', !!(await puente.getCapabilities()).operations.aiImage?.available);
     if (estIa.credentialStorage !== 'device-secure' || !(gem && gem.connected)) throw new Error('La IA del teléfono no guardó la conexión en el llavero');
+    // Con GEMINI_REAL=1 y GEMINI_API_KEY: las acciones de estudio contra Google, por la misma pila del teléfono.
+    if (process.env.GEMINI_REAL && process.env.GEMINI_API_KEY) {
+      const paso = async (n, f) => { try { return await f(); } catch (e) { console.log('GEMINI paso fallido:', n, e && e.code, e && e.message); throw e; } };
+      await paso('modo personal', () => puente.aiPersonalEnable(true));
+      await paso('guardar clave', () => puente.aiGeminiKey(process.env.GEMINI_API_KEY));
+      const modelos = await paso('modelos', () => puente.aiGeminiModels());
+      const modelo = modelos[0].id;
+      for (const [nombre, ref, pregunta] of [['Exégesis', { book: 18, chapter: 23, verse: 1 }, 'Exégesis de Salmos 23:1: qué dice el texto en su contexto inmediato, su estructura y su sentido. Separa «Lo que dice el texto» de «Interpretación».'], ['Pasajes paralelos', { book: 42, chapter: 3, verse: 16 }, 'Pasajes paralelos de Juan 3:16: entre 3 y 6 pasajes relacionados y por qué se conectan. Cita solo referencias reales y verificables.'], ['Contexto histórico', { book: 44, chapter: 8, verse: 28 }, 'Contexto histórico de Romanos 8:28: autor, fecha, destinatarios, situación. Di claramente cuándo algo es incierto.']]) {
+        const t0 = Date.now();
+        const prep = await paso('preparar ' + nombre, () => puente.aiPrepare({ ...ref, module: 'rv1909', scope: 'verse', task: 'explain', question: pregunta, includeBible: true, includeComment: false, study: true, allowLiving: false, history: '' }));
+        const r = await paso('preguntar ' + nombre, () => puente.aiAsk({ id: prep.id, provider: 'gemini-api', model: modelo }));
+        const s = r.sections || {};
+        console.log(`GEMINI ${nombre} (${modelo}, ${Date.now() - t0} ms) · en breve: ${String(s.brief || r.text || '').slice(0, 160).replace(/\s+/g, ' ')} · citas: ${JSON.stringify(r.citations || []).slice(0, 160)}`);
+      }
+    }
     if ((plan.entries || []).length !== 1189 || (plan.completed || []).length !== 329 || tras.state.devotionals.length !== 2 || !/Texto inventado/.test(verso)) throw new Error('Los datos traídos no cuadran');
   }
   await ventana.LibraryAndroidServices.close();

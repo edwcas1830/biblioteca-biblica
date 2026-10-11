@@ -1,0 +1,7 @@
+/* Seis acciones de estudio sobre el pasaje (ai-acciones.js). Usa los tokens del diseño activo. */
+#ai-acciones { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+#ai-acciones .ai-accion { font: inherit; font-size: .88rem; border: 1px solid color-mix(in srgb, currentColor 22%, transparent); background: color-mix(in srgb, currentColor 6%, transparent); color: inherit; border-radius: 999px; padding: 6px 12px; min-height: 36px; cursor: pointer; }
+#ai-acciones .ai-accion[aria-pressed="true"] { background: var(--accent, #7A3E2E); border-color: var(--accent, #7A3E2E); color: var(--paper, #fff); }
+#ai-llevar { margin-top: 8px; }
+#ai-llevar summary { cursor: pointer; font-size: .9rem; }
+#ai-llevar small { display: block; margin: 6px 0; opacity: .75; }

@@ -466,12 +466,12 @@
           crear('button', { type: 'button', class: 'primary', id: 'movil-ia-codigo-enviar', texto: 'Conectar' })
         ]),
         crear('button', { type: 'button', class: 'quiet', id: 'movil-ia-reabrir', texto: 'Abrir OpenRouter otra vez ↗' }),
-        crear('p', { class: 'movil-ia-aviso', texto: 'La conexión dura mientras la app está abierta: al cerrarla tendrás que volver a conectar.' })
+        crear('p', { class: 'movil-ia-aviso', texto: 'La conexión queda guardada en el llavero seguro del teléfono: no tendrás que volver a conectar al cerrar la app.' })
       ]);
       conectar.after(bloque);
       // El texto de escritorio habla de la protección de Windows: en el teléfono la clave vive solo en memoria.
       for (const pa of $$('#ai-settings p.muted')) {
-        if (/protegida por Windows/.test(pa.textContent)) pa.textContent = 'La autorización se completa en el navegador del teléfono. La clave queda solo en la memoria de la app mientras está abierta y no se incluye en las copias ni en el traspaso.';
+        if (/protegida por Windows/.test(pa.textContent)) pa.textContent = 'La autorización se completa en el navegador del teléfono. La clave queda guardada en el llavero seguro del teléfono y no se incluye en las copias ni en el traspaso.';
       }
       let url = null;
       conectar.addEventListener('click', async e => {
@@ -507,7 +507,14 @@
       $('#ai-pane .ai-pane-head')?.append(enPanel);
       const hora = iso => { try { return new Date(iso).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' }); } catch { return ''; } };
       const pintar = texto => { for (const el of [enAjustes, enPanel]) $('.movil-ia-cuota-texto', el).textContent = texto; };
+      // La cuota es de OpenRouter: con Gemini (u otro proveedor) no se muestra ni se consulta.
+      const usaOpenRouter = () => (typeof personalProvider === 'function' ? personalProvider() : 'openrouter') === 'openrouter';
+      const sincronizar = () => { const si = usaOpenRouter(); enAjustes.hidden = !si; enPanel.hidden = !si; return si; };
+      for (const id of ['ai-provider', 'ai-personal-enabled']) $('#' + id)?.addEventListener('change', () => setTimeout(sincronizar, 50));
+      document.addEventListener('click', e => { if (e.target.closest('[data-action="ai-open"], [data-action="ai-settings"], #ai-settings-open, .reading-actions button')) setTimeout(sincronizar, 300); });
+      setTimeout(sincronizar, 800);
       const refrescarCuota = async () => {
+        if (!sincronizar()) return;
         try {
           const q = await puente.aiQuota();
           const partes = [];
