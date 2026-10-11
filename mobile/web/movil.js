@@ -182,6 +182,9 @@
     const buscar = crear('button', { type: 'button', class: 'movil-barra-icono', id: 'movil-buscar', 'aria-label': 'Buscar libro, cita o palabra', onclick: () => window.BibliaBuscador?.abrir({ indice: false }) }, [iconoBuscar()]);
     const menu = crear('button', { type: 'button', class: 'movil-barra-icono', id: 'movil-menu', 'aria-label': 'Menú', texto: '☰', onclick: abrirMas });
     vista.prepend(crear('header', { id: 'movil-barra' }, [menu, ref, buscar]));
+    // Versión y «Comparar» comparten una sola fila al comienzo de la Biblia (se mueve el nodo: conserva sus eventos).
+    const cabeza = $('#pane-biblia > .pane-head'), comparar = $('#comparison-controls');
+    if (cabeza && comparar && comparar.parentElement !== cabeza) cabeza.append(comparar);
     const actualizar = () => { texto.textContent = textoReferencia(); };
     const origen = $('#bible-ref');
     if (origen) new MutationObserver(actualizar).observe(origen, { childList: true, characterData: true, subtree: true });

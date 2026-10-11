@@ -418,7 +418,9 @@ html[data-edicion="tienda"] #sources-dialog > p.muted { display: none !important
 /* Versión y «Comparar» en una sola fila compacta al comienzo de la Biblia. */
 :root[data-telefono="true"] #pane-biblia > .pane-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 16px; }
 :root[data-telefono="true"] #pane-biblia #version-select { min-height: 48px; max-width: 50%; }
-:root[data-telefono="true"] #pane-biblia #comparison-controls { padding: 0 16px 8px; margin: 0; }
+:root[data-telefono="true"] #read-view { row-gap: 0; }
+:root[data-telefono="true"] #pane-biblia #comparison-controls { padding: 0; margin: 0; border: 0; flex: 1 1 auto; min-width: 0; }
+:root[data-telefono="true"] #pane-biblia #comparison-controls .comparison-actions { display: flex; gap: 8px; justify-content: flex-end; }
 :root[data-telefono="true"] #pane-biblia #compare-toggle { min-height: 48px; }
 /* «Más»: fila de letra. */
 .movil-mas-letra { display: flex; align-items: center; gap: 8px; }
