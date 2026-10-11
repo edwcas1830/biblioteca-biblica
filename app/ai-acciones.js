@@ -24,6 +24,7 @@
   function usar(accion) {
     const pregunta = $('#ai-question');
     if (!pregunta || (typeof aiWorking !== 'undefined' && aiWorking)) return;
+    window.BibliaAccionActual = accion.id;
     pregunta.value = accion.pregunta(referencia());
     const comentario = $('#ai-include-comment');
     if (comentario && !comentario.disabled) comentario.checked = !!accion.comentario;
@@ -48,6 +49,7 @@
     }
     compose.prepend(fila);
     const pregunta = $('#ai-question'); if (pregunta) pregunta.placeholder = 'Tu pregunta sobre este pasaje…';
+    pregunta?.addEventListener('input', e => { if (e.isTrusted) { window.BibliaAccionActual = 'pregunta'; document.querySelectorAll('#ai-acciones button').forEach(b => b.setAttribute('aria-pressed', 'false')); } });
     const preguntar = $('#ai-ask'); if (preguntar) preguntar.textContent = 'Consultar →';
 
     // «Avanzado»: el selector de objetivo, las casillas y «Ver qué se envía» dejan de estar a la vista.

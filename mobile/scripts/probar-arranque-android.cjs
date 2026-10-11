@@ -246,12 +246,13 @@ function cargarPagina(plugins) {
       await paso('guardar clave', () => puente.aiGeminiKey(process.env.GEMINI_API_KEY));
       const modelos = await paso('modelos', () => puente.aiGeminiModels());
       const modelo = modelos[0].id;
-      for (const [nombre, ref, pregunta] of [['Exégesis', { book: 18, chapter: 23, verse: 1 }, 'Exégesis de Salmos 23:1: qué dice el texto en su contexto inmediato, su estructura y su sentido. Separa «Lo que dice el texto» de «Interpretación».'], ['Pasajes paralelos', { book: 42, chapter: 3, verse: 16 }, 'Pasajes paralelos de Juan 3:16: entre 3 y 6 pasajes relacionados y por qué se conectan. Cita solo referencias reales y verificables.'], ['Contexto histórico', { book: 44, chapter: 8, verse: 28 }, 'Contexto histórico de Romanos 8:28: autor, fecha, destinatarios, situación. Di claramente cuándo algo es incierto.']]) {
+      for (const [nombre, accion, ref] of [['Exégesis', 'exegesis', { book: 18, chapter: 23, verse: 1 }], ['Pasajes paralelos', 'paralelos', { book: 42, chapter: 3, verse: 16 }], ['Contexto histórico', 'contexto', { book: 44, chapter: 8, verse: 28 }]]) {
         const t0 = Date.now();
-        const prep = await paso('preparar ' + nombre, () => puente.aiPrepare({ ...ref, module: 'rv1909', scope: 'verse', task: 'explain', question: pregunta, includeBible: true, includeComment: false, study: true, allowLiving: false, history: '' }));
-        const r = await paso('preguntar ' + nombre, () => puente.aiAsk({ id: prep.id, provider: 'gemini-api', model: modelo }));
-        const s = r.sections || {};
-        console.log(`GEMINI ${nombre} (${modelo}, ${Date.now() - t0} ms) · en breve: ${String(s.brief || r.text || '').slice(0, 160).replace(/\s+/g, ' ')} · citas: ${JSON.stringify(r.citations || []).slice(0, 160)}`);
+        const prep = await paso('preparar ' + nombre, () => puente.aiPrepare({ ...ref, action: accion, module: 'rv1909', scope: 'verse', task: 'explain', question: '', includeBible: true, includeComment: false, study: true, allowLiving: accion === 'vida', history: '' }));
+        const r = await paso('preguntar ' + nombre, () => puente.aiAsk({ id: prep.id, action: accion, provider: 'gemini-api', model: modelo }));
+        if (process.env.VER_RESPUESTA) console.log('RESPUESTA', JSON.stringify(Object.fromEntries(Object.entries(r).map(([k, v]) => [k, typeof v === 'string' ? v.slice(0, 120) : Array.isArray(v) ? v.length : v]))).slice(0, 900));
+        const refs = (r.fuentes || []).map(f => f.ref ? `${f.ref.book}:${f.ref.chapter}:${f.ref.verse}` : (f.strong || f.modulo)).join(', ');
+        console.log(`GEMINI ${nombre} (${modelo}, ${Date.now() - t0} ms) · fuentes enviadas: ${prep.sources.length} · usadas: [${refs}] · en breve: ${String(r.brief || '').slice(0, 140).replace(/\s+/g, ' ')} · texto: ${r.texto ? 'sí' : 'no'} · interpretación: ${r.interpretacion ? 'sí' : 'no'} · seguimientos: ${(r.seguimientos || []).join(' | ').slice(0, 160)}`);
       }
     }
     if ((plan.entries || []).length !== 1189 || (plan.completed || []).length !== 329 || tras.state.devotionals.length !== 2 || !/Texto inventado/.test(verso)) throw new Error('Los datos traídos no cuadran');
