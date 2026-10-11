@@ -239,3 +239,11 @@ jobs:
           npm i --no-save playwright@1.49.1
           npx playwright install --with-deps webkit
           node scripts/probar-web-webkit.cjs
+
+      - name: Captura si WebKit falla
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prueba-webkit
+          path: mobile/prueba-webkit/
+          retention-days: 7
