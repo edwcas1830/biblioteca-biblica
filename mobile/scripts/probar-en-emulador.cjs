@@ -105,6 +105,8 @@ async function esperarLista(app, etiqueta) {
 }
 
 (async () => {
+  // Letra grande del sistema, como el teléfono de Edward (así se ven los desbordes).
+  adb('shell', 'settings', 'put', 'system', 'font_scale', '1.3');
   adb('install', '-r', apk);
   adb('shell', 'am', 'start', '-n', PKG + '/.MainActivity');
   let app = await conectar();
@@ -184,6 +186,16 @@ async function esperarLista(app, etiqueta) {
   const ui = await app.evaluar(`return {telefono:document.documentElement.dataset.telefono,nav:!!document.querySelector('#movil-nav'),hoja:!!document.querySelector('#movil-hoja-cabecera'),versiculos:document.querySelectorAll('#verses .verse').length};`);
   captura('4-interfaz');
   anotar(ui.nav && ui.hoja && ui.versiculos > 0, 'interfaz de teléfono', JSON.stringify(ui));
+  // Lo que Edward debe VER (con letra grande del sistema): la barra del versículo con 🖼 Imagen dentro de la
+  // pantalla, «Imagen con versículos» en Más, y en IA solo OpenRouter y Gemini con el modo personal.
+  const visible = await app.evaluar(`const v=document.querySelector('#verses .verse[data-verse="2"]');v.dispatchEvent(new MouseEvent('click',{bubbles:true,clientY:300}));await new Promise(r=>setTimeout(r,700));const bar=document.querySelector('#movil-versiculo');const dentro=b=>{const r=b.getBoundingClientRect();return r.width>0&&r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight;};const botones=[...bar.querySelectorAll(':scope > button')].map(b=>({t:b.textContent.trim(),ok:dentro(b)}));return {barra:!bar.hidden,botones,ancho:innerWidth};`, 30000);
+  captura('4c-barra-versiculo');
+  const fuera = visible.botones.filter(b => !b.ok).map(b => b.t);
+  anotar(visible.barra && visible.botones.some(b => /Imagen/.test(b.t)) && fuera.length === 0, 'botones del versículo a la vista (letra grande)', JSON.stringify({ ancho: visible.ancho, fuera }));
+  const masIa = await app.evaluar(`document.querySelector('#movil-nav [data-destino="mas"]').click();await new Promise(r=>setTimeout(r,500));const items=[...document.querySelectorAll('#movil-mas .movil-mas-lista button')].filter(b=>!b.hidden).map(b=>b.textContent.trim());const ia=[...document.querySelectorAll('#movil-mas .movil-mas-lista button')].find(b=>/inteligencia artificial/i.test(b.textContent));ia&&ia.click();await new Promise(r=>setTimeout(r,1200));const modo=document.querySelector('#ai-personal-mode');const chk=document.querySelector('#ai-personal-enabled');if(chk&&!chk.checked){chk.click();await new Promise(r=>setTimeout(r,800));}const sel=document.querySelector('#ai-provider');return {items,modoPersonal:!!modo&&!modo.hidden,proveedores:sel?[...sel.options].map(o=>o.value):[]};`, 30000);
+  captura('4d-ajustes-ia');
+  await app.evaluar(`document.querySelector('#ai-settings-dialog')?.close?.();document.querySelectorAll('dialog[open]').forEach(d=>d.close());return true;`);
+  anotar(masIa.items.some(t => /Imagen con versículos/.test(t)) && masIa.modoPersonal && JSON.stringify(masIa.proveedores) === JSON.stringify(['openrouter', 'gemini-api']), 'Más ofrece imágenes y la IA deja elegir OpenRouter o Gemini', JSON.stringify(masIa));
   // Imagen con versículos en el teléfono: se abre, arma Salmos 23:1-2 y dibuja en tamaño historia.
   const imagen = await app.evaluar(`go(18,23,1);await new Promise(r=>setTimeout(r,800));window.BibliaImagen.abrir();await new Promise(r=>setTimeout(r,600));const h=document.querySelector('#imagen-hasta');h.value='2';h.dispatchEvent(new Event('change'));document.querySelector('#imagen-formato').value='historia';await window.BibliaImagen.dibujar();await new Promise(r=>setTimeout(r,800));const c=window.BibliaImagen._lienzo();return {ref:document.querySelector('#imagen-referencia').value,texto:document.querySelector('#imagen-texto').value.slice(0,40),w:c.width,h:c.height,compartir:typeof window.BibliaPlataforma.compartirImagen==='function'};`, 60000);
   captura('4b-imagen-versiculo');

@@ -231,7 +231,8 @@
 /* ---------- Barra del versículo ---------- */
 #movil-versiculo { display: none; }
 :root[data-telefono="true"][data-vista-movil="read-view"] #movil-versiculo:not([hidden]) {
-  display: flex; align-items: center; gap: 2px; overflow-x: auto; scrollbar-width: none;
+  /* Dos filas si hace falta (letra grande): antes los últimos botones quedaban escondidos a la derecha. */
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 2px; overflow: visible;
   position: fixed; left: 6px; right: 6px; z-index: 45;
   bottom: calc(var(--pie) + var(--hoja-alto) + 8px);
   padding: 4px 2px; border-radius: 14px;
@@ -240,9 +241,9 @@
 }
 #movil-versiculo .movil-tintas { display: flex; gap: 4px; padding-right: 6px; border-right: 1px solid var(--borde-hoja); }
 #movil-versiculo .movil-tintas button { width: 32px; min-width: 32px; height: 32px; min-height: 32px; border-radius: 50%; padding: 0; }
-#movil-versiculo { justify-content: space-between; }
 #movil-versiculo > button { flex: 0 0 auto; min-width: 40px; padding: 0 6px; font-size: .9rem; }
-#movil-versiculo .movil-tintas { gap: 2px; padding-right: 4px; }
+#movil-versiculo .movil-tintas { gap: 2px; padding-right: 4px; flex: 0 0 auto; }
+#movil-versiculo > button { white-space: nowrap; }
 
 /* «Mis notas» como hoja: se abre desde la barra del versículo. */
 :root[data-telefono="true"] .pane-notes:not([open]) { display: none; }

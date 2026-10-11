@@ -91,6 +91,7 @@
     moverAjustes(true);
     const lista = crear('div', { class: 'movil-mas-lista' });
     const extras = [
+      ['🖼 Imagen con versículos', () => window.BibliaImagen?.abrir()],
       ['Estudio con IA', () => botonPorTexto('.reading-actions button', 'ia')?.click()]
     ];
     for (const [texto, fn] of extras) lista.append(crear('button', { type: 'button', class: 'quiet', texto, onclick: () => { cerrarMas(); fn(); } }));
@@ -220,9 +221,9 @@
       tintas,
       accion('Nota', () => { const n = $('.pane-notes'); if (n) { n.open = true; html.dataset.notas = 'abiertas'; $('#note')?.focus(); } ocultarBarra(); }),
       crear('button', { type: 'button', class: 'quiet', id: 'movil-preguntar', texto: 'Preguntar', 'aria-label': 'Preguntar a la IA sobre este versículo', onclick: () => { $('#ai-verse-ask')?.click(); ocultarBarra(); } }),
-      accion('🖼', () => { ocultarBarra(); window.BibliaImagen?.abrir(); }, 'Crear imagen con este versículo'),
-      accion('↗', compartirVersiculo, 'Compartir versículo'),
-      accion('⧉', copiarVersiculo, 'Copiar versículo')
+      accion('🖼 Imagen', () => { ocultarBarra(); window.BibliaImagen?.abrir(); }, 'Crear imagen con este versículo'),
+      accion('↗ Compartir', compartirVersiculo, 'Compartir versículo'),
+      accion('⧉ Copiar', copiarVersiculo, 'Copiar versículo')
     );
     document.body.append(barra);
     const puente = window.libraryDesktop;
@@ -299,6 +300,15 @@
     const cab = parseFloat(getComputedStyle(html).getPropertyValue('--hoja-cab')) || 52;
     html.style.setProperty('--cabeceras-lectura', Math.max(0, Math.round(arriba)) + 'px');
     html.style.setProperty('--alto-libro', Math.max(320, window.innerHeight - arriba - pie - cab) + 'px');
+  }
+
+  // En el teléfono no hay programas de terminal (Codex, Claude, Gemini CLI): solo OpenRouter y Gemini con clave.
+  function soloProveedoresDelTelefono() {
+    const sel = $('#ai-provider');
+    if (!sel) return;
+    for (const o of [...sel.options]) if (!['openrouter', 'gemini-api'].includes(o.value)) o.remove();
+    const g = [...sel.options].find(o => o.value === 'gemini-api'); if (g) g.textContent = 'Gemini · mi clave de Google AI Studio';
+    const r = [...sel.options].find(o => o.value === 'openrouter'); if (r) r.textContent = 'OpenRouter · ChatGPT, Claude, Gemini y más';
   }
 
   // ---------- Traer desde la PC ----------
@@ -593,6 +603,7 @@
     construirBarraVersiculo();
     construirControlesLectura();
     prepararTraspaso();
+    soloProveedoresDelTelefono();
     confirmarTraspasoAlAbrir();
     prepararIA().then(() => { prepararIA.hecho = true; });
     vigilarOriginal();
