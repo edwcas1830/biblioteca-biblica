@@ -112,3 +112,6 @@ html[data-design] #panes[data-layout="rows"] .pane-body>.verse{max-width:70ch;ma
 html[data-design] #panes[data-layout="rows"] .pane-body>.comment-entry,
 html[data-design] #panes[data-layout="rows"] .pane-body>.comment-introduction,
 html[data-design] #panes[data-layout="rows"] .pane-body>.dictionary-entry{max-width:80ch;margin-inline:auto}
+
+/* Palabra elegida en la Biblia (queda marcada mientras se consulta Comentario y Diccionario). */
+.verses .palabra-elegida{background:color-mix(in srgb,var(--accent,#7a4a24) 22%,transparent);border-radius:4px;box-shadow:0 2px 0 var(--accent,#7a4a24);text-decoration:none}

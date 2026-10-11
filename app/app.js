@@ -285,6 +285,15 @@ function bind() {
     renderNote(); save();
     const strong=event.target.closest('[data-strong]'),word=event.target.closest('[data-word]');
     const original=event.target.closest('[data-original]');if(original){openOriginal(original.dataset.original,original.dataset.originalText);return;}
+    const tocada=strong||word;
+    if(tocada){
+      // Edward (11-oct): la palabra queda elegida hasta que él la quite (tocándola otra vez); así puede pasar
+      // por Comentario y por varios diccionarios sin volver a buscarla.
+      const misma=palabraElegida&&palabraElegida.verse===Number(verse.dataset.verse)&&palabraElegida.text===(strong?strong.dataset.strong:word.dataset.word)&&tocada.classList.contains('palabra-elegida');
+      if(misma){palabraElegida=null;marcarPalabraElegida();return;}
+      palabraElegida={book:state.position.book,chapter:state.position.chapter,verse:Number(verse.dataset.verse),text:strong?strong.dataset.strong:word.dataset.word,strong:!!strong};
+      marcarPalabraElegida(tocada);
+    }
     if(strong)queryFromReading(strong.dataset.strong,true);else if(word)queryFromReading(word.dataset.word);
   });
   $('#note').addEventListener('input',()=>{if(state.privateLocked)return; if($('#note').value) state.notes[key()]=$('#note').value; else delete state.notes[key()]; save(); });
@@ -380,7 +389,7 @@ function showDictionaryEntry(index){
 async function consultDictionary(){
   closeOriginal();
   const generation=++dictionaryGeneration,content=$('#dictionary-content');syncDictionaryRef();content.setAttribute('aria-busy','true');content.textContent='Buscando…';
-  try{const result=await desktop.dictionary({group:$('#dictionary-select').value,query:$('#dictionary-query').value});if(generation!==dictionaryGeneration)return;dictionaryEntries=result.entries;if(dictionaryEntries.length)showDictionaryEntry(0);else content.innerHTML='<p class="empty-slot">No hay entradas para esta consulta. Prueba otra palabra.</p>';$('#dictionary-status').textContent=`${dictionaryEntries.length} resultados${$('#dictionary-select').value==='drae'?' · palabra exacta primero, después prefijos':''}.`;}
+  try{const result=await desktop.dictionary({group:$('#dictionary-select').value,query:$('#dictionary-query').value});if(generation!==dictionaryGeneration)return;dictionaryEntries=result.entries;if(dictionaryEntries.length)showDictionaryEntry(0);else{const q=$('#dictionary-query').value.trim(),opcion=$('#dictionary-select').selectedOptions[0];content.innerHTML='<p class="empty-slot"></p>';content.firstChild.textContent=q?`«${q}» no aparece en ${opcion?opcion.textContent.trim():'este diccionario'}. Elige otro diccionario arriba: la palabra sigue elegida.`:'No hay entradas para esta consulta. Prueba otra palabra.';}$('#dictionary-status').textContent=`${dictionaryEntries.length} resultados${$('#dictionary-select').value==='drae'?' · palabra exacta primero, después prefijos':''}.`;}
   catch(error){if(generation===dictionaryGeneration){content.textContent=error.message;$('#dictionary-status').textContent='No se pudo consultar esta fuente.';}}
   finally{if(generation===dictionaryGeneration)content.setAttribute('aria-busy','false');}
 }
@@ -412,6 +421,16 @@ function decorateReading(){
       if(last){fragment.append(node.textContent.slice(last));node.replaceWith(fragment);}
     }
   }
+  marcarPalabraElegida();
+}
+// Palabra elegida en la Biblia: una sola, marcada en el texto, y se vuelve a marcar si el capítulo se redibuja.
+let palabraElegida=null;
+function marcarPalabraElegida(span){
+  $('#verses')?.querySelectorAll('.palabra-elegida').forEach(el=>el.classList.remove('palabra-elegida'));
+  const p=palabraElegida;if(!p)return;
+  if(p.book!==state.position.book||p.chapter!==state.position.chapter)return;
+  const objetivo=span||[...($('#verses')?.querySelectorAll(`[data-verse="${p.verse}"] [data-${p.strong?'strong':'word'}]`)||[])].find(el=>(p.strong?el.dataset.strong:el.dataset.word)===p.text);
+  objetivo?.classList.add('palabra-elegida');
 }
 function syncDictionaryRef(){
   const query=$('#dictionary-query').value.trim();
@@ -544,7 +563,7 @@ function bindAppearance(){
   document.querySelectorAll('[data-action]').forEach(button=>button.addEventListener('click',()=>{const menu=button.closest('details');if(menu)menu.open=false;document.getElementById(button.dataset.action)?.click();}));
 }
 
-function bindLibrary(){if(!desktop?.catalog){$('#library-controls').hidden=true;return;}$('#version-select').addEventListener('change',()=>{selectedVersion=$('#version-select').value;state.selectedVersion=selectedVersion;$('#show-strong').disabled=!(selectedVersion==='rv1960'&&catalogData.modules.some(m=>m.id==='rv1960-strong')||catalogData.modules.some(m=>m.id===selectedVersion&&m.strong));if($('#show-strong').disabled)$('#show-strong').checked=false;stopVoice();renderReader();save();});$('#show-strong').addEventListener('change',renderReader);$('#comment-select').addEventListener('change',renderComment);$('#dictionary-form').addEventListener('submit',event=>{event.preventDefault();consultDictionary();});$('#dictionary-select').addEventListener('change',()=>{dictionaryGeneration++;dictionaryEntries=[];$('#dictionary-content').setAttribute('aria-busy','false');$('#dictionary-content').innerHTML='<p class="empty-slot">Consulta una palabra en esta fuente.</p>';$('#dictionary-query').placeholder=$('#dictionary-select').value==='drae'?'Palabra en español…':'Padre, G25, H7225…';$('#panes').dataset.sourcesReady=String(Boolean($('#comment-select').value&&$('#dictionary-select').value));});$('#dictionary-content').addEventListener('click',event=>{const button=event.target.closest('[data-dictionary-entry]');if(button){const index=Number(button.dataset.dictionaryEntry);showDictionaryEntry(index);$('#dictionary-content').querySelector(`[data-dictionary-entry="${index}"]`)?.focus({preventScroll:true});}});$('#sources-open').addEventListener('click',()=>$('#sources-dialog').showModal());$('#sources-close').addEventListener('click',()=>$('#sources-dialog').close());$('#sources-refresh').addEventListener('click',async()=>{try{await loadCatalog();await renderReader();toast('Fuentes y revisiones comprobadas.');}catch(error){toast(error.message);}});$('#search-mode').addEventListener('change',search);$('#voice-play').addEventListener('click',playVoice);$('#voice-pause').addEventListener('click',()=>{void toggleVoicePause();});$('#voice-stop').addEventListener('click',stopVoice);void loadVoices();window.addEventListener('beforeunload',event=>{stopVoice();if(saveFailed){if(!window.confirm('Hay cambios sin guardar. Puedes cancelar y exportar una copia. ¿Cerrar y descartarlos?')){event.preventDefault();event.returnValue='';}return;}if(savePending){event.preventDefault();event.returnValue='';saveQueue.then(()=>{if(!saveFailed)window.close();});}});}
+function bindLibrary(){if(!desktop?.catalog){$('#library-controls').hidden=true;return;}$('#version-select').addEventListener('change',()=>{selectedVersion=$('#version-select').value;state.selectedVersion=selectedVersion;$('#show-strong').disabled=!(selectedVersion==='rv1960'&&catalogData.modules.some(m=>m.id==='rv1960-strong')||catalogData.modules.some(m=>m.id===selectedVersion&&m.strong));if($('#show-strong').disabled)$('#show-strong').checked=false;stopVoice();renderReader();save();});$('#show-strong').addEventListener('change',renderReader);$('#comment-select').addEventListener('change',renderComment);$('#dictionary-form').addEventListener('submit',event=>{event.preventDefault();consultDictionary();});$('#dictionary-select').addEventListener('change',()=>{dictionaryGeneration++;dictionaryEntries=[];$('#dictionary-content').setAttribute('aria-busy','false');$('#dictionary-content').innerHTML='<p class="empty-slot">Consulta una palabra en esta fuente.</p>';if($('#dictionary-query').value.trim())consultDictionary();$('#dictionary-query').placeholder=$('#dictionary-select').value==='drae'?'Palabra en español…':'Padre, G25, H7225…';$('#panes').dataset.sourcesReady=String(Boolean($('#comment-select').value&&$('#dictionary-select').value));});$('#dictionary-content').addEventListener('click',event=>{const button=event.target.closest('[data-dictionary-entry]');if(button){const index=Number(button.dataset.dictionaryEntry);showDictionaryEntry(index);$('#dictionary-content').querySelector(`[data-dictionary-entry="${index}"]`)?.focus({preventScroll:true});}});$('#sources-open').addEventListener('click',()=>$('#sources-dialog').showModal());$('#sources-close').addEventListener('click',()=>$('#sources-dialog').close());$('#sources-refresh').addEventListener('click',async()=>{try{await loadCatalog();await renderReader();toast('Fuentes y revisiones comprobadas.');}catch(error){toast(error.message);}});$('#search-mode').addEventListener('change',search);$('#voice-play').addEventListener('click',playVoice);$('#voice-pause').addEventListener('click',()=>{void toggleVoicePause();});$('#voice-stop').addEventListener('click',stopVoice);void loadVoices();window.addEventListener('beforeunload',event=>{stopVoice();if(saveFailed){if(!window.confirm('Hay cambios sin guardar. Puedes cancelar y exportar una copia. ¿Cerrar y descartarlos?')){event.preventDefault();event.returnValue='';}return;}if(savePending){event.preventDefault();event.returnValue='';saveQueue.then(()=>{if(!saveFailed)window.close();});}});}
 function voiceController(){
   if(!readerVoiceController)readerVoiceController=window.LibraryVoiceCore.create({
     bridge:desktop,speech:window.speechSynthesis,Utterance:window.SpeechSynthesisUtterance,
