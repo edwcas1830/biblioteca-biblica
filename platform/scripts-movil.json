@@ -6,6 +6,7 @@
   "shared/ai-context.js",
   "shared/ai-pricing.js",
   "shared/ai-image.js",
+  "shared/ai-image-prompts.js",
   "platform/ai/credentials.js",
   "platform/ai/openrouter.js",
   "platform/ai/gemini.js",

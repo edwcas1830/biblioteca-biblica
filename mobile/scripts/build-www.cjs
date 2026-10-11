@@ -56,6 +56,7 @@ const puentes = fs.existsSync(ordenCodex)
 // Núcleos puros de app/ que el modelo personal necesita al crearse: se adelantan (y se quita
 // su etiqueta original para no cargarlos dos veces).
 const nucleos = ['prayer-core.js', 'guide-core.js', 'study-chat-core.js'];
+html=html.replace('<script defer src="../shared/study-model.js"></script>','');
 for (const n of nucleos) html = html.replace(`<script defer src="${n}"></script>`, '');
 // Manifiesto público de RV1909 (permiso de IA y atribución) embebido: el adaptador se crea sin esperar red.
 const manifiestoRv = path.join(out, 'data', 'rv1909-manifest.json');

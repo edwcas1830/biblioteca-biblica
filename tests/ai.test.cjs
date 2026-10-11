@@ -37,10 +37,10 @@ test('OAuth local usa PKCE S256, ruta impredecible, rechaza callbacks ajenos y n
 test('Desconectar durante un intercambio impide guardar una autorización tardía',async t=>{
   let opened,release;const service=setup({openExternal:async url=>opened=new URL(url),fetchImpl:()=>new Promise(resolve=>release=()=>resolve(new Response(JSON.stringify({key:token}))))});t.after(()=>service.stop());await service.connect();const callback=new URL(opened.searchParams.get('callback_url'));callback.searchParams.set('code','late-code');const request=fetch(callback);for(let i=0;i<500&&!release;i++)await new Promise(r=>setTimeout(r,5));assert.ok(release,'El callback no llegó al intercambio');service.disconnect();release();assert.equal((await request).status,400);assert.equal(service.status().connected,false);
 });
-test('Solo ofrece modelos gratis y limita precios; errores del proveedor son recuperables',async()=>{
+test('Modelos gratis mantienen precio cero y rechazan modelos fuera del catálogo; errores recuperables',async()=>{
   assert.deepEqual(core.freeModels([{id:'qwen/test:free',pricing:{prompt:'0',completion:'0'}},{id:'paid',pricing:{prompt:'1',completion:'1'}}]).map(m=>m.id),['qwen/test:free']);
   let request;const service=setup({fetchImpl:async(url,options)=>{request=JSON.parse(options.body);return new Response(JSON.stringify({choices:[{message:{content:JSON.stringify({text:'Una observación.',citations:[{book:42,chapter:3,verse:16},{book:99,chapter:1,verse:1}]})}}]}));}});service.store(token);
-  const response=await service.ask({prompt:'Una pregunta'});assert.equal(request.provider.max_price.prompt,0);assert.equal(request.provider.data_collection,'deny');assert.equal(response.citations.length,1);await assert.rejects(()=>service.ask({model:'paid',prompt:'x'}),/gratuitos/);
+  const response=await service.ask({prompt:'Una pregunta'});assert.equal(request.provider.max_price.prompt,0);assert.equal(request.provider.data_collection,'deny');assert.equal(response.citations.length,1);await assert.rejects(()=>service.ask({model:'paid',prompt:'x'}),{code:'VALIDATION'});
   service.fetch=async()=>new Response('',{status:429});await assert.rejects(()=>service.ask({prompt:'x'}),/límite/);assert.equal(service.busy,false);
   const insecure=setup({safeStorage:{isEncryptionAvailable:()=>false}});await assert.rejects(()=>insecure.connect(),/proteger/);assert.throws(()=>insecure.store(token),/proteger/);
 });

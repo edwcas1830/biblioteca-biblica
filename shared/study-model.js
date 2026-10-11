@@ -3,6 +3,7 @@
   else root.StudyChatCore=factory(root.StudyChatCore);
 })(typeof globalThis!=='undefined'?globalThis:this,function(legacy){
   'use strict';
+  if(legacy.rangesSupported===true)return legacy;
   const str=(v,n)=>typeof v==='string'?v.slice(0,n):'';
   function anchor(value){const a=legacy.anchor(value),endVerse=value.endVerse??a.verse;if(a.scope==='verse'&&(!Number.isInteger(endVerse)||endVerse<a.verse||endVerse>176))throw Error('Rango de estudio no válido.');return {...a,...(a.scope==='verse'?{endVerse}:{})};}
   function key(a){return legacy.key(a)+(a.scope==='verse'&&(a.endVerse??a.verse)!==a.verse?'-'+a.endVerse:'');}
@@ -21,5 +22,5 @@
       });return old;
     });
   }
-  return {...legacy,anchor,key,validate};
+  return {...legacy,rangesSupported:true,anchor,key,validate};
 });

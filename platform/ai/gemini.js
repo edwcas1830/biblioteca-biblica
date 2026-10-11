@@ -88,17 +88,17 @@
     async function image(input,{beforeSend}={}){
       await ensure();if(busy)fail('CONFLICT','Espera a que termine la consulta anterior.');
       let body;try{body=images.geminiBody(input);}catch(e){fail('VALIDATION',e.message);}
-      busy=true;controller=new AbortController();const current=controller;
+      busy=true;controller=new AbortController();const current=controller,at=generation;
       try{
         for(const model of images.GEMINI_MODELS){
-          if(beforeSend)await beforeSend();
+          if(beforeSend)await beforeSend();if(at!==generation||current.signal.aborted||closed)cancelled();
           const response=await fetchImpl(API+'/models/'+model+':generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify(body),signal:AbortSignal.any([current.signal,AbortSignal.timeout(120000)]),redirect:'error'});
           if(response.status===404){await response.body?.cancel().catch(()=>{});continue;}
           if(!response.ok){await response.body?.cancel().catch(()=>{});images.geminiHttpError(response.status);}
-          return images.geminiResult(await json(response,images.MAX_RESPONSE),model);
+          const value=await json(response,images.MAX_RESPONSE);if(at!==generation||current.signal.aborted||closed)cancelled();return images.geminiResult(value,model);
         }
         fail('UNAVAILABLE','Ningún modelo de imagen de Gemini está disponible para tu clave.');
-      }catch(e){if(current.signal.aborted)cancelled();if(e instanceof images.ImageError)fail(e.code,e.message);throw e;}
+      }catch(e){if(current.signal.aborted)cancelled();if(e instanceof images.ImageError)fail(e.code,e.message);if(e instanceof contract.BridgeError)throw e;fail('UNAVAILABLE','No se pudo generar el fondo de Gemini. Revisa internet o usa un fondo local.');}
       finally{busy=false;if(controller===current)controller=null;}
     }
     return Object.freeze({status,ready,storeKey,disconnect,listModels,ask,image,cancel,close});

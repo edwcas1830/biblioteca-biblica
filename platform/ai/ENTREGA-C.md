@@ -1,0 +1,13 @@
+# C · Ideas e imágenes (2026-10-10)
+
+aiImageIdeas({ref:Ref|string,texto,estilo?,provider?,model?,paid?}) devuelve un ARRAY de tres {titulo,prompt}: Escena, Metáfora, Minimalista. No devuelve {ideas}; la UI debe aceptar el array. aiImagePrompt({idea,provider?,model?,paid?}) devuelve {prompt}. Solo generan texto y no llaman al generador de imagen. Elegir una idea no crea el fondo. Prompt resultante máximo 600 caracteres, con restricciones fijas de símbolos, sin personas, Dios, rostro de Jesús, texto ni logotipos. Las restricciones se reiteran al generar, también para ideas manuales; no se afirma revisión visual automática del resultado.
+
+Ambas operaciones y aiImage admiten provider:'gemini-api'|'openrouter'. La UI debe pasar el activo; si se omite, compatibilidad: Gemini conectado en modo personal, luego OpenRouter. Elección explícita nunca cambia de proveedor al fallar. Para ideas sin model: Gemini elige Flash Lite del catálogo real; OpenRouter usa openrouter/free. Si se elige texto de pago en OpenRouter, requiere paid.confirmed y maxCostUsd como las consultas.
+
+aiImage conserva dataUrl/model y añade estimatedCostUsd:0.0336, costEstimate:{currency:'USD',amount:0.0336,resolution:'1K',approximate:true,checkedAt:'2026-10-10',notice}. Precio orientativo SOLO salida de imagen; entrada y pensamiento pueden sumar. Nano Banana 2.1 fijo, 1K explícito, sin fallback a un modelo más caro. El aviso/contador de 30 fondos sigue a cargo de la UI de Claude y no es un límite de facturación.
+
+Fuentes: https://ai.google.dev/gemini-api/docs/pricing y https://openrouter.ai/google/gemini-nano-banana-2.1 (verificados 2026-10-10). PNG/JPEG integrados, límites de bytes/píxeles, cuerpo leído por flujo, pensamiento/truncado rechazados. Cancelación descarta respuestas tardías incluso si el transporte ignora abort. Espera al llavero y libera estado ocupado tras fallo del catálogo.
+
+Se agregó UNA etiqueta shared/study-model.js al HTML de escritorio para conservar rangos y nuevas respuestas. No se cambió el diseño ni la UI de Claude. El constructor móvil retira esa etiqueta de escritorio para evitar cargar dos veces el modelo; cambio mínimo de una línea, sin tocar integraciones. Los scripts móviles están ordenados en scripts-movil.json. Pendientes de Claude: pasar proveedor activo, aceptar array de ideas, prueba visual/emulador y clave real. No se usaron cuentas reales, no se publicó ni se construyó APK.
+
+Validación: npm test 262/262. Pruebas sintéticas de las dos operaciones de texto, proveedor activo, ausencia de generación implícita, inicio con llavero lento, liberación tras fallo, cuerpo excesivo, JPEG y cancelación tardía en Windows/Android.

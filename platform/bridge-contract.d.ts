@@ -73,7 +73,9 @@ export interface LibraryBridge {
   aiPrepare(data:AiSelection):Promise<AiPrepared>;
   aiAsk(data:{id:string; action?:StudyAction; provider?:string; model:string; allowData?:boolean; paid?:{confirmed:true; maxCostUsd:number}}):Promise<AiReply>;
   /** One OpenRouter background; uses account credits, never the free text model list. */
-  aiImage(data:{prompt:string; aspect:'4:5'|'1:1'|'9:16'}):Promise<{dataUrl:string; model:string}>;
+  aiImage(data:{prompt:string; aspect:'4:5'|'1:1'|'9:16'; provider?:'gemini-api'|'openrouter'}):Promise<{dataUrl:string; model:string; estimatedCostUsd:number; costEstimate:{currency:'USD'; amount:number; resolution:'1K'; approximate:true; checkedAt:string; notice:string}}>;
+  aiImageIdeas(data:{ref:Ref|string; texto:string; estilo?:string; provider?:'gemini-api'|'openrouter'; model?:string; paid?:{confirmed:true; maxCostUsd:number}}):Promise<{titulo:string; prompt:string}[]>;
+  aiImagePrompt(data:{idea:string; provider?:'gemini-api'|'openrouter'; model?:string; paid?:{confirmed:true; maxCostUsd:number}}):Promise<{prompt:string}>;
   aiCopy(data:{id:string; provider?:string}):Promise<{copied:boolean; opened:boolean}>;
   aiTextCopy(text:string):Promise<boolean>; aiCancel():Promise<boolean>;
   onAiProgress(callback:(value:{id:string; text:string})=>void):Unsubscribe;

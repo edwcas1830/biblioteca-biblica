@@ -19,12 +19,12 @@ async function fixture(t,kind,{fetchImpl=async()=>reply(),connected=true}={}){
 for(const kind of ['Windows','Android']){
   test(kind+': background uses existing account, fixed image model/aspect and sends no implicit study context',async t=>{
     const requests=[],provider=await fixture(t,kind,{fetchImpl:async(url,input)=>{requests.push({url,input});return reply();}});
-    for(const aspect of ['4:5','1:1','9:16'])assert.deepEqual(await provider.image({...selection,aspect}),{dataUrl,model:images.MODEL});
+    for(const aspect of ['4:5','1:1','9:16'])assert.deepEqual(await provider.image({...selection,aspect}),{dataUrl,model:images.MODEL,...images.estimate()});
     assert.equal(requests.length,3);
     for(const {url,input}of requests){
       assert.equal(url,'https://openrouter.ai/api/v1/chat/completions');assert.equal(input.headers.Authorization,'Bearer '+token);assert.equal(input.redirect,'error');assert.equal(input.credentials,'omit');
       const body=JSON.parse(input.body);assert.equal(body.model,images.MODEL);assert.deepEqual(body.modalities,['image','text']);assert.equal(body.stream,false);assert.equal(body.max_tokens,2048);assert.equal(body.provider.allow_fallbacks,false);assert.equal(body.provider.data_collection,'deny');assert.equal(body.provider.max_price,undefined,'Image request must not be silently limited to free text pricing');
-      assert.match(body.messages[0].content,/exactamente UNA/);assert.match(body.messages[0].content,/No dibujes texto/);assert.equal(body.messages[1].content,selection.prompt);assert.deepEqual(Object.keys(body.image_config),['aspect_ratio']);assert.doesNotMatch(input.body,/sk-or-|sources|history|notes|prayer|tools/);
+      assert.match(body.messages[0].content,/exactamente UNA/);assert.match(body.messages[0].content,/No dibujes texto/);assert.equal(body.messages[1].content,selection.prompt);assert.deepEqual(Object.keys(body.image_config),['aspect_ratio','image_size']);assert.equal(body.image_config.image_size,'1K');assert.match(body.messages[0].content,/sin representar a Dios/);assert.doesNotMatch(input.body,/sk-or-|sources|history|notes|prayer|tools/);
     }
   });
   test(kind+': invalid input and absent account perform no HTTP request',async t=>{

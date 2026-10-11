@@ -1,7 +1,7 @@
 (function(root,factory){
-  if(typeof module==='object'&&module.exports)module.exports=factory(require('../bridge-contract.js'),require('../../shared/ai-context.js'),require('./openrouter.js'),require('../../app/ai-core.js'),require('../../app/study-chat-core.js'),require('./gemini.js'),require('./credentials.js'),require('../../shared/study-actions.js'));
-  else root.LibraryMobileAi=factory(root.LibraryBridgeContract,root.LibraryAiContext,root.LibraryOpenRouter,root.AiCore,root.StudyChatCore,root.LibraryGemini,root.LibraryAiCredentials,root.LibraryStudyActions);
-})(typeof globalThis!=='undefined'?globalThis:this,function(contract,contexts,providers,core,chat,geminis,credentials,actions){
+  if(typeof module==='object'&&module.exports)module.exports=factory(require('../bridge-contract.js'),require('../../shared/ai-context.js'),require('./openrouter.js'),require('../../app/ai-core.js'),require('../../app/study-chat-core.js'),require('./gemini.js'),require('./credentials.js'),require('../../shared/study-actions.js'),require('../../shared/ai-image-prompts.js'));
+  else root.LibraryMobileAi=factory(root.LibraryBridgeContract,root.LibraryAiContext,root.LibraryOpenRouter,root.AiCore,root.StudyChatCore,root.LibraryGemini,root.LibraryAiCredentials,root.LibraryStudyActions,root.LibraryAiImagePrompts);
+})(typeof globalThis!=='undefined'?globalThis:this,function(contract,contexts,providers,core,chat,geminis,credentials,actions,imagePrompts){
   'use strict';
   const fail=(code,message)=>{throw new contract.BridgeError(code,message);};
   function create({call,emit=()=>{},epoch=()=>0,crypto=globalThis.crypto,fetchImpl,now=()=>Date.now(),openExternal,reporter,credentialStore}={}){
@@ -76,11 +76,29 @@
       if(busy)fail('CONFLICT','Espera a que termine la consulta o el fondo anterior.');
       busy=true;const at=generation,session=epoch();
       const check=async()=>{await guard(session);if(at!==generation)fail('CANCELLED','La generación del fondo se canceló.');};
-      // Con Gemini conectado en modo personal, el fondo sale de la clave de Gemini; si no, de OpenRouter.
-      const conGemini=!!gemini&&personalEnabled&&gemini.status().connected&&await personalMode();
-      try{await check();const result=await (conGemini?gemini.image(input,{beforeSend:check}):provider.image(input,{beforeSend:check}));await check();return result;}finally{busy=false;}
+      try{
+        await gemini?.ready;await provider.ready;
+        const conGemini=input?.provider==='gemini-api'||input?.provider===undefined&&!!gemini&&personalEnabled&&gemini.status().connected&&await personalMode();
+        if(conGemini)await requireGemini();
+        await check();const result=await (conGemini?gemini.image(input,{beforeSend:check}):provider.image(input,{beforeSend:check}));await check();return result;
+      }finally{busy=false;}
     }
-    const handlers={aiStatus:async()=>{await provider.ready;return {...provider.status(),reporting};},aiConnect:input=>provider.connect(input),aiDisconnect:()=>{cancel();prepared.clear();return provider.disconnect();},aiModels:()=>provider.listModels(),aiQuota:()=>provider.refreshQuota(),aiCancel:cancel,aiPrepare:prepare,aiAsk:ask,aiImage:image,aiCopy:copy,aiShare:share,aiReport:report,aiPersonalStatus:personalStatus};
+    async function imageText(input,mode){
+      imagePrompts.validate(input,mode);
+      if(busy)fail('CONFLICT','Espera a que termine la consulta anterior.');busy=true;const at=generation,session=epoch();
+      const check=async()=>{await guard(session);if(at!==generation)fail('CANCELLED','La idea se canceló.');};
+      try{
+        await gemini?.ready;await provider.ready;
+        const conGemini=input.provider==='gemini-api'||input.provider===undefined&&!!gemini&&personalEnabled&&gemini.status().connected&&await personalMode();
+        if(conGemini)await requireGemini();const selected=conGemini?gemini:provider;
+        if(!selected)fail('UNAVAILABLE','Conecta el proveedor elegido.');
+        const request=imagePrompts.request(input,mode);
+        if(!request.model){if(conGemini){const models=await gemini.listModels();request.model=models.find(m=>/flash.*lite|flash-lite/.test(m.id))?.id||models.find(m=>/flash/.test(m.id))?.id;if(!request.model)fail('UNAVAILABLE','No hay un modelo de texto disponible.');}else request.model='openrouter/free';}
+        await check();const response=await selected.ask({...request,beforeSend:check});await check();
+        return imagePrompts.result(response,mode);
+      }finally{busy=false;}
+    }
+    const handlers={aiStatus:async()=>{await provider.ready;return {...provider.status(),reporting};},aiConnect:input=>provider.connect(input),aiDisconnect:()=>{cancel();prepared.clear();return provider.disconnect();},aiModels:()=>provider.listModels(),aiQuota:()=>provider.refreshQuota(),aiCancel:cancel,aiPrepare:prepare,aiAsk:ask,aiImage:image,aiImageIdeas:input=>imageText(input,'ideas'),aiImagePrompt:input=>imageText(input,'prompt'),aiCopy:copy,aiShare:share,aiReport:report,aiPersonalStatus:personalStatus};
     if(gemini)Object.assign(handlers,{
       aiGeminiKey:async value=>{if(value!==null)await requireGemini();cancel();prepared.clear();await gemini.storeKey(value);return personalStatus();},
       aiGeminiModels:async()=>{await requireGemini();return gemini.listModels();},

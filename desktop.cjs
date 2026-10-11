@@ -60,7 +60,8 @@ app.whenReady().then(async () => {
   const ai=new AiService({root:app.getPath('userData'),safeStorage,openExternal:url=>shell.openExternal(url),notify:status=>{if(!win.isDestroyed())win.webContents.send('library:ai-state',status);}}),prepared=new Map();
   const {PersonalAi}=require('./lib/personal-ai.cjs'),personalAi=new PersonalAi({root:app.getPath('userData'),safeStorage,policy:()=>request('personalAiPolicy'),openExternal:url=>shell.openExternal(url)});
   const actionContext=require('./shared/ai-context.js').create({call:request});
-  const bridgeContract=require('./platform/bridge-contract.js'),imageCore=require('./shared/ai-image.js');
+  const bridgeContract=require('./platform/bridge-contract.js'),imageCore=require('./shared/ai-image.js'),imagePrompts=require('./shared/ai-image-prompts.js');
+  let aiEpoch=0;
   ipcMain.handle('library:capabilities',event=>{if(!trusted(event))throw Error('Origen no autorizado.');return {version:1,platform:'desktop',storage:'sqlite',nativeVerified:false,operations:Object.fromEntries(Object.keys(bridgeContract.operations).map(name=>[name,{available:bridgeContract.preloadNames.includes(name)}]))};});
   ipcMain.handle('library:ai-image',async(event,data)=>{
     if(!trusted(event))throw Error('Origen no autorizado.');
@@ -68,9 +69,21 @@ app.whenReady().then(async () => {
       imageCore.validate(data);
       const check=async()=>{if((await request('privacyStatus')).locked)throw new imageCore.ImageError('LOCKED','Abre tu cuaderno antes de generar un fondo.');if(personalAi.busy)throw new imageCore.ImageError('CONFLICT','Espera a que termine la consulta anterior.');};
       // Con Gemini guardado en modo personal, el fondo sale de esa clave; si no, de OpenRouter.
-      const conGemini=await personalAi.geminiReady();
+      const conGemini=data.provider==='gemini-api'||data.provider===undefined&&await personalAi.geminiReady();
       await check();const value=conGemini?await personalAi.image(data,{beforeSend:async()=>{if((await request('privacyStatus')).locked)throw new imageCore.ImageError('LOCKED','Abre tu cuaderno antes de generar un fondo.');}}):await ai.image(data,{beforeSend:check});await check();return {ok:true,value};
     }catch(error){return {ok:false,error:error instanceof imageCore.ImageError?{code:error.code,message:error.message}:{code:'UNAVAILABLE',message:'No se pudo generar el fondo. Puedes usar una foto o un fondo local.'}};}
+  });
+  for(const [operation,mode] of [['ai-image-ideas','ideas'],['ai-image-prompt','prompt']])ipcMain.handle('library:'+operation,async(event,data)=>{
+    if(!trusted(event))throw Error('Origen no autorizado.');
+    try{
+      const input=imagePrompts.request(data,mode),at=aiEpoch;
+      const check=async()=>{if(at!==aiEpoch)throw new bridgeContract.BridgeError('CANCELLED','La idea se canceló.');if((await request('privacyStatus')).locked)throw new bridgeContract.BridgeError('LOCKED','Abre tu cuaderno antes de consultar.');};
+      await check();const gemini=data.provider==='gemini-api'||data.provider===undefined&&await personalAi.geminiReady();
+      if(gemini&&!input.model){const models=await personalAi.models();input.model=models.find(m=>/flash.*lite|flash-lite/.test(m.id))?.id||models.find(m=>/flash/.test(m.id))?.id;if(!input.model)throw new bridgeContract.BridgeError('UNAVAILABLE','No hay un modelo de texto disponible.');}
+      if(!gemini&&!input.model)input.model='openrouter/free';
+      await check();const response=gemini?await personalAi.ask({...input,provider:'gemini-api'}):await ai.ask(input);await check();
+      return {ok:true,value:imagePrompts.result(response,mode)};
+    }catch(e){return {ok:false,error:e instanceof bridgeContract.BridgeError||e instanceof imageCore.ImageError?{code:e.code,message:e.message}:{code:'UNAVAILABLE',message:'No se pudo preparar la idea. Puedes escribirla o usar un fondo local.'}};}
   });
   app.on('before-quit',()=>{ai.stop();personalAi.stop();});
   const {YoutubeService}=require('./lib/youtube-service.cjs'),youtube=new YoutubeService({root:app.getPath('userData'),safeStorage,mode:()=>personalAi.mode()});
@@ -99,7 +112,7 @@ app.whenReady().then(async () => {
     if(response.keywords){const actual=new Set(item.context.sources.filter(s=>s.kind==='bible').flatMap(s=>s.text.match(/[HG]\d{1,5}/g)||[]));const verified=[];for(const k of response.keywords.filter(k=>actual.has(k.code))){try{const found=await request('dictionary',{group:'strong-es',query:k.code});if(found.entries.some(e=>e.title===k.code))verified.push(k);}catch{}}response.keywords=verified;}const chat=require('./app/study-chat-core.js');return {...response,...(item.study?chat.result(response,item.allowLiving):{}),citations,sources:item.sources,allowLiving:item.allowLiving};
   });
   ipcMain.handle('library:ai-text-copy',(event,text)=>{if(!trusted(event)||typeof text!=='string'||text.length>50000)throw Error('Texto no válido.');clipboard.writeText(text);return true;});
-  ipcMain.handle('library:ai-cancel',event=>{if(!trusted(event))throw Error('Origen no autorizado.');ai.controller?.abort();personalAi.stop();return true;});
+  ipcMain.handle('library:ai-cancel',event=>{if(!trusted(event))throw Error('Origen no autorizado.');aiEpoch++;ai.controller?.abort();personalAi.stop();return true;});
   ipcMain.handle('library:ai-copy',async(event,{id,provider})=>{
     if(!trusted(event))throw new Error('Origen no autorizado.');if((await request('privacyStatus')).locked)throw Error('Abre tu cuaderno para consultar tu estudio.');const item=getPrepared(id);await request('verifyAiSources',item.sources);const url=provider?aiCore.external(provider,item.prompt):null;clipboard.writeText(item.prompt);if(url)await shell.openExternal(url);return {copied:true,opened:!!url};
   });
