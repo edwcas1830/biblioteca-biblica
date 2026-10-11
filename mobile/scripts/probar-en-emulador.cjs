@@ -186,6 +186,23 @@ async function esperarLista(app, etiqueta) {
   const ui = await app.evaluar(`return {telefono:document.documentElement.dataset.telefono,nav:!!document.querySelector('#movil-nav'),hoja:!!document.querySelector('#movil-hoja-cabecera'),versiculos:document.querySelectorAll('#verses .verse').length};`);
   captura('4-interfaz');
   anotar(ui.nav && ui.hoja && ui.versiculos > 0, 'interfaz de teléfono', JSON.stringify(ui));
+  // Paso 1 del diseño (CONSENSO-MOVIL.md): barra superior de una fila (☰ · referencia · buscar) y buscador
+  // con autocompletado. Con letra grande: nada se sale de la pantalla, nada se corta y todo mide 48 px o más.
+  const MEDIR = `const medir=raiz=>{const r=[];for(const b of raiz.querySelectorAll('button,input,select')){if(b.offsetParent===null)continue;const q=b.getBoundingClientRect();if(!q.width)continue;r.push({t:(b.textContent||b.getAttribute('aria-label')||b.id||'').trim().slice(0,18),h:Math.round(q.height),fuera:q.left<-1||q.right>innerWidth+1,corta:b.scrollWidth>b.clientWidth+1});}return r;};`;
+  const paso1 = await app.evaluar(`go(42,3,16);await new Promise(r=>setTimeout(r,900));${MEDIR}const barra=document.querySelector('#movil-barra');const tb=document.querySelector('.reading-toolbar');return {alto:Math.round(barra.getBoundingClientRect().height),ref:barra.querySelector('.movil-barra-ref').textContent,toolbarOculta:!tb||getComputedStyle(tb).display==='none',controles:medir(barra),horizontal:document.documentElement.scrollWidth<=innerWidth+1};`);
+  captura('6a-barra-superior');
+  anotar(paso1.alto <= 100 && /Juan 3/.test(paso1.ref) && paso1.toolbarOculta && paso1.horizontal && paso1.controles.length === 3 && paso1.controles.every(c => c.h >= 47 && !c.fuera && !c.corta), 'paso 1: barra superior de una fila', JSON.stringify(paso1));
+  const rey = await app.evaluar(`document.querySelector('#movil-buscar').click();await new Promise(r=>setTimeout(r,600));const q=document.querySelector('#buscador-campo');q.value='rey';q.dispatchEvent(new Event('input'));await new Promise(r=>setTimeout(r,400));${MEDIR}const d=document.querySelector('#buscador');return {abierto:d.open,filas:[...d.querySelectorAll('.buscador-fila')].map(b=>b.textContent),malos:medir(d).filter(c=>c.h<47||c.fuera||c.corta)};`);
+  captura('6b-buscador-rey');
+  anotar(rey.abierto && rey.filas.includes('1 Reyes') && rey.filas.includes('2 Reyes') && rey.malos.length === 0, 'paso 1: «rey» sugiere 1 Reyes y 2 Reyes', JSON.stringify(rey));
+  const cita = await app.evaluar(`const q=document.querySelector('#buscador-campo');q.value='jn 3 16';q.dispatchEvent(new Event('input'));await new Promise(r=>setTimeout(r,400));const fila=document.querySelector('#buscador .buscador-fila');const texto=fila.textContent;fila.click();await new Promise(r=>setTimeout(r,1200));return {texto,abierto:document.querySelector('#buscador').open,pos:state.position,ref:document.querySelector('#movil-barra .movil-barra-ref').textContent};`);
+  anotar(!cita.abierto && cita.pos.book === 42 && cita.pos.chapter === 3 && cita.pos.verse === 16 && /Juan 3/.test(cita.ref), 'paso 1: «jn 3 16» lleva a Juan 3:16', JSON.stringify(cita));
+  const indice = await app.evaluar(`document.querySelector('#movil-barra .movil-barra-ref').click();await new Promise(r=>setTimeout(r,600));const d=document.querySelector('#buscador');const libros=d.querySelectorAll('.buscador-libros button').length;[...d.querySelectorAll('.buscador-libros button')].find(b=>b.textContent==='Sal').click();await new Promise(r=>setTimeout(r,400));const caps=d.querySelectorAll('.buscador-caps button').length;${MEDIR}const malos=medir(d).filter(c=>c.h<47||c.fuera||c.corta);return {libros,caps,malos};`);
+  captura('6c-indice-salmos');
+  const salmo = await app.evaluar(`[...document.querySelectorAll('#buscador .buscador-caps button')].find(b=>b.textContent==='23').click();await new Promise(r=>setTimeout(r,1200));return {abierto:document.querySelector('#buscador').open,ref:document.querySelector('#movil-barra .movil-barra-ref').textContent};`);
+  anotar(indice.libros === 66 && indice.caps === 150 && indice.malos.length === 0 && !salmo.abierto && /Salmos 23/.test(salmo.ref), 'paso 1: índice libro → capítulo (Salmos 23)', JSON.stringify({ ...indice, ...salmo }));
+  const mas1 = await app.evaluar(`document.querySelector('#movil-menu').click();await new Promise(r=>setTimeout(r,600));const d=document.querySelector('#movil-mas');const items=[...d.querySelectorAll('.movil-mas-lista button')].filter(b=>!b.hidden).map(b=>b.textContent.trim());const letra=!!d.querySelector('.movil-mas-letra');d.close();return {abierto:true,items,letra};`);
+  anotar(mas1.letra && mas1.items.some(t => /Pantalla completa/.test(t)) && mas1.items.some(t => /Atlas/.test(t)), 'paso 1: ☰ abre Más con letra, atlas y pantalla completa', JSON.stringify(mas1));
   // Lo que Edward debe VER (con letra grande del sistema): la barra del versículo con 🖼 Imagen dentro de la
   // pantalla, «Imagen con versículos» en Más, y en IA solo OpenRouter y Gemini con el modo personal.
   const visible = await app.evaluar(`const v=document.querySelector('#verses .verse[data-verse="2"]');v.dispatchEvent(new MouseEvent('click',{bubbles:true,clientY:300}));await new Promise(r=>setTimeout(r,700));const bar=document.querySelector('#movil-versiculo');const dentro=b=>{const r=b.getBoundingClientRect();return r.width>0&&r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight;};const botones=[...bar.querySelectorAll(':scope > button')].map(b=>({t:b.textContent.trim(),ok:dentro(b)}));return {barra:!bar.hidden,botones,ancho:innerWidth};`, 30000);
@@ -252,6 +269,24 @@ async function esperarLista(app, etiqueta) {
   anotar(actualizado && actualizado.lista && actualizado.hechos === 329 && actualizado.devocionales === 2 && actualizado.modulos >= 5, 'actualizar encima conserva los datos', JSON.stringify(actualizado));
   const geminiDespues = await app.evaluar(`const p=await window.libraryDesktop.aiPersonalStatus();const g=(p.providers||[]).find(x=>x.id==='gemini-api');await window.libraryDesktop.aiGeminiKey(null);return {personal:p.enabled,gemini:!!(g&&g.connected)};`, 60000);
   anotar(geminiDespues.personal && geminiDespues.gemini, 'Gemini sigue conectado tras actualizar', JSON.stringify(geminiDespues));
+  // Letra al 200 % (Android 14 permite hasta 2,0): la barra y el buscador siguen dentro de la pantalla.
+  adb('shell', 'settings', 'put', 'system', 'font_scale', '2.0');
+  adb('shell', 'am', 'force-stop', PKG);
+  adb('shell', 'am', 'start', '-n', PKG + '/.MainActivity');
+  try { app.cerrar(); } catch { /* ya cerrada */ }
+  try { app = await conectar(); app = await esperarLista(app, '7-letra-200'); }
+  catch (e) {
+    if (!/no arrancó|no expone depuración|no abrió la depuración/.test(e.message)) throw e;
+    if (/^FALLÓ arranque 7-letra-200/.test(informe[informe.length - 1] || '')) informe.pop();
+    informe.push('AVISO el emulador demoró la app con letra al 200 %; se reabrió una vez'); console.log(informe[informe.length - 1]);
+    adb('shell', 'am', 'start', '-n', PKG + '/.MainActivity');
+    app = await conectar(); app = await esperarLista(app, '7-letra-200-reabierta');
+  }
+  const grande = await app.evaluar(`go(42,3,16);await new Promise(r=>setTimeout(r,900));${MEDIR}const barra=document.querySelector('#movil-barra');const enBarra=medir(barra);document.querySelector('#movil-buscar').click();await new Promise(r=>setTimeout(r,600));const q=document.querySelector('#buscador-campo');q.value='rey';q.dispatchEvent(new Event('input'));await new Promise(r=>setTimeout(r,400));const d=document.querySelector('#buscador');const enBuscador=medir(d).filter(c=>c.h<47||c.fuera||c.corta);return {escala:devicePixelRatio,alto:Math.round(barra.getBoundingClientRect().height),malosBarra:enBarra.filter(c=>c.h<47||c.fuera||c.corta),enBuscador,horizontal:document.documentElement.scrollWidth<=innerWidth+1};`);
+  captura('7b-buscador-letra-200');
+  await app.evaluar(`document.querySelector('#buscador').close();return true;`);
+  adb('shell', 'settings', 'put', 'system', 'font_scale', '1.3');
+  anotar(grande.malosBarra.length === 0 && grande.enBuscador.length === 0 && grande.horizontal, 'paso 1 con letra al 200 %: nada se sale ni se corta', JSON.stringify(grande));
   fs.writeFileSync(path.join(salida, 'consola.txt'), app.consola.join('\n'));
   app.cerrar();
 })().catch(e => {

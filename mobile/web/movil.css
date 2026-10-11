@@ -392,3 +392,35 @@ html[data-edicion="tienda"] #module-import-open,
 html[data-edicion="tienda"] #sources-refresh,
 html[data-edicion="tienda"] #sources-warning,
 html[data-edicion="tienda"] #sources-dialog > p.muted { display: none !important; }
+
+/* ---------- Paso 1 del diseño (CONSENSO-MOVIL.md): barra superior de una fila ---------- */
+/* Fichas de espaciado: 4/8/12/16/24/32 · toques de 48 px · sin alturas fijas. */
+#movil-barra { display: none; }
+:root[data-telefono="true"] #movil-barra {
+  display: flex; align-items: center; gap: 8px; position: sticky; top: 0; z-index: 30;
+  padding: calc(8px + var(--seguro-arriba)) 16px 8px; background: var(--paper); border-bottom: 1px solid var(--line);
+}
+:root[data-telefono="true"] .movil-barra-icono { flex: none; min-width: 48px; min-height: 48px; padding: 0; border: 0; background: none; color: var(--ink); font-size: 1.375rem; display: grid; place-items: center; }
+:root[data-telefono="true"] .movil-barra-svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+:root[data-telefono="true"] .movil-barra-ref {
+  flex: 1; min-width: 0; min-height: 48px; display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 0 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--ink);
+  font-family: var(--serif, Georgia, serif); font-size: 1.125rem; font-weight: 600;
+}
+:root[data-telefono="true"] .movil-barra-texto { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+:root[data-telefono="true"] .movil-barra-flecha { flex: none; font-size: .875rem; color: var(--muted); }
+/* Lo que reemplaza la barra: la fila de herramientas, libro/capítulo, la referencia repetida y «Pantalla completa». */
+:root[data-telefono="true"] .reading-toolbar,
+:root[data-telefono="true"] #pane-biblia .pane-heading,
+:root[data-telefono="true"] #pane-biblia .passage-picker,
+:root[data-telefono="true"] #pane-biblia #bible-ref,
+:root[data-telefono="true"] #pane-biblia .enfoque-abrir { display: none !important; }
+/* Versión y «Comparar» en una sola fila compacta al comienzo de la Biblia. */
+:root[data-telefono="true"] #pane-biblia > .pane-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 16px; }
+:root[data-telefono="true"] #pane-biblia #version-select { min-height: 48px; max-width: 50%; }
+:root[data-telefono="true"] #pane-biblia #comparison-controls { padding: 0 16px 8px; margin: 0; }
+:root[data-telefono="true"] #pane-biblia #compare-toggle { min-height: 48px; }
+/* «Más»: fila de letra. */
+.movil-mas-letra { display: flex; align-items: center; gap: 8px; }
+.movil-mas-letra span { flex: 1; }
+.movil-mas-letra button { min-width: 64px; min-height: 48px; font-weight: 600; }

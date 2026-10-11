@@ -176,6 +176,9 @@ jobs:
           grep -q "^OK  versión final no depurable" prueba-emulador/informe.txt
           grep -q "^OK  versión final no registra llamadas a plugins" prueba-emulador/informe.txt
           grep -q "^OK  tienda: sin IA, música, traspaso, círculo ni importar módulos" prueba-emulador/informe.txt
+          grep -q "^OK  paso 1: barra superior de una fila" prueba-emulador/informe.txt
+          grep -q "^OK  paso 1: «rey» sugiere 1 Reyes y 2 Reyes" prueba-emulador/informe.txt
+          grep -q "^OK  paso 1 con letra al 200 %: nada se sale ni se corta" prueba-emulador/informe.txt
 
       - name: Resultados de la prueba en el emulador
         if: always()

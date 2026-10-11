@@ -90,9 +90,19 @@
     ajustesMas = ajustes;
     moverAjustes(true);
     const lista = crear('div', { class: 'movil-mas-lista' });
+    // Paso 1 del diseño: la fila ♪ · IA · Estudio · Lectura · A− · A+ se quita de arriba; lo suyo vive aquí.
+    const letra = crear('div', { class: 'movil-mas-letra', role: 'group', 'aria-label': 'Tamaño de letra' }, [
+      crear('span', { texto: 'Letra' }),
+      crear('button', { type: 'button', class: 'outline', 'aria-label': 'Letra más pequeña', texto: 'A−', onclick: () => $('#smaller')?.click() }),
+      crear('button', { type: 'button', class: 'outline', 'aria-label': 'Letra más grande', texto: 'A+', onclick: () => $('#larger')?.click() })
+    ]);
+    ajustes.append(letra);
     const extras = [
       ['🖼 Imagen con versículos', () => window.BibliaImagen?.abrir()],
-      ['Estudio con IA', () => botonPorTexto('.reading-actions button', 'ia')?.click()]
+      ['Estudio con IA', () => botonPorTexto('.reading-actions button', 'ia')?.click()],
+      ['◎ Atlas y contexto', () => $('#graphics-open')?.click()],
+      ['⤢ Pantalla completa', () => $('#pane-biblia .enfoque-abrir')?.click()],
+      ['🔊 Escuchar y números Strong', () => { const abiertos = html.dataset.controlesLectura !== 'abiertos'; html.dataset.controlesLectura = abiertos ? 'abiertos' : 'cerrados'; setTimeout(ajustarAltoLectura, 0); }]
     ];
     // Edición tienda: «Apoyar el proyecto» (CONSENSO-PLAY: aporte con Google Play Billing; hasta que la app esté en
     // Google Play, la pantalla es una vista previa y no cobra nada).
@@ -151,6 +161,33 @@
   }
   function abrirMas() { if (!hojaMas.open) hojaMas.showModal(); }
   function cerrarMas() { if (hojaMas?.open) hojaMas.close(); }
+
+  // ---------- Barra superior de una fila (CONSENSO-MOVIL.md, paso 1): ☰ · referencia · buscar ----------
+  function textoReferencia() {
+    try { const p = state.position; return books[p.book].name + ' ' + p.chapter; } catch { return 'Elegir pasaje'; }
+  }
+  function iconoBuscar() {
+    const ns = 'http://www.w3.org/2000/svg', svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('class', 'movil-barra-svg');
+    const c = document.createElementNS(ns, 'circle'); c.setAttribute('cx', '10.5'); c.setAttribute('cy', '10.5'); c.setAttribute('r', '6.5');
+    const l = document.createElementNS(ns, 'path'); l.setAttribute('d', 'M15.5 15.5 21 21');
+    svg.append(c, l); return svg;
+  }
+  function construirBarraSuperior() {
+    const vista = $('#read-view');
+    if (!vista || $('#movil-barra')) return;
+    const texto = crear('span', { class: 'movil-barra-texto', texto: textoReferencia() });
+    const ref = crear('button', { type: 'button', class: 'movil-barra-ref', 'aria-label': 'Elegir libro y capítulo', onclick: () => window.BibliaBuscador?.abrir({ indice: true }) },
+      [texto, crear('span', { class: 'movil-barra-flecha', 'aria-hidden': 'true', texto: '▾' })]);
+    const buscar = crear('button', { type: 'button', class: 'movil-barra-icono', id: 'movil-buscar', 'aria-label': 'Buscar libro, cita o palabra', onclick: () => window.BibliaBuscador?.abrir({ indice: false }) }, [iconoBuscar()]);
+    const menu = crear('button', { type: 'button', class: 'movil-barra-icono', id: 'movil-menu', 'aria-label': 'Menú', texto: '☰', onclick: abrirMas });
+    vista.prepend(crear('header', { id: 'movil-barra' }, [menu, ref, buscar]));
+    const actualizar = () => { texto.textContent = textoReferencia(); };
+    const origen = $('#bible-ref');
+    if (origen) new MutationObserver(actualizar).observe(origen, { childList: true, characterData: true, subtree: true });
+    $('#book')?.addEventListener('change', actualizar); $('#chapter')?.addEventListener('change', actualizar);
+    actualizar();
+  }
 
   // ---------- Hoja de estudio ----------
   let cabeceraHoja;
@@ -624,6 +661,7 @@
     if (!consulta.matches) return;
     estado.construida = true;
     construirNavegacion();
+    construirBarraSuperior();
     construirMas();
     construirHoja();
     construirBarraVersiculo();
