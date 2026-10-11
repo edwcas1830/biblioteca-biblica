@@ -98,12 +98,21 @@
       crear('button', { type: 'button', class: 'outline', 'aria-label': 'Letra más grande', texto: 'A+', onclick: () => $('#larger')?.click() })
     ]);
     ajustes.append(letra);
+    // Números Strong a la vista (Edward, 11-oct): interruptor propio, sincronizado con el de la app.
+    const origenStrong = $('#show-strong');
+    if (origenStrong) {
+      const caja = crear('input', { type: 'checkbox', id: 'movil-strong', role: 'switch' });
+      caja.addEventListener('change', () => { origenStrong.checked = caja.checked; origenStrong.dispatchEvent(new Event('change', { bubbles: true })); });
+      origenStrong.addEventListener('change', () => { caja.checked = origenStrong.checked; });
+      caja.checked = origenStrong.checked;
+      ajustes.append(crear('label', { class: 'movil-mas-strong', for: 'movil-strong' }, [crear('span', { texto: 'Números Strong en el texto' }), caja]));
+    }
     const extras = [
       ['🖼 Imagen con versículos', () => window.BibliaImagen?.abrir()],
       ['Estudio con IA', () => botonPorTexto('.reading-actions button', 'ia')?.click()],
       ['◎ Atlas y contexto', () => $('#graphics-open')?.click()],
       ['⤢ Pantalla completa', () => $('#pane-biblia .enfoque-abrir')?.click()],
-      ['🔊 Escuchar y números Strong', () => { const abiertos = html.dataset.controlesLectura !== 'abiertos'; html.dataset.controlesLectura = abiertos ? 'abiertos' : 'cerrados'; setTimeout(ajustarAltoLectura, 0); }]
+      ['🔊 Escuchar en voz alta', () => { const abiertos = html.dataset.controlesLectura !== 'abiertos'; html.dataset.controlesLectura = abiertos ? 'abiertos' : 'cerrados'; setTimeout(ajustarAltoLectura, 0); }]
     ];
     // Edición tienda: «Apoyar el proyecto» (CONSENSO-PLAY: aporte con Google Play Billing; hasta que la app esté en
     // Google Play, la pantalla es una vista previa y no cobra nada).
@@ -179,7 +188,7 @@
     }
     hojaApoyo.showModal();
   }
-  function abrirMas() { if (!hojaMas.open) hojaMas.showModal(); }
+  function abrirMas() { const c = $('#movil-strong'), o = $('#show-strong'); if (c && o) c.checked = o.checked; if (!hojaMas.open) hojaMas.showModal(); }
   function cerrarMas() { if (hojaMas?.open) hojaMas.close(); }
 
   // ---------- Barra superior de una fila (CONSENSO-MOVIL.md, paso 1): ☰ · referencia · buscar ----------

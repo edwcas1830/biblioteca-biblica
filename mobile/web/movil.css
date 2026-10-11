@@ -526,3 +526,8 @@ html[data-edicion="tienda"] #sources-dialog > p.muted { display: none !important
 :root[data-telefono="true"] #movil-seleccion:not([hidden]) { flex-wrap: wrap; overflow-x: visible; }
 :root[data-telefono="true"] #movil-seleccion .movil-seleccion-cuenta { flex: 1 1 100%; padding: 8px; }
 :root[data-telefono="true"] #movil-seleccion button { flex: 1 1 0; min-width: 48px; padding: 0 4px; }
+
+/* Números Strong a la vista en ☰ y aviso del módulo con márgenes. */
+.movil-mas-strong { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 48px; margin: 8px 0 0; font-size: 1rem; color: inherit; }
+.movil-mas-strong input { width: 48px; height: 28px; margin: 0; accent-color: var(--accent); }
+:root[data-telefono="true"] #module-status:not(:empty) { margin: 0; padding: 8px 16px; font-size: .85rem; line-height: 1.4; }
