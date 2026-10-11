@@ -71,6 +71,39 @@
       salida.querySelectorAll('[data-ai-copy]').forEach(b => { b.textContent = nombres[b.dataset.aiCopy] ?? b.textContent; });
     }
   }
+  // Modelos de pago de OpenRouter (ChatGPT, Claude): permiso explícito por modelo, con tope por consulta.
+  // Cambiar de modelo o de proveedor borra el permiso (Codex: no reusar en silencio).
+  const TOPE_USD = 0.02;
+  const modeloElegido = () => (window.BibliaModelosIA || []).find(m => m.id === $('#ai-model')?.value);
+  function filaPermiso() {
+    const sel = $('#ai-model');
+    if (!sel || $('#ai-pago-fila')) return;
+    const fila = document.createElement('label'); fila.id = 'ai-pago-fila'; fila.className = 'checkbox-label'; fila.hidden = true;
+    const caja = document.createElement('input'); caja.type = 'checkbox'; caja.id = 'ai-pago';
+    const texto = document.createElement('span');
+    fila.append(caja, texto);
+    sel.after(fila);
+    const pintar = () => {
+      const m = modeloElegido();
+      fila.hidden = !(m && m.paid);
+      caja.checked = false;
+      if (m && m.paid) texto.textContent = ` Permitir consultas de pago con ${m.name}, hasta US$0,02 cada una. Se cobra de tu saldo de OpenRouter.`;
+    };
+    sel.addEventListener('change', pintar);
+    $('#ai-provider')?.addEventListener('change', () => { caja.checked = false; });
+    pintar();
+  }
+  window.BibliaPago = {
+    opciones(proveedor) {
+      if (proveedor !== 'openrouter') return {};
+      const m = modeloElegido();
+      if (!m || !m.paid) return {};
+      if (!$('#ai-pago')?.checked) throw new Error(`«${m.name}» es de pago. Para usarlo, marca «Permitir consultas de pago» en Inteligencia artificial, o elige un modelo gratis.`);
+      return { paid: { confirmed: true, maxCostUsd: TOPE_USD } };
+    }
+  };
+
   window.BibliaAcciones = { ACCIONES, usar: id => { const a = ACCIONES.find(x => x.id === id); if (a) usar(a); } };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', construir); else construir();
+  const iniciar = () => { construir(); filaPermiso(); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar); else iniciar();
 })();

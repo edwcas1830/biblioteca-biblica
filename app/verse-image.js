@@ -195,6 +195,8 @@
   const AVISO_MES = 30;
   const REGLAS = ' Sin texto, letras ni logotipos. Sin representar a Dios ni el rostro de Jesús: usa símbolos como luz, camino, agua, cruz vacía o paloma.';
   let ideasDe = '';
+  // El proveedor activo (Gemini con clave u OpenRouter); la app nunca cambia de proveedor si uno falla.
+  const proveedor = () => { try { const p = typeof personalProvider === 'function' ? personalProvider() : ''; return p === 'gemini-api' || p === 'openrouter' ? { provider: p } : {}; } catch { return {}; } };
   const mesActual = () => new Date().toISOString().slice(0, 7);
   const contador = () => { try { const d = JSON.parse(localStorage.getItem('biblioteca-fondos-ia') || '{}'); return d.mes === mesActual() ? d.n : 0; } catch { return 0; } };
   const contar = () => { try { localStorage.setItem('biblioteca-fondos-ia', JSON.stringify({ mes: mesActual(), n: contador() + 1 })); } catch { /* sin almacenamiento */ } };
@@ -232,8 +234,9 @@
     if (!ops.aiImageIdeas?.available) { pintarIdeas(ideasLocales(texto), 'Ideas de plantilla (sin IA de texto). Toca una para usarla o escribe tu idea.'); return; }
     $('#imagen-ideas-origen').textContent = 'Pensando tres ideas para este versículo…';
     try {
-      const r = await window.libraryDesktop.aiImageIdeas({ ref, texto });
-      pintarIdeas(Array.isArray(r?.ideas) && r.ideas.length ? r.ideas : ideasLocales(texto), 'Ideas de la IA para este versículo. Toca una para usarla; puedes editarla.');
+      const r = await window.libraryDesktop.aiImageIdeas({ ref, texto, ...proveedor() });
+      const lista = Array.isArray(r) ? r : r?.ideas;
+      pintarIdeas(Array.isArray(lista) && lista.length ? lista : ideasLocales(texto), 'Ideas de la IA para este versículo. Toca una para usarla; puedes editarla.');
     } catch (e) { pintarIdeas(ideasLocales(texto), 'No se pudieron pedir ideas a la IA (' + ((e && e.message) || 'error') + '). Estas son de plantilla.'); }
   }
   async function crearFondoIA() {
@@ -245,7 +248,7 @@
     if ($('#imagen-mejorar').checked && ops.aiImagePrompt?.available) {
       boton.disabled = true; aviso.textContent = 'Mejorando tu idea…';
       try {
-        const r = await window.libraryDesktop.aiImagePrompt({ idea: prompt });
+        const r = await window.libraryDesktop.aiImagePrompt({ idea: prompt, ...proveedor() });
         if (r?.prompt) { $('#imagen-ia-texto').value = r.prompt; $('#imagen-mejorar').checked = false; aviso.textContent = 'Esta es tu idea mejorada. Revísala o edítala y toca «Crear este fondo».'; return; }
       } catch (e) { aviso.textContent = 'No se pudo mejorar (' + ((e && e.message) || 'error') + '). Puedes crear con tu idea tal cual.'; return; }
       finally { boton.disabled = false; }
@@ -258,11 +261,12 @@
     }
     boton.disabled = true; aviso.textContent = 'Creando el fondo… puede tardar unos segundos.';
     try {
-      const r = await window.libraryDesktop.aiImage({ prompt: (prompt + REGLAS).slice(0, 600), aspect: ASPECTO[$('#imagen-formato').value] || '4:5' });
+      const r = await window.libraryDesktop.aiImage({ prompt: (prompt + REGLAS).slice(0, 600), aspect: ASPECTO[$('#imagen-formato').value] || '4:5', ...proveedor() });
       await new Promise((ok, mal) => { const img = new Image(); img.onload = () => { fotoFondo = img; ok(); }; img.onerror = () => mal(new Error('La imagen recibida no se pudo abrir.')); img.src = r.dataUrl; });
       contar();
       $('#imagen-sin-foto').hidden = false; await dibujar();
-      aviso.textContent = 'Fondo creado' + (r.model ? ' con ' + r.model : '') + '. Si no te gusta, elige otra idea o cambia la descripción.';
+      const costo = Number.isFinite(r.estimatedCostUsd) ? ' Costo aproximado: US$' + r.estimatedCostUsd.toFixed(3).replace('.', ',') + '.' : '';
+      aviso.textContent = 'Fondo creado' + (r.model ? ' con ' + r.model : '') + '.' + costo + ' Si no te gusta, elige otra idea o cambia la descripción.';
     } catch (e) {
       const m = (e && e.message) || 'No se pudo crear el fondo.';
       aviso.textContent = !/OpenRouter|Gemini/.test(m) && /conex|conect|LOCKED|UNAVAILABLE/i.test(m + (e && e.code || '')) ? m + ' Conecta Gemini u OpenRouter en Inteligencia artificial.' : m;
