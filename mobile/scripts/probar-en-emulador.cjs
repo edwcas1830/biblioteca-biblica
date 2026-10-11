@@ -225,14 +225,16 @@ async function esperarLista(app, etiqueta) {
   try { app.cerrar(); } catch { /* ya cerrada */ }
   adb('install', '-r', apk);
   adb('shell', 'am', 'start', '-n', PKG + '/.MainActivity');
-  app = await conectar();
   // En el emulador, a veces se caen los servicios de Google y Android cierra la app con ellos («depends on provider
-  // com.google.android.gms … in dying proc»). Eso no es un fallo de la app: se reabre UNA vez y queda anotado.
-  try { app = await esperarLista(app, '5-tras-actualizar'); }
+  // com.google.android.gms … in dying proc»), o la app reinstalada tarda en abrir su WebView. Eso no es un fallo
+  // de la app: se reabre UNA vez y queda anotado.
+  try { app = await conectar(); app = await esperarLista(app, '5-tras-actualizar'); }
   catch (e) {
     let gms = ''; try { gms = adb('logcat', '-d', '-s', 'ActivityManager:I'); } catch { /* sin registro */ }
-    if (!/bibliotecabiblica.*depends on provider com\.google\.android\.gms/.test(gms)) throw e;
-    informe.pop(); informe.push('AVISO servicios de Google del emulador cerraron la app al actualizar; se reabrió una vez');
+    const tropiezo = /bibliotecabiblica.*depends on provider com\.google\.android\.gms/.test(gms) || /no arrancó|no expone depuración|no abrió la depuración/.test(e.message);
+    if (!tropiezo) throw e;
+    if (/^FALLÓ arranque 5-tras-actualizar/.test(informe[informe.length - 1] || '')) informe.pop();
+    informe.push('AVISO el emulador cerró o demoró la app al actualizar (' + e.message.slice(0, 60) + '); se reabrió una vez');
     console.log(informe[informe.length - 1]);
     try { app.cerrar(); } catch { /* ya cerrada */ }
     adb('shell', 'am', 'start', '-n', PKG + '/.MainActivity');
