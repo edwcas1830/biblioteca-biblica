@@ -19,3 +19,8 @@
   #imagen-dialog .imagen-cuerpo { grid-template-columns: 1fr; gap: 14px; }
   #imagen-lienzo { max-height: 46vh; }
 }
+#imagen-dialog .imagen-ia-titulo { margin: 0; font-weight: 600; }
+#imagen-dialog .imagen-ideas { display: grid; gap: 6px; }
+#imagen-dialog .imagen-idea { text-align: left; font: inherit; font-size: .88rem; line-height: 1.4; padding: 8px 10px; border-radius: 8px; border: 1px solid color-mix(in srgb, currentColor 20%, transparent); background: color-mix(in srgb, currentColor 4%, transparent); color: inherit; cursor: pointer; }
+#imagen-dialog .imagen-idea[aria-pressed="true"] { border-color: var(--accent, #7A3E2E); box-shadow: inset 3px 0 0 var(--accent, #7A3E2E); }
+#imagen-dialog #imagen-otras-ideas { justify-self: start; font-size: .85rem; }

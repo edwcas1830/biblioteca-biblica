@@ -11,6 +11,13 @@ module.exports=async({evaluate,screenshot,wait,args})=>{
  report.texto=await evaluate("document.querySelector('#imagen-texto').value");
  report.fondoIA=await evaluate("!document.querySelector('#imagen-ia').hidden");
  assert.equal(report.fondoIA,true,'el botón Fondo con IA aparece');
+ report.ideas=await evaluate("[...document.querySelectorAll('#imagen-ideas .imagen-idea')].map(b=>b.textContent.slice(0,40))");
+ assert.equal(report.ideas.length,3,'tres ideas para el fondo');
+ await evaluate("document.querySelector('#imagen-ideas .imagen-idea').click()");await wait(200);
+ report.ideaElegida=await evaluate("document.querySelector('#imagen-ia-texto').value.slice(0,60)");
+ assert.ok(report.ideaElegida.length>10,'la idea se copia a Mi idea');
+ report.botonCosto=await evaluate("document.querySelector('#imagen-ia-crear').textContent");
+ assert.match(report.botonCosto,/US\$0,03/);
  await evaluate("document.querySelector('#imagen-ia-crear').click()");await wait(1500);
  report.sinConexion=await evaluate("document.querySelector('#imagen-estado').textContent");
  assert.match(report.sinConexion,/OpenRouter/,'sin conexión explica que hay que conectar OpenRouter');

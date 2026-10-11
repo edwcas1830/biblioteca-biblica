@@ -155,7 +155,14 @@
           <div class="imagen-fila"><label>Estilo <select id="imagen-estilo">${Object.entries(ESTILOS).map(([id, e]) => `<option value="${id}">${e.nombre}</option>`).join('')}</select></label>
           <label>Tamaño <select id="imagen-formato">${Object.entries(FORMATOS).map(([id, f]) => `<option value="${id}">${f.nombre}</option>`).join('')}</select></label></div>
           <div class="imagen-fila"><label class="imagen-foto">Foto de fondo (opcional)<input id="imagen-foto" type="file" accept="image/*"></label><button type="button" class="quiet" id="imagen-sin-foto" hidden>Quitar foto</button></div>
-          <div id="imagen-ia" class="imagen-ia" hidden><label>Fondo creado con IA (con tu clave de Gemini o tu conexión de OpenRouter)<textarea id="imagen-ia-texto" rows="2" maxlength="600"></textarea></label><button type="button" class="quiet" id="imagen-ia-crear">✦ Crear fondo con IA</button></div>
+          <div id="imagen-ia" class="imagen-ia" hidden>
+            <p class="imagen-ia-titulo">✦ Fondo creado con IA</p>
+            <div id="imagen-ideas" class="imagen-ideas"></div>
+            <p id="imagen-ideas-origen" class="muted"></p><button type="button" class="quiet" id="imagen-otras-ideas">Pedir otras ideas</button>
+            <label>Mi idea (o la idea elegida)<textarea id="imagen-ia-texto" rows="3" maxlength="500" placeholder="Describe el fondo que imaginas…"></textarea></label>
+            <label class="imagen-check" id="imagen-mejorar-fila"><input id="imagen-mejorar" type="checkbox"> Mejorar mi idea con IA antes de crear</label>
+            <button type="button" class="quiet" id="imagen-ia-crear">✦ Crear este fondo</button>
+          </div>
           <div class="imagen-acciones"><button type="button" class="primary" id="imagen-guardar"></button></div>
           <p id="imagen-estado" class="muted" role="status"></p>
         </div>
@@ -177,31 +184,97 @@
     });
     $('#imagen-sin-foto').addEventListener('click', () => { fotoFondo = null; $('#imagen-foto').value = ''; $('#imagen-sin-foto').hidden = true; dibujar(); });
     $('#imagen-ia-crear').addEventListener('click', crearFondoIA);
+    $('#imagen-otras-ideas').addEventListener('click', () => pedirIdeas(true));
   }
 
-  // Fondo con IA: la operación aiImage (Codex) pide a OpenRouter una imagen SIN texto; el versículo lo dibuja
-  // la app encima, así nunca sale mal escrito. Solo aparece si la plataforma la ofrece.
+  // Fondo con IA (CONSENSO-IA-ESTUDIO.md): 3 ideas según el versículo (Escena · Metáfora · Minimalista), «Mi idea»
+  // con «Mejorar con IA», costo antes de crear y aviso al pasar de 30 fondos al mes. La IA crea SOLO el fondo:
+  // el versículo lo dibuja la app. Sin texto y sin representar a Dios ni el rostro de Jesús (decisión de Edward).
   const ASPECTO = { vertical: '4:5', cuadrado: '1:1', historia: '9:16' };
+  const COSTO = 'unos US$0,03';
+  const AVISO_MES = 30;
+  const REGLAS = ' Sin texto, letras ni logotipos. Sin representar a Dios ni el rostro de Jesús: usa símbolos como luz, camino, agua, cruz vacía o paloma.';
+  let ideasDe = '';
+  const mesActual = () => new Date().toISOString().slice(0, 7);
+  const contador = () => { try { const d = JSON.parse(localStorage.getItem('biblioteca-fondos-ia') || '{}'); return d.mes === mesActual() ? d.n : 0; } catch { return 0; } };
+  const contar = () => { try { localStorage.setItem('biblioteca-fondos-ia', JSON.stringify({ mes: mesActual(), n: contador() + 1 })); } catch { /* sin almacenamiento */ } };
+  const capacidades = async () => { try { return (await window.libraryDesktop?.getCapabilities?.())?.operations || {}; } catch { return {}; } };
+
+  // Sin IA de texto: tres plantillas a partir del versículo (no se presentan como análisis de la IA).
+  function ideasLocales(texto) {
+    const corto = texto.split(/[.;:]/)[0].slice(0, 140);
+    return [
+      { titulo: 'Escena', prompt: `Paisaje bíblico sereno que evoque «${corto}», luz cálida de amanecer, estilo pintura al óleo` },
+      { titulo: 'Metáfora', prompt: `Símbolo visual de «${corto}»: un camino de luz entre colinas y agua tranquila, estilo acuarela` },
+      { titulo: 'Minimalista', prompt: 'Fondo minimalista de colinas suaves y cielo amplio en tonos crema y salvia, mucho espacio libre para el texto' }
+    ];
+  }
+  function pintarIdeas(lista, origen) {
+    const caja = $('#imagen-ideas'); caja.replaceChildren();
+    for (const idea of lista.slice(0, 3)) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'imagen-idea';
+      const t = document.createElement('b'); t.textContent = idea.titulo || 'Idea';
+      const p = document.createElement('span'); p.textContent = ' · ' + idea.prompt;
+      b.append(t, p);
+      b.addEventListener('click', () => {
+        $('#imagen-ia-texto').value = idea.prompt; $('#imagen-mejorar').checked = false;
+        caja.querySelectorAll('.imagen-idea').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+      });
+      caja.append(b);
+    }
+    $('#imagen-ideas-origen').textContent = origen;
+  }
+  async function pedirIdeas(forzar) {
+    const texto = $('#imagen-texto').value.trim(), ref = $('#imagen-referencia').value.trim();
+    if (!texto || (!forzar && ideasDe === ref + texto)) return;
+    ideasDe = ref + texto;
+    const ops = await capacidades();
+    if (!ops.aiImageIdeas?.available) { pintarIdeas(ideasLocales(texto), 'Ideas de plantilla (sin IA de texto). Toca una para usarla o escribe tu idea.'); return; }
+    $('#imagen-ideas-origen').textContent = 'Pensando tres ideas para este versículo…';
+    try {
+      const r = await window.libraryDesktop.aiImageIdeas({ ref, texto });
+      pintarIdeas(Array.isArray(r?.ideas) && r.ideas.length ? r.ideas : ideasLocales(texto), 'Ideas de la IA para este versículo. Toca una para usarla; puedes editarla.');
+    } catch (e) { pintarIdeas(ideasLocales(texto), 'No se pudieron pedir ideas a la IA (' + ((e && e.message) || 'error') + '). Estas son de plantilla.'); }
+  }
   async function crearFondoIA() {
     const aviso = $('#imagen-estado'), boton = $('#imagen-ia-crear');
     const prompt = $('#imagen-ia-texto').value.trim();
-    if (!prompt) { aviso.textContent = 'Describe el fondo que quieres.'; return; }
+    if (!prompt) { aviso.textContent = 'Toca una idea o escribe tu idea para el fondo.'; return; }
+    const ops = await capacidades();
+    // «Mejorar con IA»: primero muestra la descripción mejorada; se crea al tocar otra vez (Edward la aprueba).
+    if ($('#imagen-mejorar').checked && ops.aiImagePrompt?.available) {
+      boton.disabled = true; aviso.textContent = 'Mejorando tu idea…';
+      try {
+        const r = await window.libraryDesktop.aiImagePrompt({ idea: prompt });
+        if (r?.prompt) { $('#imagen-ia-texto').value = r.prompt; $('#imagen-mejorar').checked = false; aviso.textContent = 'Esta es tu idea mejorada. Revísala o edítala y toca «Crear este fondo».'; return; }
+      } catch (e) { aviso.textContent = 'No se pudo mejorar (' + ((e && e.message) || 'error') + '). Puedes crear con tu idea tal cual.'; return; }
+      finally { boton.disabled = false; }
+    }
+    const usados = contador();
+    if (usados >= AVISO_MES && boton.dataset.confirmado !== mesActual()) {
+      boton.dataset.confirmado = mesActual();
+      aviso.textContent = `Este mes ya creaste ${usados} fondos (${COSTO} cada uno). Toca «Crear este fondo» otra vez para seguir.`;
+      return;
+    }
     boton.disabled = true; aviso.textContent = 'Creando el fondo… puede tardar unos segundos.';
     try {
-      const r = await window.libraryDesktop.aiImage({ prompt, aspect: ASPECTO[$('#imagen-formato').value] || '4:5' });
+      const r = await window.libraryDesktop.aiImage({ prompt: (prompt + REGLAS).slice(0, 600), aspect: ASPECTO[$('#imagen-formato').value] || '4:5' });
       await new Promise((ok, mal) => { const img = new Image(); img.onload = () => { fotoFondo = img; ok(); }; img.onerror = () => mal(new Error('La imagen recibida no se pudo abrir.')); img.src = r.dataUrl; });
+      contar();
       $('#imagen-sin-foto').hidden = false; await dibujar();
-      aviso.textContent = 'Fondo creado' + (r.model ? ' con ' + r.model : '') + '. Si no te gusta, cambia la descripción y vuelve a crearlo.';
+      aviso.textContent = 'Fondo creado' + (r.model ? ' con ' + r.model : '') + '. Si no te gusta, elige otra idea o cambia la descripción.';
     } catch (e) {
       const m = (e && e.message) || 'No se pudo crear el fondo.';
       aviso.textContent = !/OpenRouter|Gemini/.test(m) && /conex|conect|LOCKED|UNAVAILABLE/i.test(m + (e && e.code || '')) ? m + ' Conecta Gemini u OpenRouter en Inteligencia artificial.' : m;
     } finally { boton.disabled = false; }
   }
   async function mostrarIA() {
-    let ok = false;
-    try { ok = !!(await window.libraryDesktop?.getCapabilities?.())?.operations?.aiImage?.available; } catch { ok = false; }
+    const ops = await capacidades();
+    const ok = !!ops.aiImage?.available;
     $('#imagen-ia').hidden = !ok;
-    if (ok && !$('#imagen-ia-texto').value) $('#imagen-ia-texto').value = 'Paisaje sereno al amanecer, luz cálida y suave, colinas y cielo amplio, estilo pintura al óleo';
+    $('#imagen-mejorar-fila').hidden = !ops.aiImagePrompt?.available;
+    $('#imagen-ia-crear').textContent = `✦ Crear este fondo (${COSTO})`;
+    if (ok) pedirIdeas(false);
   }
 
   function abrir() {
