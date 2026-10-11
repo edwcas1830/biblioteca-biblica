@@ -3,12 +3,12 @@ const {test}=require('node:test'),assert=require('node:assert/strict');
 const pricing=require('../shared/ai-pricing.js'),or=require('../platform/ai/openrouter.js');
 const models=[{id:'openai/fixture',name:'OpenAI',architecture:{output_modalities:['text']},pricing:{prompt:'0.0000001',completion:'0.0000005',request:'0'},top_provider:{max_completion_tokens:4000}},{id:'anthropic/fixture',name:'Claude',architecture:{output_modalities:['text']},pricing:{prompt:'0.0000002',completion:'0.000001'}},{id:'qwen/free:free',pricing:{prompt:'0',completion:'0'}},{id:'openai/hidden-charge',architecture:{output_modalities:['text']},pricing:{prompt:'0.1',completion:'0.1',request:'1'}}];
 test('Catálogo trae precios actuales, etiqueta vía OpenRouter y excluye costos no presupuestables',()=>{
-  const rows=pricing.catalog(models,100);assert.equal(rows.length,4);assert.ok(rows.filter(r=>r.paid).every(r=>r.name.includes('vía OpenRouter')));assert.ok(Math.abs(rows.find(r=>r.id==='openai/fixture').pricing.inputPerMillion-0.1)<1e-12);assert.ok(!rows.some(r=>r.id.includes('hidden')));
+  const rows=pricing.catalog(models,100);assert.equal(rows.length,4);assert.ok(rows.filter(r=>r.paid).every(r=>r.name.includes('vía OpenRouter')));assert.equal(rows.find(r=>r.id==='openai/fixture').pricing.inputPerMillion,0.1);assert.ok(!rows.some(r=>r.id.includes('hidden')));
 });
 test('Modelo pago requiere permiso explícito, presupuesto suficiente y precio vigente; gratis nunca permite precio positivo',()=>{
   const base={models:pricing.catalog(models,100),model:'openai/fixture',prompt:'Texto',maxTokens:4000,now:100};
   assert.throws(()=>pricing.authorize(base),{code:'VALIDATION'});assert.throws(()=>pricing.authorize({...base,paid:{confirmed:true,maxCostUsd:0.0001}}),{code:'QUOTA'});assert.throws(()=>pricing.authorize({...base,now:100+16*60000,paid:{confirmed:true,maxCostUsd:0.05}}),{code:'CONFLICT'});
-  const allowed=pricing.authorize({...base,paid:{confirmed:true,maxCostUsd:0.01}});assert.equal(allowed.provider.allow_fallbacks,false);assert.ok(Math.abs(allowed.provider.max_price.prompt-0.1)<1e-12);assert.equal(allowed.maxTokens,4000);
+  const allowed=pricing.authorize({...base,paid:{confirmed:true,maxCostUsd:0.01}});assert.equal(allowed.provider.allow_fallbacks,false);assert.equal(allowed.provider.max_price.prompt,0.1);assert.equal(allowed.maxTokens,4000);
   assert.deepEqual(pricing.authorize({...base,model:'qwen/free:free'}).provider.max_price,{prompt:0,completion:0});
 });
 test('Android consulta pago solo tras autorización, no reintenta/fallback, y transmite límites y estimación',async()=>{

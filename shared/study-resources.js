@@ -38,7 +38,7 @@
       if(typeof id!=='string'||id.length>100)fail('VALIDATION','Persona no válida.');const people=(await data('theographic')).people,p=Object.hasOwn(people,id)?people[id]:null;if(!p)fail('NOT_FOUND','Persona no encontrada.');
       return {person:person(p,people),groups:['father','mother','partners','children','siblings'].map(kind=>({kind,items:p[kind].map(id=>people[id]).filter(Boolean).map(p=>person(p,people))}))};
     }
-    const studySources=()=>Promise.all(['openbible','atlas','natural-earth','bibledata','theographic'].map(info));
+    const studySources=()=>Promise.all(['openbible','atlas','natural-earth','bibledata','theographic'].map(async id=>{const manifest=await info(id);return {...manifest,id:manifest.id||id};}));
     return Object.freeze({connections,graphicsChapter,graphicsChronology,graphicsPeople,graphicsGenealogy,studySources});
   }
   return Object.freeze({create});

@@ -68,3 +68,22 @@ test('Web free package, comparison joined ranges, dictionary and graphics use ac
 test('Corrupted public resource and unknown resource path fail before exposing data',async()=>{
   const r=resourceFactory.create({baseUrl:'https://fixture.local/data/',fetch:async()=>new Response('corrupted')});await assert.rejects(r.file('free-package/fixture.json.gz','a'.repeat(64)),{code:'CORRUPT'});await assert.rejects(r.data('../secret'),{code:'NOT_FOUND'});
 });
+
+test('Native reader → aiPrepare → Gemini conserva acción, vecinos, OpenBible y gráficos con recursos reales libres',async t=>{
+  const {api}=await fixture(t),requests=[],service=require('../platform/ai/service.js').create({
+    credentialStore:{leer:async name=>name==='gemini'?'AQ.'+'x'.repeat(50):null,guardar:async()=>{},borrar:async()=>{}},
+    call:async(name,value)=>name==='privacyStatus'?{locked:false}:api[name](value),
+    fetchImpl:async(url,options)=>{
+      if(url.includes('/models?'))return Response.json({models:[{name:'models/gemini-flash-latest',supportedGenerationMethods:['generateContent']}]});
+      const sent=JSON.parse(options.body);requests.push(sent);assert.match(sent.systemInstruction.parts[0].text,/"interpretacion"/);assert.doesNotMatch(sent.systemInstruction.parts[0].text,/sections|citations/);
+      return Response.json({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify({brief:'Síntesis [1]',texto:'Observación',interpretacion:'Interpretación',conexiones:'Relación',fuentes:[{sourceId:1}],seguimientos:['Uno','Dos','Tres']})}]}}]});
+    }
+  });t.after(()=>service.close());const bridge=service.handlers();
+  for(const action of ['exegesis','paralelos','contexto']){
+    const p=await bridge.aiPrepare({action,book:42,chapter:3,verse:16,module:'rv1909',scope:'verse',study:true,includeBible:true,includeComment:false});assert.equal(p.action,action);assert.ok(p.sources.length>=2);assert.ok(p.sources.some(s=>s.kind==='bible'&&s.verse===14));
+    if(action==='paralelos'){assert.ok(p.sources.some(s=>s.module==='openbible-crossrefs'));assert.ok(p.sources.some(s=>s.parallel&&s.text));}
+    if(action==='contexto')assert.ok(p.sources.some(s=>s.module==='atlas')&&p.sources.some(s=>s.module==='bibledata'));
+    const r=await bridge.aiAsk({id:p.id,action,provider:'gemini-api',model:'gemini-flash-latest'});assert.equal(r.action,action);assert.equal(r.seguimientos.length,3);assert.equal(r.fuentes.length,1);assert.ok(r.texto&&r.interpretacion);assert.equal(r.sections,undefined);
+  }
+  assert.equal(requests.length,3);
+});

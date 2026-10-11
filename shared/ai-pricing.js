@@ -2,6 +2,7 @@
   'use strict';
   const fail=(code,message)=>{throw new contract.BridgeError(code,message);};
   const price=v=>typeof v==='string'||typeof v==='number'?Number(v):NaN;
+  const perMillion=v=>Number((v*1e6).toPrecision(15));
   function catalog(data,now=Date.now()){
     const rows=[];
     for(const m of Array.isArray(data)?data:[]){
@@ -11,7 +12,7 @@
       const free=m.id.endsWith(':free')&&Object.values(m.pricing).every(v=>v===null||price(v)===0);
       const paid=!free&&/^(openai|anthropic)\//.test(m.id)&&(p>0||c>0)&&m.architecture?.output_modalities?.length===1&&m.architecture.output_modalities[0]==='text'&&Object.entries(m.pricing).every(([k,v])=>['prompt','completion','input_cache_read','input_cache_write'].includes(k)||v===null||price(v)===0);
       if(!free&&!paid)continue;
-      rows.push({id:m.id,name:String(m.name||m.id).slice(0,150)+(paid?' · vía OpenRouter':''),paid,via:'openrouter',pricing:{currency:'USD',prompt:p,completion:c,inputPerMillion:p*1e6,outputPerMillion:c*1e6,checkedAt:now},contextLength:m.context_length,maxOutputTokens:m.top_provider?.max_completion_tokens});
+      rows.push({id:m.id,name:String(m.name||m.id).slice(0,150)+(paid?' · vía OpenRouter':''),paid,via:'openrouter',pricing:{currency:'USD',prompt:p,completion:c,inputPerMillion:perMillion(p),outputPerMillion:perMillion(c),checkedAt:now},contextLength:m.context_length,maxOutputTokens:m.top_provider?.max_completion_tokens});
     }
     rows.sort((a,b)=>Number(a.paid)-Number(b.paid)||(a.paid?a.pricing.completion-b.pricing.completion:Number(/^(qwen|deepseek)\//.test(b.id))-Number(/^(qwen|deepseek)\//.test(a.id))));
     return [...rows.slice(0,200),{id:'openrouter/free',name:'Selección gratuita automática',paid:false,via:'openrouter',pricing:{currency:'USD',prompt:0,completion:0,inputPerMillion:0,outputPerMillion:0,checkedAt:now}}];
