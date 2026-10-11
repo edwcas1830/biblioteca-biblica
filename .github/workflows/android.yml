@@ -203,3 +203,39 @@ jobs:
             apk.sha256
             mobile/www-auditoria.json
           retention-days: 14
+
+  # Edición web para iPhone en WebKit (motor de Safari): arranque, CSP y cifrado cruzado con Node.
+  web-webkit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.rama || github.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Dependencias y Biblia
+        run: |
+          npm ci
+          npm run bible
+          npm run prepare:assets
+
+      - name: Armar la edición web
+        working-directory: mobile
+        env:
+          BIBLIA_EDICION: web
+        run: |
+          npm ci
+          node scripts/build-www.cjs
+
+      - name: WebKit
+        working-directory: mobile
+        run: |
+          npm i --no-save playwright@1.49.1
+          npx playwright install --with-deps webkit
+          node scripts/probar-web-webkit.cjs
