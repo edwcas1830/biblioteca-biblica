@@ -70,7 +70,7 @@ async function conectar() {
   anotar(!!tras && /Nota de prueba de la tienda/.test(tras), 'una nota escrita en pantalla sigue tras recargar', escrita);
   await app.evaluar("go(42,3,16);await new Promise(r=>setTimeout(r,1200));return true;");
   captura('1-lectura');
-  const mas = await app.evaluar("document.querySelector('#movil-nav [data-destino=\"mas\"]').click();await new Promise(r=>setTimeout(r,700));return [...document.querySelectorAll('#movil-mas .movil-mas-lista button')].filter(b=>!b.hidden).map(b=>b.textContent.trim());");
+  const mas = await app.evaluar("document.querySelector('#movil-menu').click();await new Promise(r=>setTimeout(r,700));return [...document.querySelectorAll('#movil-mas .movil-mas-lista button')].filter(b=>!b.hidden).map(b=>b.textContent.trim());");
   captura('2-mas');
   anotar(mas.some(t => /Apoyar el proyecto/.test(t)) && !mas.some(t => /inteligencia artificial|estudio con ia|música|traer desde|círculo/i.test(t)), '«Más» ofrece Apoyar y no muestra lo que no va', JSON.stringify(mas));
   const apoyo = await app.evaluar("[...document.querySelectorAll('#movil-mas .movil-mas-lista button')].find(b=>/Apoyar/.test(b.textContent)).click();await new Promise(r=>setTimeout(r,700));const d=document.querySelector('#movil-apoyo');return {abierto:!!d?.open,montos:[...d.querySelectorAll('.movil-apoyo-montos button')].map(b=>b.textContent)};");

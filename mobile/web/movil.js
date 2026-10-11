@@ -66,6 +66,7 @@
   function marcarDestino() {
     const vista = vistaActiva();
     html.dataset.vistaMovil = vista;
+    marcarPestana();
     for (const b of $$('#movil-nav button')) {
       const d = DESTINOS.find(x => x.id === b.dataset.destino);
       b.setAttribute('aria-current', d.vista === vista ? 'page' : 'false');
@@ -110,7 +111,6 @@
     for (const [texto, fn] of extras) lista.append(crear('button', { type: 'button', class: 'quiet', texto, onclick: () => { cerrarMas(); fn(); } }));
     for (const b of $$('.library-menu-items button')) {
       const t = b.textContent.trim();
-      if (/oración y testimonios/i.test(t)) continue; // ya está en la barra inferior
       if (lista.querySelector(`[data-original="${CSS.escape(t)}"]`)) continue;
       lista.append(crear('button', { type: 'button', class: 'quiet', 'data-original': t, texto: t, onclick: () => { cerrarMas(); b.click(); } }));
     }
@@ -121,6 +121,23 @@
       ]),
       ajustes, lista
     );
+    // Secciones (paso 2): Mi camino · Herramientas · Mi biblioteca y ajustes.
+    const plan = crear('button', { type: 'button', class: 'quiet', texto: '📅 Plan de lectura', onclick: () => { cerrarMas(); botonPorTexto('.compact-nav button', 'mi plan')?.click(); } });
+    lista.prepend(plan);
+    const SECCIONES = [
+      ['Mi camino', /plan de lectura|oración|círculo/i],
+      ['Herramientas', /imagen|estudio con ia|atlas|pantalla completa|escuchar|música/i],
+      ['Mi biblioteca y ajustes', /./]
+    ];
+    const botones = $$('button', lista);
+    lista.replaceChildren();
+    const usados = new Set();
+    for (const [titulo, re] of SECCIONES) {
+      const grupo = botones.filter(b => !usados.has(b) && re.test(b.textContent));
+      if (!grupo.length) continue;
+      grupo.forEach(b => usados.add(b));
+      lista.append(crear('h3', { class: 'movil-mas-seccion', texto: titulo }), ...grupo);
+    }
     hojaMas.addEventListener('click', e => { if (e.target === hojaMas) cerrarMas(); });
     ocultarSinCapacidad(lista);
     document.body.append(hojaMas);
@@ -192,6 +209,62 @@
     actualizar();
   }
 
+
+  // ---------- Paso 2 del diseño (CONSENSO-MOVIL.md): pestañas abajo, una cosa a la vez ----------
+  // Biblia · Comentario · Diccionario · Original · Referencias · Devocional. Cada una ocupa toda la pantalla
+  // entre la barra de arriba y las pestañas, y sigue al versículo elegido. Plan, Oración y lo demás van en ☰.
+  const VISTAS = [
+    { id: 'biblia', texto: 'Biblia' },
+    { id: 'comentario', texto: 'Comentario' },
+    { id: 'diccionario', texto: 'Diccionario' },
+    { id: 'original', texto: 'Original' },
+    { id: 'referencias', texto: 'Referencias' },
+    { id: 'devocional', texto: 'Devocional' }
+  ];
+  let franja;
+  function construirPestanas() {
+    franja = crear('nav', { id: 'movil-pestanas', role: 'tablist', 'aria-label': 'Qué ver' });
+    for (const v of VISTAS) franja.append(crear('button', { type: 'button', role: 'tab', 'data-vista': v.id, 'aria-selected': 'false', texto: v.texto, onclick: () => elegirVista(v.id) }));
+    document.body.append(franja);
+  }
+  function elegirVista(id) {
+    cerrarMas();
+    if (id === 'devocional') {
+      estado.pestana = 'devocional'; html.dataset.pestana = 'devocional';
+      botonPorTexto('.compact-nav button', 'devocional')?.click();
+    } else {
+      if (vistaActiva() !== 'read-view') botonPorTexto('.compact-nav button', 'mi biblia')?.click();
+      estado.pestana = id; html.dataset.pestana = id;
+      if (id !== 'biblia') { asegurarPanelesVisibles(); ocultarBarra(); }
+      if (id === 'referencias') { const caja = $('#connections-box'); if (caja) caja.open = true; }
+      if (id === 'original' && $('#original-inline')?.hidden && !$('#original-inline').childElementCount) mostrarAviso('Toca una palabra del texto (con números Strong) para ver su original.');
+    }
+    setTimeout(() => { marcarDestino(); ajustarAltoLectura(); }, 60);
+  }
+  function marcarPestana() {
+    if (!franja) return;
+    const vista = vistaActiva();
+    const actual = vista === 'dev-view' ? 'devocional' : vista === 'read-view' ? (estado.pestana === 'devocional' ? 'biblia' : estado.pestana || 'biblia') : '';
+    if (vista === 'read-view' && estado.pestana === 'devocional') { estado.pestana = 'biblia'; html.dataset.pestana = 'biblia'; }
+    for (const b of $$('button', franja)) b.setAttribute('aria-selected', String(b.dataset.vista === actual));
+    franja.querySelector('[aria-selected="true"]')?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+  }
+  // Capítulos: flechas a los lados y deslizar sobre el texto (no desde los bordes: ahí está el «atrás» de Android).
+  function construirFlechas() {
+    const libro = $('#pane-biblia');
+    if (!libro || $('#movil-flecha-ant')) return;
+    const flecha = (id, texto, etiqueta, destino) => crear('button', { type: 'button', id, class: 'movil-flecha', 'aria-label': etiqueta, texto, onclick: () => $(destino)?.click() });
+    libro.append(flecha('movil-flecha-ant', '‹', 'Capítulo anterior', '#previous'), flecha('movil-flecha-sig', '›', 'Capítulo siguiente', '#next'));
+    const versos = $('#verses');
+    let toque = null;
+    versos?.addEventListener('touchstart', e => { const t = e.touches[0]; toque = t && t.clientX > 24 && t.clientX < window.innerWidth - 24 ? { x: t.clientX, y: t.clientY, t: Date.now() } : null; }, { passive: true });
+    versos?.addEventListener('touchend', e => {
+      if (!toque) return; const t = e.changedTouches[0], dx = t.clientX - toque.x, dy = t.clientY - toque.y, rapido = Date.now() - toque.t < 600; toque = null;
+      if (!rapido || Math.abs(dx) < 80 || Math.abs(dy) > 40 || window.getSelection()?.toString()) return;
+      $(dx < 0 ? '#next' : '#previous')?.click();
+    }, { passive: true });
+  }
+
   // ---------- Hoja de estudio ----------
   let cabeceraHoja;
   const PESTANAS = [
@@ -243,14 +316,8 @@
     ponerAltura(estado.hoja === 'plegada' ? 'media' : estado.hoja === 'media' ? 'completa' : 'plegada');
   }
   function elegirPestana(id, abrir) {
-    estado.pestana = id;
-    html.dataset.pestana = id;
-    for (const b of $$('[data-pestana]', cabeceraHoja)) b.setAttribute('aria-selected', String(b.dataset.pestana === id));
+    if (abrir) { elegirVista(id); return; }
     asegurarPanelesVisibles();
-    if (id === 'original' && $('#original-inline')?.hidden && $('#original-inline').childElementCount === 0) {
-      mostrarAviso('Toca una palabra del texto para ver su original.');
-    }
-    if (abrir && estado.hoja === 'plegada') ponerAltura('media');
   }
 
   // La hoja sigue el versículo activo, salvo que esté fijada.
@@ -345,8 +412,8 @@
     if (notas && notas.open) { notas.open = false; html.dataset.notas = 'cerradas'; return true; }
     const ia = $('#ai-pane');
     if (ia && !ia.hidden && getComputedStyle(ia).display !== 'none') { $('#ai-pane .pane-close, #ai-pane [data-close-ai], #ai-close')?.click(); return true; }
-    if (estado.hoja !== 'plegada' && vistaActiva() === 'read-view') { ponerAltura(estado.hoja === 'completa' ? 'media' : 'plegada'); return true; }
-    if (vistaActiva() !== 'read-view') { DESTINOS[0].accion(); setTimeout(marcarDestino, 60); return true; }
+    if (vistaActiva() === 'read-view' && estado.pestana && estado.pestana !== 'biblia') { elegirVista('biblia'); return true; }
+    if (vistaActiva() !== 'read-view') { elegirVista('biblia'); return true; }
     return false; // la plataforma decide salir
   }
 
@@ -355,8 +422,9 @@
     const libro = $('#pane-biblia');
     if (!libro || !consulta.matches) return;
     const arriba = libro.getBoundingClientRect().top + window.scrollY;
-    const pie = parseFloat(getComputedStyle(html).getPropertyValue('--nav-alto')) || 64;
-    const cab = parseFloat(getComputedStyle(html).getPropertyValue('--hoja-cab')) || 52;
+    if (franja) html.style.setProperty('--nav-alto', Math.round(franja.getBoundingClientRect().height || 56) + 'px');
+    const pie = (franja ? franja.getBoundingClientRect().height : 0) || parseFloat(getComputedStyle(html).getPropertyValue('--nav-alto')) || 56;
+    const cab = 0;
     html.style.setProperty('--cabeceras-lectura', Math.max(0, Math.round(arriba)) + 'px');
     html.style.setProperty('--alto-libro', Math.max(320, window.innerHeight - arriba - pie - cab) + 'px');
   }
@@ -490,7 +558,8 @@
     }
     if (!botonTraspaso) {
       botonTraspaso = crear('button', { type: 'button', class: 'quiet', id: 'movil-traer-pc', texto: '⇣ Traer desde la PC', onclick: () => { cerrarMas(); dialogoTraspaso.showModal(); iniciarTraspaso(); } });
-      $('.movil-mas-lista', hojaMas).prepend(botonTraspaso);
+      const seccionBiblioteca = [...$$('.movil-mas-seccion', hojaMas)].find(h => /biblioteca/i.test(h.textContent));
+      if (seccionBiblioteca) seccionBiblioteca.after(botonTraspaso); else $('.movil-mas-lista', hojaMas).prepend(botonTraspaso);
     }
     botonTraspaso.hidden = false;
   }
@@ -663,10 +732,10 @@
     if (estado.construida) { moverAjustes(consulta.matches); if (consulta.matches) { marcarDestino(); ajustarAltoLectura(); } else cerrarMas(); return; }
     if (!consulta.matches) return;
     estado.construida = true;
-    construirNavegacion();
     construirBarraSuperior();
     construirMas();
-    construirHoja();
+    construirPestanas();
+    construirFlechas();
     construirBarraVersiculo();
     construirControlesLectura();
     prepararTraspaso();
@@ -678,7 +747,8 @@
     for (const ev of ['touchmove', 'wheel']) $('#verses')?.addEventListener(ev, ocultarBarra, { passive: true });
     asegurarPanelesVisibles();
     ponerAltura('plegada');
-    elegirPestana('comentario', false);
+    estado.pestana = 'biblia'; html.dataset.pestana = 'biblia';
+    asegurarPanelesVisibles();
     $('#verses')?.addEventListener('click', alTocarVersiculo, true);
     // Las vistas cambian por los controladores de la app: se observa y se marca el destino.
     for (const v of $$('main > section.view')) new MutationObserver(marcarDestino).observe(v, { attributes: true, attributeFilter: ['hidden', 'class', 'style'] });
@@ -689,7 +759,7 @@
     setTimeout(ajustarAltoLectura, 400);
   }
 
-  window.BibliaMovil = { atras, ajustarAltoLectura, ponerAltura, elegirPestana, abrirMas, cerrarMas, estado };
+  window.BibliaMovil = { atras, ajustarAltoLectura, ponerAltura, elegirPestana, elegirVista, abrirMas, cerrarMas, estado };
   consulta.addEventListener('change', activar);
   window.addEventListener('resize', () => { if (String(consulta.matches) !== html.dataset.telefono) activar(); });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(activar, 0));

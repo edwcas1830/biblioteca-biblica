@@ -426,3 +426,59 @@ html[data-edicion="tienda"] #sources-dialog > p.muted { display: none !important
 .movil-mas-letra { display: flex; align-items: center; gap: 8px; }
 .movil-mas-letra span { flex: 1; }
 .movil-mas-letra button { min-width: 64px; min-height: 48px; font-weight: 600; }
+
+/* ---------- Paso 2 del diseño (CONSENSO-MOVIL.md): pestañas abajo, una cosa a la vez ---------- */
+:root[data-telefono="true"] { --hoja-cab: 0px; --nav-alto: 56px; }
+:root[data-telefono="true"] #movil-nav,
+:root[data-telefono="true"] #movil-hoja-cabecera,
+:root[data-telefono="true"] #pane-biblia .pane-foot,
+:root[data-telefono="true"] #pane-comentario .pane-foot,
+:root[data-telefono="true"] .pane .enfoque-abrir { display: none !important; }
+#movil-pestanas { display: none; }
+:root[data-telefono="true"] #movil-pestanas {
+  display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+  padding: 0 8px var(--seguro-abajo); gap: 4px; overflow-x: auto; scrollbar-width: none;
+  background: var(--paper); border-top: 1px solid var(--line);
+}
+:root[data-telefono="true"] #movil-pestanas::-webkit-scrollbar { display: none; }
+:root[data-telefono="true"] #movil-pestanas button {
+  flex: none; min-height: 56px; padding: 0 16px; border: 0; border-top: 3px solid transparent; border-radius: 0;
+  background: none; color: var(--muted); font-size: 1rem; font-weight: 600; white-space: nowrap;
+}
+:root[data-telefono="true"] #movil-pestanas button[aria-selected="true"] { color: var(--accent); border-top-color: var(--accent); }
+:root.lectura-inmersiva #movil-pestanas { display: none !important; }
+
+/* Cada pestaña ocupa todo el alto entre la barra de arriba y las pestañas. */
+:root[data-telefono="true"] #pane-biblia { position: relative; }
+:root[data-telefono="true"][data-vista-movil="read-view"]:not([data-pestana="biblia"]) #pane-biblia { visibility: hidden; }
+:root[data-telefono="true"][data-vista-movil="read-view"]:not([data-pestana="biblia"]) #movil-versiculo { display: none !important; }
+:root[data-telefono="true"] #pane-comentario,
+:root[data-telefono="true"] #pane-diccionario {
+  top: var(--cabeceras-lectura, 64px) !important; bottom: var(--pie) !important; height: auto !important; display: none !important;
+}
+:root[data-telefono="true"][data-vista-movil="read-view"][data-pestana="comentario"] #pane-comentario,
+:root[data-telefono="true"][data-vista-movil="read-view"][data-pestana="referencias"] #pane-comentario,
+:root[data-telefono="true"][data-vista-movil="read-view"][data-pestana="diccionario"] #pane-diccionario,
+:root[data-telefono="true"][data-vista-movil="read-view"][data-pestana="original"] #pane-diccionario { display: flex !important; }
+/* Comentario: sin la caja de referencias (tiene su pestaña). Referencias: solo la caja, abierta y a todo el alto. */
+:root[data-telefono="true"][data-pestana="comentario"] #connections-box { display: none; }
+:root[data-telefono="true"][data-pestana="referencias"] #pane-comentario > :not(#connections-box) { display: none !important; }
+:root[data-telefono="true"][data-pestana="referencias"] #connections-box { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 16px; margin: 0; }
+:root[data-telefono="true"][data-pestana="referencias"] #connections-box > summary { pointer-events: none; list-style: none; font-weight: 700; font-size: 1.125rem; }
+:root[data-telefono="true"][data-pestana="referencias"] #connections-box > summary::-webkit-details-marker { display: none; }
+
+/* Flechas de capítulo: a los lados del texto, discretas. */
+.movil-flecha { display: none; }
+:root[data-telefono="true"] .movil-flecha {
+  display: grid; place-items: center; position: absolute; top: 50%; z-index: 5; width: 48px; height: 48px; min-height: 48px; padding: 0;
+  border: 1px solid var(--line); border-radius: 50%; background: color-mix(in srgb, var(--paper) 82%, transparent); color: var(--accent);
+  font-size: 1.75rem; line-height: 1; opacity: .85;
+}
+:root[data-telefono="true"] #movil-flecha-ant { left: 4px; }
+:root[data-telefono="true"] #movil-flecha-sig { right: 4px; }
+
+/* ☰ a pantalla completa, por secciones. */
+:root[data-telefono="true"] #movil-mas { max-height: 100dvh; height: 100dvh; border-radius: 0; margin: 0; padding-top: calc(8px + var(--seguro-arriba)); overflow-y: auto; }
+.movil-mas-seccion { margin: 24px 0 8px; font-size: .75rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+:root[data-telefono="true"] #movil-mas .movil-mas-lista button { min-height: 48px; }
+:root[data-telefono="true"][data-pestana="referencias"] #connections-list { max-height: none !important; overflow: visible !important; }
