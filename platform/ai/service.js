@@ -39,7 +39,7 @@
         if(at!==generation)fail('CANCELLED','La consulta se canceló.');
         if(input.action!==undefined&&input.action!==item.action)fail('CONFLICT','La acción cambió. Prepara otra vez el estudio.');
         const beforeSend=async()=>{await getPrepared(input.id);if(input.provider==='gemini-api')await requireGemini();if(at!==generation)fail('CANCELLED','La consulta se canceló.');};
-        const response=await selected.ask({prompt:item.prompt,model:input.model,allowData:input.allowData===true,study:item.study,allowLiving:item.allowLiving,action:item.action,beforeSend});
+        const response=await selected.ask({prompt:item.prompt,model:input.model,allowData:input.allowData===true,study:item.study,allowLiving:item.allowLiving,action:item.action,paid:input.paid,beforeSend});
         if(input.provider==='gemini-api')await requireGemini();
         await guard(item.epoch);await context.verify(item.context.sources);if(at!==generation)fail('CANCELLED','La consulta se canceló.');
         if(item.action){if(input.action!==undefined&&input.action!==item.action)fail('CONFLICT','La acción cambió. Prepara otra vez el estudio.');return {...response,...actions.result(response,item.context)};}

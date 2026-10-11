@@ -69,9 +69,9 @@ export interface LibraryBridge {
   moduleScan(data?:{choose?:boolean}):Promise<ScanResult|null>;
   moduleInstall(tokens:string[]):Promise<{installed:string[]; count:number; backup:string|null}>;
   aiStatus():Promise<AiStatus>; aiConnect(data?:{code?:string}):Promise<AiStatus>;
-  aiDisconnect():Promise<AiStatus>; aiModels():Promise<{id:string; name:string}[]>;
+  aiDisconnect():Promise<AiStatus>; aiModels():Promise<{id:string; name:string; paid?:boolean; via?:'openrouter'; pricing?:{currency:'USD'; prompt:number; completion:number; inputPerMillion:number; outputPerMillion:number; checkedAt:number}}[]>;
   aiPrepare(data:AiSelection):Promise<AiPrepared>;
-  aiAsk(data:{id:string; action?:StudyAction; provider?:string; model:string; allowData?:boolean}):Promise<AiReply>;
+  aiAsk(data:{id:string; action?:StudyAction; provider?:string; model:string; allowData?:boolean; paid?:{confirmed:true; maxCostUsd:number}}):Promise<AiReply>;
   /** One OpenRouter background; uses account credits, never the free text model list. */
   aiImage(data:{prompt:string; aspect:'4:5'|'1:1'|'9:16'}):Promise<{dataUrl:string; model:string}>;
   aiCopy(data:{id:string; provider?:string}):Promise<{copied:boolean; opened:boolean}>;

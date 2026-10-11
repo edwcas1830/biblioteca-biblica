@@ -4,6 +4,7 @@
   "shared/study-model.js",
   "shared/study-actions.js",
   "shared/ai-context.js",
+  "shared/ai-pricing.js",
   "shared/ai-image.js",
   "platform/ai/credentials.js",
   "platform/ai/openrouter.js",

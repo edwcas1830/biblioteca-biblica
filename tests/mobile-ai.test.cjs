@@ -29,7 +29,7 @@ test('Only genuinely zero-priced :free text models are selectable; no paid fallb
     sent=JSON.parse(input.body);return response({model:'qwen/fixture:free',choices:[{message:{content:JSON.stringify({text:'Observación',sections:{brief:'Breve',living:'No solicitado'},keywords:[],citations:[{book:42,chapter:3,verse:16},{book:66,chapter:1,verse:1}]})}}]});
   }});
   assert.deepEqual((await service.listModels()).map(m=>m.id),['qwen/fixture:free','openrouter/free']);await assert.rejects(service.ask({prompt:'x',model:'paid'}),{code:'VALIDATION'});
-  const result=await service.ask({prompt:'Pregunta',model:'qwen/fixture:free',study:true});assert.deepEqual(sent.provider,{max_price:{prompt:0,completion:0},data_collection:'deny'});assert.equal(sent.stream,false);assert.equal(sent.max_tokens,4000);assert.equal(result.citations.length,1);assert.equal(result.sections.brief,'Breve');assert.equal(result.living,undefined);
+  const result=await service.ask({prompt:'Pregunta',model:'qwen/fixture:free',study:true});assert.deepEqual(sent.provider,{max_price:{prompt:0,completion:0},allow_fallbacks:false,data_collection:'deny'});assert.equal(sent.stream,false);assert.equal(sent.max_tokens,4000);assert.equal(result.citations.length,1);assert.equal(result.sections.brief,'Breve');assert.equal(result.living,undefined);
   await service.ask({prompt:'Pregunta',allowData:true});assert.equal(sent.provider.data_collection,'allow');service.close();
 });
 test('Quota displays provider daily counter, never treats zero-cost usage as a request count',async()=>{
