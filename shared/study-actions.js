@@ -30,16 +30,23 @@
       function add(m,kind,text,extra={}){
         text=str(text,Math.min(remaining,kind==='bible'?18000:5000));if(!text)return;
         remaining-=text.length;
-        sources.push({sourceId:sources.length+1,kind,module:m.id,title:m.titulo||m.title,revision:m.sha256,license:m.licencia||m.license,attribution:m.atribucion||m.attribution||m.credit||m.author,origin:m.origen||m.source||m.url,licenseUrl:m.licenciaUrl||m.licenseUrl,book,chapter,verse,endVerse,reference,text,...extra});
+        sources.push({sourceId:sources.length+1,kind,module:m.id,title:m.titulo||m.title,revision:m.sha256,license:m.licencia||m.license,attribution:m.atribucion||m.attribution||m.credit||m.author,origin:m.origen||m.source||m.url,licenseUrl:m.licenciaUrl||m.licenseUrl,notes:m.changes,book,chapter,verse,endVerse,reference,text,...extra});
       }
       const bible=catalog.modules.find(m=>m.id===module&&m.tipo==='biblia');
       if(!bible)fail('NOT_FOUND','La versión elegida no está instalada.');
+      const support=module==='rv1960'?catalog.modules.find(m=>m.id==='rv1960-strong'):null;
+      const strongAllowed=module!=='rv1960'||permitted(support);
       if(permitted(bible)){
         const result=await call('chapter',{module,book,chapter});
         if(result.revision!==bible.sha256)fail('CONFLICT','La versión cambió. Prepara otra vez el estudio.');
         const selected=result.verses.filter(v=>(v.endVerse||v.verse)>=verse&&v.verse<=endVerse);
-        for(const v of selected.filter(v=>v.alignment!==false))for(const c of v.strong||[])if(/^[HG]\d{1,5}$/.test(c))codes.add(c);
-        add(bible,'bible',selected.map(v=>v.verse+'. '+v.text+(v.strong?.length?' [Strong verificados: '+v.strong.join(', ')+']':'')).join('\n'));
+        if(strongAllowed)for(const v of selected.filter(v=>v.alignment!==false))for(const c of v.strong||[])if(/^[HG]\d{1,5}$/.test(c))codes.add(c);
+        add(bible,'bible',selected.map(v=>v.verse+'. '+v.text+(strongAllowed&&v.alignment!==false&&v.strong?.length?' [Strong verificados: '+v.strong.join(', ')+']':'')).join('\n'));
+        if(support&&strongAllowed&&codes.size){
+          const checked=await call('chapter',{module:support.id,book,chapter});
+          if(checked.revision!==support.sha256)fail('CONFLICT','El apoyo Strong cambió.');
+          add(support,'bible','Códigos Strong presentes en el rango y alineados con la versión: '+[...codes].join(', '),{support:true});
+        }
         if(input.scope!=='chapter'){
           // Many modules have no editorial paragraph boundaries. Label neighbors honestly.
           const before=Math.max(1,verse-2),after=Math.min(n,endVerse+2);
@@ -81,6 +88,12 @@
               for(const r of result.items||[]){if(!allowedConnections.some(a=>JSON.stringify(a)===JSON.stringify(r)))allowedConnections.push(r);if(allowedConnections.length>=40)break;}
             }
             add(m,'resource',JSON.stringify(allowedConnections),{resource:'openbible'});
+            if(permitted(bible))for(const r of allowedConnections.filter(r=>r.book===r.endBook&&r.chapter===r.endChapter).slice(0,6)){
+              const result=await call('chapter',{module,book:r.book,chapter:r.chapter});
+              if(result.revision!==bible.sha256)fail('CONFLICT','La versión cambió al leer los paralelos.');
+              const end=Math.min(r.endVerse,r.verse+4),text=result.verses.filter(v=>(v.endVerse||v.verse)>=r.verse&&v.verse<=end).map(v=>v.verse+'. '+v.text).join('\n');
+              add(bible,'bible',text,{book:r.book,chapter:r.chapter,verse:r.verse,endVerse:end,reference:books[r.book]?.name+' '+r.chapter+':'+r.verse+(end!==r.verse?'-'+end:''),parallel:true});
+            }
           }
         }
       }
@@ -109,6 +122,7 @@
     return {action:input.action,task:'explain',study:true,allowLiving:input.action==='vida',prompt,reference:context.reference,ref:context.ref,sources:context.sources};
   }
   function result(value,context){
+    if(!value||typeof value!=='object'||!str(value.brief||value.text||value.texto).trim())fail('CORRUPT','El proveedor no devolvió una explicación válida. Prueba otra vez o lleva la pregunta a otra IA.');
     const ids=new Set((Array.isArray(value.fuentes)?value.fuentes:[]).map(s=>s?.sourceId).filter(Number.isInteger));
     const fuente=s=>({sourceId:s.sourceId,...(s.kind==='bible'?{ref:{book:s.book,chapter:s.chapter,verse:s.verse,endVerse:s.endVerse}}:{modulo:s.module}),...(s.strong?{strong:s.strong}:{}),extracto:s.text.slice(0,2500),title:s.title,license:s.license,attribution:s.attribution});
     const fields={brief:str(value.brief||value.sections?.brief||value.text,1200),texto:str(value.texto||value.text),interpretacion:str(value.interpretacion),conexiones:str(value.conexiones),fuentes:context.sources.filter(s=>ids.has(s.sourceId)).map(fuente)};
