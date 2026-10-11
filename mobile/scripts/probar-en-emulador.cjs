@@ -219,7 +219,19 @@ async function esperarLista(app, etiqueta) {
   adb('install', '-r', apk);
   adb('shell', 'am', 'start', '-n', PKG + '/.MainActivity');
   app = await conectar();
-  app = await esperarLista(app, '5-tras-actualizar');
+  // En el emulador, a veces se caen los servicios de Google y Android cierra la app con ellos («depends on provider
+  // com.google.android.gms … in dying proc»). Eso no es un fallo de la app: se reabre UNA vez y queda anotado.
+  try { app = await esperarLista(app, '5-tras-actualizar'); }
+  catch (e) {
+    let gms = ''; try { gms = adb('logcat', '-d', '-s', 'ActivityManager:I'); } catch { /* sin registro */ }
+    if (!/bibliotecabiblica.*depends on provider com\.google\.android\.gms/.test(gms)) throw e;
+    informe.pop(); informe.push('AVISO servicios de Google del emulador cerraron la app al actualizar; se reabrió una vez');
+    console.log(informe[informe.length - 1]);
+    try { app.cerrar(); } catch { /* ya cerrada */ }
+    adb('shell', 'am', 'start', '-n', PKG + '/.MainActivity');
+    app = await conectar();
+    app = await esperarLista(app, '5-tras-actualizar-reabierta');
+  }
   let actualizado = null;
   for (let i = 0; i < 60; i++) {
     try {
