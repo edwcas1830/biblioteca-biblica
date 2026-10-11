@@ -247,3 +247,45 @@ jobs:
           name: prueba-webkit
           path: mobile/prueba-webkit/
           retention-days: 7
+
+  # Migraciones del chat (_bb) en un Postgres desechable que imita lo mínimo de Supabase.
+  # Nunca toca el proyecto real: cada prueba termina con un error a propósito y todo se deshace.
+  servidor-sql:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: prueba
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: prueba
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.rama || github.ref }}
+
+      - name: Pruebas de 001 y 003
+        working-directory: servidor/supabase
+        run: |
+          probar() { # base, archivos…
+            local base=$1; shift
+            createdb "$base"
+            psql -q -d "$base" -v ON_ERROR_STOP=1 -f ci/supabase_minimo.sql
+            local args=(); for f in "$@"; do args+=(-f "$f"); done
+            psql -q -d "$base" -1 "${args[@]}" > "salida-$base.txt" 2>&1 || true
+            sed -n '/INFORME/,$p' "salida-$base.txt"
+            grep -q "INFORME" "salida-$base.txt" || { cat "salida-$base.txt"; return 1; }
+            ! grep -q "FALLA" "salida-$base.txt"
+          }
+          probar uno 001_foro_bb.sql 002_proyecto_compartido.sql prueba_001_foro_bb.sql
+          probar dos 001_foro_bb.sql 002_proyecto_compartido.sql 003_foro_bb.sql prueba_003_foro_bb.sql
+          # 003 se aplica limpio sobre 001+002 (como se aplicaría en el proyecto real).
+          createdb tres
+          psql -q -d tres -v ON_ERROR_STOP=1 -f ci/supabase_minimo.sql -f 001_foro_bb.sql -f 002_proyecto_compartido.sql -1 -f 003_foro_bb.sql
+          echo "003 aplica limpio"

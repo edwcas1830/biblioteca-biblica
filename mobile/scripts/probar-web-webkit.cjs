@@ -32,15 +32,15 @@ const servidor = http.createServer((req, res) => {
     const errores = [];
     page.on('pageerror', e => errores.push(String(e.message || e)));
     page.on('console', m => { if (m.type() === 'error') errores.push(m.text()); });
-    await page.addInitScript(() => { window.__csp = []; document.addEventListener('securitypolicyviolation', e => window.__csp.push(e.violatedDirective + ' ' + e.blockedURI)); });
+    await page.addInitScript(() => { window.__csp = []; document.addEventListener('securitypolicyviolation', e => window.__csp.push(e.violatedDirective + ' ' + e.blockedURI + ' @ ' + (e.sourceFile || '').split('/').pop() + ':' + e.lineNumber + ' «' + (e.sample || '').slice(0, 60) + '»')); });
     await page.goto(base);
     // waitForFunction evalúa texto en la página y la CSP (sin 'unsafe-eval') lo bloquea en WebKit: se consulta en bucle.
     for (let i = 0; ; i++) {
-      if (await page.evaluate(() => (document.querySelector('#reader')?.innerText || '').length > 200)) break;
+      if (await page.evaluate(() => (document.querySelector('#verses')?.innerText || '').length > 200)) break;
       if (i > 120) {
         fs.mkdirSync('prueba-webkit', { recursive: true });
         await page.screenshot({ path: 'prueba-webkit/sin-biblia.png' }).catch(() => {});
-        const d = await page.evaluate(() => ({ csp: window.__csp, texto: document.body.innerText.slice(0, 600), reader: !!document.querySelector('#reader') })).catch(e => ({ fallo: String(e) }));
+        const d = await page.evaluate(() => ({ csp: window.__csp, texto: document.body.innerText.slice(0, 600), verses: !!document.querySelector('#verses') })).catch(e => ({ fallo: String(e) }));
         console.error('Errores:', errores.slice(0, 15));
         console.error('Página:', JSON.stringify(d, null, 1));
         throw new Error('La Biblia no apareció en 60 s');
