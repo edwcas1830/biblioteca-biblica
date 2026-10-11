@@ -40,7 +40,7 @@ for(const kind of ['Windows','Android']){
     const offline=await fixture(t,kind,{fetchImpl:async()=>{throw Error(token+' raw transport');}});await assert.rejects(offline.image(selection),e=>e.code==='UNAVAILABLE'&&!e.message.includes(token));
     const embedded=await fixture(t,kind,{fetchImpl:async()=>reply({error:{code:402,message:token}})});await assert.rejects(embedded.image(selection),{code:'QUOTA'});
   });
-  test(kind+': strict PNG-only result rejects links, SVG, bad base64, incomplete files and pixel bombs without fetching them',async t=>{
+  test(kind+': integrated PNG/JPEG validation rejects links, SVG, bad base64, incomplete files and pixel bombs without fetching them',async t=>{
     const huge=Buffer.from(png);huge.writeUInt32BE(65535,16);
     for(const [url,code]of [['https://private.invalid/image.png','CORRUPT'],['data:image/svg+xml;base64,PHN2Zz4=','CORRUPT'],['data:image/jpeg;base64,/9j/','CORRUPT'],['data:image/png;base64,@@@@','CORRUPT'],['data:image/png;base64,'+png.subarray(0,-5).toString('base64'),'CORRUPT'],['data:image/png;base64,'+huge.toString('base64'),'QUOTA'],['data:image/png;base64,'+'A'.repeat(Math.ceil(images.MAX_IMAGE/3)*4+4),'QUOTA']]){
       let calls=0;const provider=await fixture(t,kind,{fetchImpl:async()=>{calls++;return reply({choices:[{message:{images:[{image_url:{url}}]}}]});}});await assert.rejects(provider.image(selection),{code});assert.equal(calls,1);

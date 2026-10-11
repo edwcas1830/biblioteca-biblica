@@ -96,7 +96,7 @@
       }finally{busy=false;if(controller===current)controller=null;}
     }
     async function image(input,{beforeSend}={}){
-      const body=images.body(input);await ready;
+      const chosen=images.validate(input),body=images.body(chosen);await ready;
       if(closed)fail('UNAVAILABLE','La sesión de IA está cerrada.');
       if(!key)fail('UNAVAILABLE','Conecta OpenRouter para generar un fondo.');
       if(busy)fail('CONFLICT','Espera a que termine la consulta o el fondo anterior.');
@@ -106,7 +106,7 @@
         if(beforeSend)await beforeSend();if(at!==generation||current.signal.aborted||closed)cancelled();
         const value=await request('/chat/completions',{method:'POST',headers:{Authorization:'Bearer '+key,'Content-Type':'application/json','X-OpenRouter-Title':'Biblioteca Bíblica'},body:JSON.stringify(body),signal:current.signal},images.MAX_RESPONSE);
         if(at!==generation||current.signal.aborted||closed)cancelled();
-        return images.result(value);
+        return images.result(value,chosen.calidad);
       }catch(e){if(e instanceof images.ImageError)fail(e.code,e.message);throw e;}
       finally{busy=false;if(controller===current)controller=null;}
     }

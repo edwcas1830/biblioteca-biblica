@@ -41,7 +41,8 @@ for(const kind of ['Android','Windows'])test(kind+': Gemini descarta imágenes t
 });
 test('Gemini rechaza JPEG sin dimensiones y bombas de píxeles, pensamiento y salida truncada',()=>{
   const value=raw=>({candidates:[{finishReason:'STOP',content:{parts:[{inlineData:{mimeType:'image/jpeg',data:raw.toString('base64')}}]}}]});
-  const bytes=Buffer.alloc(128);bytes.set([255,216,255,192,0,17,8,255,255,255,255],0);bytes.set([255,217],126);assert.throws(()=>images.geminiResult(value(bytes),'fixture'),{code:'QUOTA'});
-  const noSof=Buffer.alloc(128);noSof.set([255,216,255,224,0,2],0);noSof.set([255,217],126);assert.throws(()=>images.geminiResult(value(noSof),'fixture'),{code:'CORRUPT'});
-  const thought={candidates:[{finishReason:'STOP',content:{parts:[{thought:true,inlineData:{mimeType:'image/png',data:png}}]}}]};assert.throws(()=>images.geminiResult(thought,'fixture'),{code:'UNAVAILABLE'});thought.candidates[0].finishReason='MAX_TOKENS';assert.throws(()=>images.geminiResult(thought,'fixture'),{code:'UNAVAILABLE'});
+  const model=images.modelFor(undefined,'gemini-api');
+  const bytes=Buffer.alloc(128);bytes.set([255,216,255,192,0,17,8,255,255,255,255],0);bytes.set([255,217],126);assert.throws(()=>images.geminiResult(value(bytes),model),{code:'QUOTA'});
+  const noSof=Buffer.alloc(128);noSof.set([255,216,255,224,0,2],0);noSof.set([255,217],126);assert.throws(()=>images.geminiResult(value(noSof),model),{code:'CORRUPT'});
+  const thought={candidates:[{finishReason:'STOP',content:{parts:[{thought:true,inlineData:{mimeType:'image/png',data:png}}]}}]};assert.throws(()=>images.geminiResult(thought,model),{code:'UNAVAILABLE'});thought.candidates[0].finishReason='MAX_TOKENS';assert.throws(()=>images.geminiResult(thought,model),{code:'UNAVAILABLE'});
 });
