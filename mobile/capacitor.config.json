@@ -2,6 +2,7 @@
   "appId": "com.edward.bibliotecabiblica",
   "appName": "Biblioteca Bíblica",
   "webDir": "www",
+  "loggingBehavior": "debug",
   "android": {
     "minWebViewVersion": 110,
     "allowMixedContent": false,

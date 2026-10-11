@@ -208,6 +208,13 @@ async function esperarLista(app, etiqueta) {
   captura('4b-imagen-versiculo');
   await app.evaluar(`document.querySelector('#imagen-cerrar').click();return true;`);
   anotar(imagen.ref === 'Salmos 23:1-2' && /JEHOVÁ/.test(imagen.texto) && imagen.w === 1080 && imagen.h === 1920 && imagen.compartir, 'imagen con versículos en el teléfono', JSON.stringify(imagen));
+  // Música (auditoría 11-oct): el reproductor de YouTube va en SU origen, nunca en el de la app, así su script
+  // no alcanza el llavero. Obligatorio: marco de otro origen. Que YouTube responda depende de la red del emulador.
+  const musica = await app.evaluar(`await loadMusic('https://www.youtube.com/watch?v=M7lc1UVf-VE',{mini:false});const f=document.querySelector('#music-frame');let cruzado;try{cruzado=f.contentDocument===null;}catch{cruzado=true;}for(let i=0;i<50&&!musicReady&&!document.querySelector('#music-panel').dataset.error;i++)await new Promise(r=>setTimeout(r,500));const r={origen:new URL(f.src).origin,cruzado,listo:musicReady,estado:document.querySelector('#music-state').textContent,error:document.querySelector('#music-panel').dataset.error||''};closeMusic();return r;`, 60000);
+  captura('4f-musica');
+  anotar(musica.origen === 'https://www.youtube-nocookie.com' && musica.cruzado, 'música de YouTube en su propio origen (no alcanza el llavero)', JSON.stringify(musica));
+  if (musica.listo) { informe.push('OK  YouTube respondió en el teléfono · ' + musica.estado); console.log(informe.at(-1)); }
+  else { informe.push('AVISO YouTube no respondió en el emulador · ' + JSON.stringify(musica)); console.log(informe.at(-1)); }
   // Llavero seguro: la clave de IA se guarda cifrada con el Android Keystore y debe sobrevivir a actualizar.
   const llavero = await app.evaluar(`const d=await window.BibliaLlavero.disponible();await window.BibliaLlavero.guardar('gemini','clave-de-prueba-123');const v=await window.BibliaLlavero.leer('gemini');await window.BibliaLlavero.borrar('gemini');return {d,v,borrada:(await window.BibliaLlavero.leer('gemini'))===null};`);
   anotar(llavero.d === true && llavero.v === 'clave-de-prueba-123' && llavero.borrada, 'llavero seguro guarda, lee y borra', JSON.stringify({ disponible: llavero.d, coincide: llavero.v === 'clave-de-prueba-123', borrada: llavero.borrada }));

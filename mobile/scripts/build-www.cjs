@@ -10,11 +10,14 @@ const mobile = path.join(repo, 'mobile');
 const out = path.join(mobile, 'www');
 const PROHIBIDAS = /\.(bblx|cmtx|dctx|bbli|cmti|dcti|topx|mybible|sqlite|sqlite3|db)$/i;
 const CARPETAS_PROHIBIDAS = new Set(['modulos', 'personal', 'paquete-personal', 'respaldos']);
+// app/music/ es el reproductor intermedio del escritorio; en el teléfono YouTube va directo en su origen (auditoría 11-oct).
+const SOLO_ESCRITORIO = new Set([path.join('app', 'music')]);
 
 function copiar(origen, destino) {
   const st = fs.statSync(origen);
   if (st.isDirectory()) {
     if (CARPETAS_PROHIBIDAS.has(path.basename(origen).toLowerCase())) return;
+    if (SOLO_ESCRITORIO.has(path.relative(repo, origen))) return;
     fs.mkdirSync(destino, { recursive: true });
     for (const nombre of fs.readdirSync(origen)) copiar(path.join(origen, nombre), path.join(destino, nombre));
   } else if (!PROHIBIDAS.test(origen)) {
@@ -85,7 +88,7 @@ html = html.replace(/<meta http-equiv="Content-Security-Policy" content="[^"]*">
   '<meta http-equiv="Content-Security-Policy" content="default-src \'self\'; script-src \'self\'; style-src \'self\'; ' +
   'img-src \'self\' data: blob: https://i.ytimg.com; media-src \'self\' blob:; worker-src \'self\' blob:; ' +
   'connect-src \'self\' https://openrouter.ai https://generativelanguage.googleapis.com https://www.googleapis.com; ' +
-  'frame-src \'self\' https://www.youtube-nocookie.com https://www.youtube.com; object-src \'none\'; base-uri \'none\'; form-action \'none\'">');
+  'frame-src https://www.youtube-nocookie.com; object-src \'none\'; base-uri \'none\'; form-action \'none\'">');
 html = html.replace('<html', '<html data-plataforma="movil"');
 // Comprobación de arranque: capacitor.js antes que plataforma.js y arranque.js (o el APK no ve los plugins).
 {

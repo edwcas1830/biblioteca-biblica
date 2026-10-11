@@ -72,8 +72,8 @@
       } catch { return { completed: false }; } // el lector cerró el selector
     };
   }
-  // Música: el reproductor (app/music/player.html) se sirve desde el mismo origen de la app;
-  // no hace falta el servidor local de escritorio. «Abrir fuera» usa el navegador del sistema.
+  // Música: el reproductor de YouTube va directo en su propio origen (no se usa app/music/player.html en el teléfono);
+  // nunca hace falta el servidor local de escritorio. «Abrir fuera» usa el navegador del sistema.
   const Browser = nativo && cap.registerPlugin ? cap.registerPlugin('Browser') : null;
   const abrirFuera = async url => {
     const u = new URL(url);
@@ -82,12 +82,14 @@
   };
   {
     integraciones.musicPlayer = async input => {
+      // Reproductor de YouTube directo, en su propio origen: su script nunca comparte origen con la app
+      // (antes music/player.html corría en https://localhost y podía alcanzar el llavero; auditoría 11-oct).
       const media = window.MusicCore.parse(input);
-      const src = new URL('music/player.html', location.href);
-      if (media.video) src.searchParams.set('video', media.video);
+      const origen = 'https://www.youtube-nocookie.com';
+      const src = new URL('/embed/' + encodeURIComponent(media.video || 'videoseries'), origen);
       if (media.list) src.searchParams.set('list', media.list);
-      src.searchParams.set('padre', location.origin);
-      return { src: src.href, origin: location.origin, media };
+      for (const [k, v] of [['enablejsapi', '1'], ['playsinline', '1'], ['controls', '1'], ['autoplay', '0'], ['origin', location.origin], ['widget_referrer', 'https://com.edward.bibliotecabiblica/']]) src.searchParams.set(k, v);
+      return { src: src.href, origin: origen, media, protocol: 'youtube' };
     };
     integraciones.musicExternal = async input => { const m = window.MusicCore.parse(input); await abrirFuera(m.url); };
     // Igual que escritorio: abre la búsqueda en YouTube (nunca una URL arbitraria).

@@ -16,8 +16,9 @@ on:
     inputs:
       rama:
         description: Rama a compilar
-        required: true
-        default: android
+        type: choice
+        options: [android-apk, android-ui]
+        default: android-apk
 
 permissions:
   contents: read
@@ -64,7 +65,7 @@ jobs:
           node scripts/probar-arranque-android.cjs
           npx cap sync android
 
-      - name: Compilar APK (firma fija de Edward)
+      - name: Compilar APK final (firma fija de Edward) y el de depuración solo para las pruebas
         working-directory: mobile/android
         env:
           ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
@@ -80,22 +81,28 @@ jobs:
             echo "::warning::Sin la llave fija: el APK sale con la firma de depuración y no se instalará encima"
           fi
           export BIBLIOTECA_VERSION_NAME="$(node -p "require('../package.json').version")"
-          ./gradlew --no-daemon assembleDebug
+          ./gradlew --no-daemon assembleDebug assembleRelease
           rm -f "$RUNNER_TEMP/biblioteca-biblica.p12"
 
-      - name: Comprobar la firma fija (huella pública del certificado)
+      - name: Comprobar el APK final (firma fija y no depurable)
         run: |
-          APK=mobile/android/app/build/outputs/apk/debug/app-debug.apk
-          SIGNER="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/apksigner"
-          "$SIGNER" verify --print-certs "$APK" | tee firma.txt
+          APK=mobile/android/app/build/outputs/apk/release/app-release.apk
+          TOOLS="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          "$TOOLS/apksigner" verify --print-certs "$APK" | tee firma.txt
           grep -qi 'SHA-256 digest: 31bdb8bbe54f57dc806108e5cdc60573b76f2df5d4ff09419ed09ba3993b07e4' firma.txt
+          if "$TOOLS/aapt2" dump badging "$APK" | grep -q 'application-debuggable'; then
+            echo "El APK final es depurable"; exit 1
+          fi
 
       - name: Auditoría del APK (nada privado)
         run: |
-          APK=mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          APK=mobile/android/app/build/outputs/apk/release/app-release.apk
           unzip -l "$APK" > lista.txt
           if grep -Ei '\.(bblx|cmtx|dctx|bbli|cmti|dcti|sqlite|sqlite3|db)$' lista.txt; then
             echo "El APK trae archivos prohibidos"; exit 1
+          fi
+          if grep -E 'assets/public/music/' lista.txt; then
+            echo "El APK trae el reproductor intermedio de música (debe ir directo a YouTube)"; exit 1
           fi
           sha256sum "$APK" | tee apk.sha256
           ls -la "$APK"
@@ -125,6 +132,7 @@ jobs:
           script: |
             echo "== prueba en emulador: inicio =="
             node mobile/scripts/probar-en-emulador.cjs mobile/android/app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/fixture-traspaso/traspaso" "$GITHUB_WORKSPACE/prueba-emulador" "$RUNNER_TEMP/fixture-traspaso/prueba.bbt"
+            node mobile/scripts/comprobar-version-final.cjs mobile/android/app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/prueba-emulador"
             ls -la "$GITHUB_WORKSPACE/prueba-emulador"
 
       - name: Comprobar el informe del emulador (sin informe completo no hay APK)
@@ -132,6 +140,8 @@ jobs:
           test -f prueba-emulador/informe.txt
           cat prueba-emulador/informe.txt
           grep -q "^OK  Gemini sigue conectado tras actualizar" prueba-emulador/informe.txt
+          grep -q "^OK  versión final no depurable" prueba-emulador/informe.txt
+          grep -q "^OK  versión final no registra llamadas a plugins" prueba-emulador/informe.txt
 
       - name: Resultados de la prueba en el emulador
         if: always()
@@ -143,9 +153,9 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: biblioteca-biblica-android-debug
+          name: biblioteca-biblica-android
           path: |
-            mobile/android/app/build/outputs/apk/debug/app-debug.apk
+            mobile/android/app/build/outputs/apk/release/app-release.apk
             apk.sha256
             mobile/www-auditoria.json
           retention-days: 14

@@ -18,7 +18,8 @@ android {
         }
     }
     // Firma fija (llave de Edward guardada como secreto de GitHub): con la misma firma, cada APK nuevo
-    // se instala ENCIMA del anterior y conserva los datos. Sin la llave (p. ej. en otra PC) se usa la de depuración.
+    // se instala ENCIMA del anterior y conserva los datos. Solo la lleva la versión FINAL (release), que es la
+    // que se entrega: no es depurable (auditoría 11-oct). La de depuración, solo para pruebas, usa la llave de prueba.
     def llave = System.getenv('ANDROID_KEYSTORE_PATH')
     signingConfigs {
         if (llave) {
@@ -32,10 +33,9 @@ android {
         }
     }
     buildTypes {
-        debug {
-            if (llave) signingConfig signingConfigs.fija
-        }
         release {
+            if (llave) signingConfig signingConfigs.fija
+            debuggable false
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
