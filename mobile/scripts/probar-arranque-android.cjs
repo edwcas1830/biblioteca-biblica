@@ -250,6 +250,7 @@ function cargarPagina(plugins) {
         const t0 = Date.now();
         const prep = await paso('preparar ' + nombre, () => puente.aiPrepare({ ...ref, action: accion, module: 'rv1909', scope: 'verse', task: 'explain', question: '', includeBible: true, includeComment: false, study: true, allowLiving: accion === 'vida', history: '' }));
         const r = await paso('preguntar ' + nombre, () => puente.aiAsk({ id: prep.id, action: accion, provider: 'gemini-api', model: modelo }));
+        if (process.env.GUARDAR_RESPUESTA && accion === 'paralelos') fs.writeFileSync(process.env.GUARDAR_RESPUESTA, JSON.stringify(r));
         if (process.env.VER_RESPUESTA) console.log('RESPUESTA', JSON.stringify(Object.fromEntries(Object.entries(r).map(([k, v]) => [k, typeof v === 'string' ? v.slice(0, 120) : Array.isArray(v) ? v.length : v]))).slice(0, 900));
         const refs = (r.fuentes || []).map(f => f.ref ? `${f.ref.book}:${f.ref.chapter}:${f.ref.verse}` : (f.strong || f.modulo)).join(', ');
         console.log(`GEMINI ${nombre} (${modelo}, ${Date.now() - t0} ms) · fuentes enviadas: ${prep.sources.length} · usadas: [${refs}] · en breve: ${String(r.brief || '').slice(0, 140).replace(/\s+/g, ' ')} · texto: ${r.texto ? 'sí' : 'no'} · interpretación: ${r.interpretacion ? 'sí' : 'no'} · seguimientos: ${(r.seguimientos || []).join(' | ').slice(0, 160)}`);
