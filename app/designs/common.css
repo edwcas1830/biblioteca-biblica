@@ -33,7 +33,7 @@ main,.focus main{height:100dvh;overflow:auto;display:flex;flex-direction:column;
 .pane,.open-book.pane,.night .open-book.pane{display:flex;flex-direction:column;min-width:0;min-height:0;padding:0;border:1px solid var(--line);border-radius:8px;background:var(--paper);box-shadow:none;overflow:hidden}
 .pane-head{flex-shrink:0;height:172px;display:flex;flex-direction:column;justify-content:flex-start;gap:8px;padding:14px 16px 10px;border-bottom:1px solid var(--line);overflow:visible}
 .pane-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:24px}.pane-head h2,.pane-head h3{font:600 20px/1.2 var(--font-heading);margin:0;text-align:left}.pane-kicker{font:13px/1.4 var(--font-ui);color:var(--muted)}#book-label{display:none}#comment-scope{display:none}
-.pane-head select{font:15px/1.4 var(--font-ui);width:100%;min-width:0;min-height:40px;padding:8px 10px;margin:0}.passage-picker{display:flex;gap:8px}.passage-picker #book{flex:1;min-width:0}.passage-picker #chapter{width:90px;flex-shrink:0}
+.pane-head select{font:15px/1.4 var(--font-ui);width:100%;min-width:0;min-height:40px;padding:8px 10px;margin:0}.passage-picker{display:flex;gap:8px}.passage-picker #book{flex:1;min-width:0}.passage-picker #chapter{width:104px;flex-shrink:0}
 .pane-ref,.selected-ref{font:600 14px/1.4 var(--font-ui);color:var(--accent);margin:0;min-height:20px}.pane-head .pane-ref{margin-top:auto}.pane-head form{margin:0;display:flex;flex-direction:column;gap:8px}.dictionary-query-row{display:flex;gap:6px;margin:0}.dictionary-query-row input{font:15px/1.4 var(--font-ui);width:100%;min-width:0;margin:0;padding:8px 10px;min-height:40px}.dictionary-query-row button{flex-shrink:0;padding:8px}
 .pane-body,.pane-body.module-content,.reading-space .verses{flex:1;min-height:0;height:auto;max-height:none;column-count:auto;column-width:auto;overflow:auto;overscroll-behavior:contain;overflow-wrap:anywhere;scrollbar-gutter:stable;padding:18px 20px;font:16px/1.7 var(--font-reader)}
 .reading-space .verses{font-size:var(--verse-size);line-height:1.75}.verse{line-height:inherit;user-select:text}.verse>sup:first-child{font-size:13px;color:var(--muted)}.verse.selected{box-shadow:inset 2px 0 var(--accent)}.reading-word:hover,.strong-code:hover{text-decoration:underline;text-decoration-color:var(--accent);text-underline-offset:4px}.strong-code{cursor:pointer}.strong-number,.night .verse .strong-number{font:13px/1.5 var(--font-ui);color:var(--strong)}.jesus-words,.night .jesus-words{color:var(--red)}.verse.highlight-gold{background:var(--highlight)}.verse.highlight-sage{background:var(--highlight-sage)}.verse.highlight-rose{background:var(--highlight-rose)}.module-heading{font-size:16px;line-height:1.5}
@@ -97,7 +97,7 @@ html[data-design] #panes[data-layout="rows"] .dictionary-query-row{flex:1 1 130p
 html[data-design] #panes[data-layout="rows"] .pane-foot{min-height:32px;padding-top:3px;padding-bottom:3px}
 html[data-design] #panes[data-layout="rows"] .pane-body{min-height:0;padding-top:12px;padding-bottom:12px}
 
-html[data-design] #panes[data-layout="rows"] .passage-picker #chapter{width:100px;min-width:100px}
+html[data-design] #panes[data-layout="rows"] .passage-picker #chapter{width:110px;min-width:110px}
 
 /* In shallow rows, lead with the definition; provenance stays below the text. */
 html[data-design] #panes[data-layout="rows"] .dictionary-entry{display:flex;flex-direction:column}

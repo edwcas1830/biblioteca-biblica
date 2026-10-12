@@ -2,6 +2,7 @@
 -- CONSENSO-CHAT.md (épocas en hilos, quién envuelve, historia, huella fijada, recuperación en papel)
 -- y CONSENSO-WEB.md (re-vincular con Edge Function, auth_uid sin cascada, mensajes serializados).
 -- Edward eligió la recuperación en PAPEL (11-oct-2026).
+-- Aplicado en kingdomtech-invest el 11-oct-2026 con el «sí» de Edward en el chat (prueba_003 pasó antes en el proyecto real).
 -- La verificación ECDSA de los desafíos la hace una Edge Function (pgcrypto no verifica ECDSA);
 -- aquí quedan los desafíos y las funciones que solo el backend (service_role) puede consumir.
 

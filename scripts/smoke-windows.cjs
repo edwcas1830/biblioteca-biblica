@@ -20,6 +20,7 @@ else if(args.phase==='respuesta'){report.respuesta=await require('./smoke-respue
 else if(args.phase==='acciones'){report.acciones=await require('./smoke-acciones.cjs')({evaluate,call,screenshot,wait,args});}
 else if(args.phase==='imagen'){report.imagen=await require('./smoke-imagen.cjs')({evaluate,call,screenshot,wait,args});}
 else if(args.phase==='enfoque'){report.enfoque=await require('./smoke-enfoque.cjs')({evaluate,call,screenshot,wait,args});}
+else if(args.phase==='lupa'){report.lupa=await require('./smoke-lupa.cjs')({evaluate,call,screenshot,wait,args});}
 else if(args.phase==='graphics'){report.graphics=await require('./smoke-graphics.cjs')({evaluate,call,screenshot,wait,args});}
 else if(args.phase==='study'){report.study=await require('./smoke-study.cjs')({evaluate,call,screenshot,wait,args});}
 else if(args.phase==='real-documents'){report.documents=await require('./smoke-real-documents.cjs')({evaluate,call,screenshot,wait,args});}

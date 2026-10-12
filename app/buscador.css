@@ -26,3 +26,8 @@
 :root[data-telefono="true"] .buscador-cab { padding-top: calc(8px + var(--seguro-arriba, 0px)); }
 /* La regla general del teléfono pone 44 px; el buscador cumple el mínimo acordado de 48 px. */
 :root #buscador button, :root #buscador input { min-height: 48px; }
+/* PC: lupa visible junto a libro y capítulo. */
+.buscador-lupa { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; min-width: 36px; min-height: 36px; padding: 6px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; }
+.buscador-lupa svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.buscador-lupa:hover, .buscador-lupa:focus-visible { border-color: var(--accent); color: var(--accent); }
+:root[data-telefono="true"] .buscador-lupa { display: none; }

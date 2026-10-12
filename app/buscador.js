@@ -82,5 +82,10 @@
     // En el teléfono, el teclado solo aparece si se pidió buscar (no al abrir el índice desde la referencia).
     if (!conIndice) setTimeout(() => campo.focus(), 50);
   }
+  // PC: la lupa junto a libro y capítulo, y Ctrl+K desde cualquier parte (en el teléfono la lupa está en la barra).
+  document.getElementById('buscador-lupa')?.addEventListener('click', () => abrir({ indice: false }));
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'k') { e.preventDefault(); abrir({ indice: false }); }
+  });
   window.BibliaBuscador = { abrir, cerrar: () => dialogo?.close(), get abierto() { return !!dialogo?.open; } };
 })();
