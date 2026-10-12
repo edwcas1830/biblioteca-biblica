@@ -283,9 +283,9 @@
   }
   function ajustarPestanas() {
     if (!franja) return;
-    franja.dataset.filas = 'una';
-    const noCabe = $$('button > span', franja).some(s => s.scrollWidth > s.clientWidth + 1);
-    franja.dataset.filas = noCabe ? 'dos' : 'una';
+    // Escalones: una fila → dos filas con el icono al lado → dos filas con el icono arriba (más ancho para el nombre).
+    const noCabe = () => $$('button > span', franja).some(s => s.scrollWidth > s.clientWidth + 1);
+    for (const modo of ['una', 'dos', 'dos-alta']) { franja.dataset.filas = modo; if (!noCabe()) return; }
   }
   // Capítulos: un pie fino sobre las pestañas que dice adónde vas («‹ Salmos 22 · Salmos 24 ›»), nunca encima
   // del texto (CONSENSO-BIBLIAS.md), y deslizar sobre el texto (no desde los bordes: ahí está el «atrás» de Android).
