@@ -26,7 +26,8 @@
     const t=T.TEMAS.find(x=>x.id===id);if(!t)return;
     const gen=++generacion,det=q('#temas-detalle');
     q('#temas-lista').hidden=true;det.hidden=false;
-    det.innerHTML=`<button type="button" class="quiet" data-temas="volver">← Todos los temas</button><h3>${esc(t.nombre)}</h3><ol class="temas-pasajes">${t.citas.map((c,i)=>`<li><button type="button" class="temas-cita" data-cita="${esc(c)}">${esc(c)}</button><p id="tema-texto-${i}">…</p></li>`).join('')}</ol>${window.IaBiblia?`<button type="button" class="outline temas-ia" data-temas="ia">✦ Pregúntale a la Biblia sobre «${esc(t.nombre.toLowerCase())}»</button>`:''}`;
+    const PORTADA={ansiedad:'paz',paz:'paz',perdon:'perdon',familia:'familia',matrimonio:'matrimonio',esperanza:'esperanza',fe:'fe',gratitud:'gratitud',oracion:'oracion'}[t.id];
+    det.innerHTML=`<button type="button" class="quiet" data-temas="volver">← Todos los temas</button>${PORTADA?`<img class="temas-portada" src="imagenes/portadas/${PORTADA}.webp" alt="">`:''}<h3>${esc(t.nombre)}</h3><ol class="temas-pasajes">${t.citas.map((c,i)=>`<li><button type="button" class="temas-cita" data-cita="${esc(c)}">${esc(c)}</button><p id="tema-texto-${i}">…</p></li>`).join('')}</ol>${window.IaBiblia?`<button type="button" class="outline temas-ia" data-temas="ia">✦ Pregúntale a la Biblia sobre «${esc(t.nombre.toLowerCase())}»</button>`:''}`;
     det.dataset.tema=id;det.scrollTop=0;
     for(const [i,c] of t.citas.entries()){const r=H.parsear(c),tx=await textoDe(r.endVerse&&r.endVerse-r.verse>3?{...r,endVerse:r.verse+3}:r);if(gen!==generacion)return;const p=q('#tema-texto-'+i);if(p)p.textContent=tx+(r.endVerse&&r.endVerse-r.verse>3?' …':'');}
   }

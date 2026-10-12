@@ -55,3 +55,4 @@ dialog#memorizar { width: min(620px, 94vw); padding: 18px 20px 20px; }
 .mem-texto { font: 1.2rem/1.9 Georgia, serif; color: var(--ink); overflow-wrap: anywhere; }
 #memorizar .mem-oculta { display: inline; min-height: 0 !important; padding: 0 3px !important; margin: 0 1px; border: 0; border-bottom: 2px solid var(--gold); background: color-mix(in srgb, var(--gold) 12%, transparent); color: var(--muted); font: inherit; letter-spacing: .05em; border-radius: 3px; }
 #memorizar .mem-oculta.vista { color: var(--accent); letter-spacing: 0; }
+.temas-portada { display: block; width: 100%; max-height: 220px; object-fit: cover; object-position: center 35%; border-radius: 12px; margin: 8px 0 4px; }

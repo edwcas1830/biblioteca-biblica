@@ -68,7 +68,7 @@
     const frase=s.cumplida?'Semana de fe cumplida. ¡Bien!':s.dias?`Semana de fe: ${s.dias} de ${s.meta} días · te ${s.faltan===1?'falta 1':'faltan '+s.faltan}`:`Semana de fe: ${s.meta} días esta semana, a tu ritmo`;
     return `<section class="hoy-camino" aria-labelledby="hoy-camino-titulo"><div class="hoy-camino-cabeza"><h2 id="hoy-camino-titulo">Mi camino</h2><button type="button" class="quiet" data-hoy="camino" aria-expanded="${caminoAbierto}" aria-controls="hoy-logros">${ganados} de ${lista.length} logros ${caminoAbierto?'▴':'▾'}</button></div>
 <p class="hoy-camino-semana">${esc(frase)}</p><p class="hoy-camino-datos">${sem===1?'1 semana de fe cumplida':sem+' semanas de fe cumplidas'} · ${H.totalDias(e)===1?'1 día':H.totalDias(e)+' días'} en la Palabra</p>
-<ul id="hoy-logros" class="hoy-logros" ${caminoAbierto?'':'hidden'}>${lista.map(l=>`<li class="${l.ganado?'ganado':''}"><span class="hoy-insignia">${insignia(l.id)}</span><span><b>${esc(l.nombre)}</b><small>${esc(l.regla)}${l.ganado?'':' · '+l.valor+' de '+l.meta}</small></span></li>`).join('')}</ul></section>`;
+<ul id="hoy-logros" class="hoy-logros" ${caminoAbierto?'':'hidden'}>${lista.map(l=>`<li class="${l.ganado?'ganado':''}"><span class="hoy-insignia"><img src="imagenes/insignias/${l.id}.webp" alt="" loading="lazy"></span><span><b>${esc(l.nombre)}</b><small>${esc(l.regla)}${l.ganado?'':' · '+l.valor+' de '+l.meta}</small></span></li>`).join('')}</ul></section>`;
   }
   // Revisa logros después de cualquier avance; celebra una sola vez cada uno (si «Mi camino» está encendido).
   function revisar(){
@@ -104,7 +104,8 @@ ${avisos?`<label>Aviso diario del versículo<input type="time" id="hoy-hora" val
 </div></div>`;
     animado=true;
     const t=await textoDe(v);if(gen!==generacion)return;
-    q('#hoy-vers-texto').textContent=t.texto||v.cita;q('#hoy-vers-edicion').textContent=t.edicion?'· '+t.edicion:'';
+    q('#hoy-vers-texto').textContent=t.texto||v.cita;
+    const tarjeta=q('.hoy-versiculo');if(tarjeta)tarjeta.style.setProperty('--hoy-fondo',`url("imagenes/fondos/fondo-${String(v.indice%30+1).padStart(2,'0')}.webp")`);q('#hoy-vers-edicion').textContent=t.edicion?'· '+t.edicion:'';
   }
 
   async function marcar(id){
