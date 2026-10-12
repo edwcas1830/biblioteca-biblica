@@ -60,6 +60,9 @@ test('An active reader detects a changed module before returning a cached FTS re
 test('Web free package, comparison joined ranges, dictionary and graphics use actual open resources and SHA checks',async()=>{
   const api=web.create({bible,manifest:{iaPermitida:true},resources:resources()}),catalog=await api.catalog();assert.deepEqual(catalog.versions,['rv1909','onbv2008']);assert.ok(catalog.modules.find(m=>m.id==='step-hebrew').iaPermitida);
   const lex=(await api.dictionary({group:'step-hebrew',query:'H1'})).entries;assert.match(lex[0].text,/אָב/);assert.match(lex[0].text,/Transliteración: av/);
+  // Sociedades Bíblicas en español (CC BY-SA): ἀγαπάω y אֱלֹהִים con sentidos y citas en español.
+  const ubsG=(await api.dictionary({group:'ubs-griego',query:'G25'})).entries;assert.match(ubsG[0].text,/ἀγαπάω/);assert.match(ubsG[0].text,/amar/);assert.match(ubsG[0].text,/Mt 5:43/);
+  const ubsH=(await api.dictionary({group:'ubs-hebreo',query:'H430'})).entries;assert.match(ubsH[0].text,/אֱלֹהִים/);assert.match(ubsH[0].text,/sustantivo masculino/);assert.match(ubsH[0].text,/Gn 1:1/);
   const comparison=await api.compare({modules:['rv1909','onbv2008'],book:42,chapter:3,verse:16});assert.equal(comparison.rows.length,1);assert.equal(comparison.rows[0].cells.length,2);
   const chapter=await api.graphicsChapter({book:41,chapter:2});assert.ok(chapter.places.some(p=>p.name.startsWith('Belén')));assert.ok(chapter.land.features.length);
   const people=await api.graphicsPeople({query:'Abraham'}),family=await api.graphicsGenealogy({id:people.items[0].id});assert.ok(family.groups.find(g=>g.kind==='children').items.some(p=>p.name==='Isaac'));assert.equal((await api.studySources()).find(m=>m.title.includes('Personas')).license,'CC BY-SA 4.0');

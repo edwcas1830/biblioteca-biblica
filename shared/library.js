@@ -79,7 +79,7 @@
       const raw=topicKey(query),needle=/^[hg]\d+$/i.test(raw)?raw[0]+Number(raw.slice(1)):raw,matches=[];
       for(const id of ids){
         if(!modules.has(id))continue;const m=await get(id);if(m.tipo!=='diccionario')fail('VALIDATION','La fuente elegida no es un diccionario.');
-        const topicRow=row=>{if(typeof row.Topic!=='string'||row.Topic.length>1000)fail('CORRUPT','Entrada de diccionario no válida.');return {topic:row.Topic,key:topicKey(row.Topic),search:id.startsWith('step-')&&row.Definition?rtf.clean(rtf.parseRtf(row.Definition,{esword:true}).text):''};};
+        const topicRow=row=>{if(typeof row.Topic!=='string'||row.Topic.length>1000)fail('CORRUPT','Entrada de diccionario no válida.');return {topic:row.Topic,key:topicKey(row.Topic),search:(id.startsWith('step-')||id.startsWith('ubs-'))&&row.Definition?rtf.clean(rtf.parseRtf(row.Definition,{esword:true}).text):''};};
         if(index?.dictionary){
           matches.push(...await index.dictionary({module:id,revision:m.sha256,needle,rae:group==='drae',verify:()=>get(id),pages:async function*(){for await(const rows of source.topicPages(id))yield rows.map(topicRow);}}));continue;
         }

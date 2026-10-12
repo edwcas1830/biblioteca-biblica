@@ -176,6 +176,7 @@ jobs:
           grep -q "^OK  versión final no depurable" prueba-emulador/informe.txt
           grep -q "^OK  versión final no registra llamadas a plugins" prueba-emulador/informe.txt
           grep -q "^OK  tienda: sin IA, música, traspaso, círculo ni importar módulos" prueba-emulador/informe.txt
+          grep -q "^OK  tienda: diccionarios griego y hebreo en español (Sociedades Bíblicas)" prueba-emulador/informe.txt
           grep -q "^OK  paso 1: barra superior de una fila" prueba-emulador/informe.txt
           grep -q "^OK  Strong y escuchar a la vista, se minimiza y vuelve" prueba-emulador/informe.txt
           grep -q "^OK  paso 1: «rey» sugiere 1 Reyes y 2 Reyes" prueba-emulador/informe.txt

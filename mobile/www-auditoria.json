@@ -1,11 +1,13 @@
 {
-  "fecha": "2026-10-12T08:29:01.648Z",
-  "archivos": 387,
-  "megabytes": 24,
+  "fecha": "2026-10-12T11:20:42.561Z",
+  "archivos": 390,
+  "megabytes": 25.5,
   "prohibidos": [],
   "edicion": "completa",
   "modulosLibres": [
     "onbv2008",
+    "ubs-griego",
+    "ubs-hebreo",
     "step-greek",
     "step-hebrew"
   ],

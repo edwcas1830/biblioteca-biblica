@@ -12,7 +12,7 @@ const out = path.join(mobile, 'www');
 // traspaso ni importar módulos; solo textos libres.
 // «web»: la misma app en el navegador para quien tenga iPhone (Edward, 11-oct): textos libres, instalable (PWA).
 const EDICION = ['tienda', 'web'].includes(process.env.BIBLIA_EDICION) ? process.env.BIBLIA_EDICION : 'completa';
-const LIBRES_TIENDA = new Set(['onbv2008', 'step-greek', 'step-hebrew']);
+const LIBRES_TIENDA = new Set(['onbv2008', 'ubs-griego', 'ubs-hebreo', 'step-greek', 'step-hebrew']); // UBS en español: CC BY-SA 4.0
 const PROHIBIDAS = /\.(bblx|cmtx|dctx|bbli|cmti|dcti|topx|mybible|sqlite|sqlite3|db)$/i;
 const CARPETAS_PROHIBIDAS = new Set(['modulos', 'personal', 'paquete-personal', 'respaldos']);
 // app/music/ es el reproductor intermedio del escritorio; en el teléfono YouTube va directo en su origen (auditoría 11-oct).
