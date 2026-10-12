@@ -90,9 +90,11 @@
         }cached={revision:m.sha256,values};topics.set(id,cached);}
         for(const t of cached.values){
           const hit=group==='drae'?t.key.startsWith(needle):/^[hg]\d+$/.test(needle)?t.key===needle:t.key.includes(needle)||t.search.includes(needle);
-          if(hit)matches.push({...t,module:id,revision:m.sha256,exact:t.key===needle});
+          if(hit)matches.push({...t,module:id,revision:m.sha256,exact:t.key===needle,pos:t.key.includes(needle)?0:t.search.indexOf(needle)+1});
         }
       }
+      // Relevancia (como el índice de Android): título exacto, palabra en el título, y luego dónde aparece en la definición.
+      if(group!=='drae'&&!/^[hg]\d+$/.test(needle))matches.sort((a,b)=>Number(b.exact)-Number(a.exact)||(a.pos||0)-(b.pos||0));
       if(group==='drae')matches.sort((a,b)=>Number(b.exact)-Number(a.exact)||(a.key<b.key?-1:a.key>b.key?1:a.topic.localeCompare(b.topic,'es',{numeric:true})));
       const entries=[];
       for(const match of matches.slice(0,30))for(const row of await source.definitions(match.module,match.topic)){

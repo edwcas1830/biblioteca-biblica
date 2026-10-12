@@ -57,7 +57,7 @@
           }catch(e){await rollback();throw e;}
         }
         const code=/^[hg]\d+$/.test(needle),where=rae?'folded LIKE ? ESCAPE CHAR(92)':code?'folded=?':'(instr(folded,?)>0 OR instr(gloss,?)>0)',values=rae?[needle.replace(/[\\%_]/g,'\\$&')+'%']:code?[needle]:[needle,needle];
-        const found=await query('SELECT topic,folded FROM topic_keys WHERE module=? AND revision=? AND '+where+' ORDER BY (folded=?) DESC,folded,topic LIMIT 300',[module,revision,...values,needle]);
+        const found=await query('SELECT topic,folded FROM topic_keys WHERE module=? AND revision=? AND '+where+' ORDER BY (folded=?) DESC,CASE WHEN instr(folded,?)>0 THEN 0 ELSE instr(gloss,?) END,folded,topic LIMIT 300',[module,revision,...values,needle,needle,needle]);
         await verify();return found.map(r=>({topic:r.topic,key:r.folded,module,revision,exact:r.folded===needle}));
       }catch(e){if(e instanceof contract.BridgeError)throw e;throw new contract.BridgeError('STORAGE','No se pudo consultar el índice del diccionario.');}
     });

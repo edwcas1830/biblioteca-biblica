@@ -690,7 +690,9 @@
     // Fila Strong · Escuchar…: si no cabe en un renglón, «Escuchar» queda solo con su icono (sin perder el nombre accesible).
     const fila = $('#library-controls');
     if (fila && html.dataset.herramientas !== 'mini') { fila.dataset.compacta = 'no'; if (fila.getBoundingClientRect().height > 64) fila.dataset.compacta = 'si'; }
-    if (franja) html.style.setProperty('--nav-alto', Math.round(franja.getBoundingClientRect().height || 56) + 'px');
+    // --nav-alto es la franja SIN la zona de los botones del sistema: --pie ya le suma --seguro-abajo
+    // (antes se contaba dos veces y quedaba una franja vacía sobre las pestañas en teléfonos con gestos o botones).
+    if (franja) html.style.setProperty('--nav-alto', Math.round((franja.getBoundingClientRect().height || 56) - (parseFloat(getComputedStyle(franja).paddingBottom) || 0)) + 'px');
     const pieCap = $('#movil-pie');
     if (pieCap) html.style.setProperty('--pie-capitulo', Math.round(pieCap.getBoundingClientRect().height || 0) + 'px');
     const pie = (franja ? franja.getBoundingClientRect().height : 0) || parseFloat(getComputedStyle(html).getPropertyValue('--nav-alto')) || 56;
@@ -1029,6 +1031,8 @@
     ajustarAltoLectura();
     window.addEventListener('resize', ajustarAltoLectura);
     new ResizeObserver(ajustarAltoLectura).observe($('.reading-toolbar') || document.body);
+    if (franja) new ResizeObserver(() => ajustarAltoLectura()).observe(franja);
+    document.fonts?.ready?.then(() => ajustarAltoLectura());
     setTimeout(ajustarAltoLectura, 400);
   }
 
