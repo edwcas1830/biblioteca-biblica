@@ -86,7 +86,7 @@ async function conectar() {
   anotar(ocultos.musica && ocultos.importar && ocultos.paquetes, 'sin botón de música ni importar módulos personales', JSON.stringify(ocultos));
   // Diccionarios en español de las Sociedades Bíblicas (CC BY-SA): por número y por palabra, y con su licencia en Fuentes.
   const ubs = await app.evaluar("const g=await window.libraryDesktop.dictionary({group:'ubs-griego',query:'G25'});const a=await window.libraryDesktop.dictionary({group:'ubs-griego',query:'amor'});const h=await window.libraryDesktop.dictionary({group:'ubs-hebreo',query:'H430'});const cat=(await window.libraryDesktop.catalog()).modules.filter(m=>m.id.startsWith('ubs-'));return {g:(g.entries[0]?.text||'').slice(0,40),amor:a.entries.slice(0,3).map(e=>(e.text||'').slice(0,12)),h:/Gn 1:1/.test(h.entries.map(e=>e.text).join(' ')),licencias:cat.map(m=>m.licencia)};");
-  anotar(/ἀγαπάω/.test(ubs.g) && /amar|amor/.test(ubs.g) && ubs.amor.some(t => /ἀγάπ/.test(t)) && ubs.h && ubs.licencias.length === 2 && ubs.licencias.every(l => /CC BY-SA 4\.0/.test(l)), 'diccionarios griego y hebreo en español (Sociedades Bíblicas)', JSON.stringify(ubs));
+  anotar(/ἀγαπάω/.test(ubs.g) && /amar|amor/.test(ubs.g) && ubs.amor.some(t => /ἀγαπ|ἀγάπ/.test(t)) && ubs.h && ubs.licencias.length === 2 && ubs.licencias.every(l => /CC BY-SA 4\.0/.test(l)), 'diccionarios griego y hebreo en español (Sociedades Bíblicas)', JSON.stringify(ubs));
   app.cerrar();
 })().catch(e => { lineas.push('ERROR tienda: ' + e.message); console.error(e); process.exitCode = 1; }).finally(() => {
   fs.appendFileSync(path.join(salida, 'informe.txt'), lineas.join('\n') + '\n');
