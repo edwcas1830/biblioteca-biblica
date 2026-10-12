@@ -1,0 +1,21 @@
+# IA integrada de Biblioteca Bíblica: ver LEEME.md para crearlo en la cuenta de Cloudflare de Edward.
+name = "biblia-ia"
+main = "worker.js"
+compatibility_date = "2026-09-01"
+
+[ai]
+binding = "AI"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "biblia-ia"
+database_id = "PONER-AQUI-EL-ID-QUE-DA-wrangler-d1-create"
+
+[vars]
+MODELO = "@cf/openai/gpt-oss-120b"
+TOPE_DIARIO_USD = "1"
+CUOTA_GRATIS = "3"
+CUOTA_PLUS = "10"
+CUOTA_PROBADOR = "30"
+CUOTA_IP = "30"
+# TOKEN_ADMIN es secreto: wrangler secret put TOKEN_ADMIN (solo para la prueba de calidad).

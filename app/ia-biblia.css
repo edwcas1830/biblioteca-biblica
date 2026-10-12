@@ -1,0 +1,31 @@
+/* «Preguntar a la Biblia» (IA integrada). Usa los colores del tema (papel, tinta, acento). */
+dialog#ia-biblia { width: min(680px, 94vw); padding: 18px 20px 20px; }
+.ia-cabeza { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ia-cabeza h2 { font: normal 1.45rem/1.25 Georgia, serif; margin: 0; color: var(--ink); }
+.ia-cabeza h2 span { color: var(--gold); }
+.ia-aviso { font-size: .8rem; color: var(--muted); margin: 6px 0 12px; line-height: 1.5; }
+.ia-modos { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.ia-modo { border: 1px solid var(--line); background: transparent; color: var(--ink); border-radius: 999px; padding: 8px 14px; font-size: .9rem; min-height: 40px; }
+.ia-modo[aria-checked="true"] { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+.ia-pasaje { font-size: .85rem; color: var(--accent); margin: 0 0 6px; }
+#ia-pregunta { margin: 0 0 10px; font-size: 1rem; }
+.ia-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ia-acciones .primary { min-height: 44px; }
+.ia-cuota { font-size: .85rem; color: var(--muted); }
+#ia-resultado { margin-top: 14px; }
+.ia-respuesta { border-top: 1px solid var(--line); padding-top: 12px; }
+.ia-respuesta p { font: 1.02rem/1.7 Georgia, serif; color: var(--ink); margin: 0 0 10px; overflow-wrap: anywhere; }
+.ia-respuesta .ia-pregunta-vista { font: italic .95rem/1.5 'Segoe UI', sans-serif; color: var(--muted); }
+/* Las citas van dentro del texto: sin el alto mínimo de los botones del teléfono. */
+#ia-biblia .ia-cita { display: inline; min-height: 0 !important; min-width: 0 !important; width: auto; line-height: inherit; vertical-align: baseline; border: 0; padding: 0 2px !important; margin: 0; background: color-mix(in srgb, var(--gold) 18%, transparent); color: var(--ink); border-radius: 4px; font: inherit; text-decoration: underline; text-decoration-color: var(--gold); text-underline-offset: 3px; cursor: pointer; }
+.ia-cita span { color: var(--accent); font-size: .85em; }
+.ia-cita-dudosa { background: color-mix(in srgb, #c0582f 14%, transparent); border-radius: 4px; padding: 0 2px; }
+.ia-respuesta .ia-resumen { font: .82rem/1.4 'Segoe UI', sans-serif; color: var(--muted); }
+.ia-error { color: var(--accent); font-size: .95rem; }
+.ia-espera { color: var(--muted); font-style: italic; }
+#ia-consentimiento p { line-height: 1.6; color: var(--ink); }
+#ia-historial-caja { margin-top: 14px; font-size: .9rem; }
+#ia-historial-caja summary { cursor: pointer; color: var(--muted); padding: 6px 0; }
+.ia-hist { display: block; width: 100%; text-align: left; border: 0; border-top: 1px solid var(--line); background: none; color: var(--ink); padding: 10px 2px; font-size: .9rem; }
+.ia-hist b { color: var(--accent); font-weight: 600; margin-right: 4px; }
+.hoy-ia { width: 100%; min-height: 48px; margin: 8px 0 0; font-size: .95rem; }

@@ -1,0 +1,5 @@
+{
+  "type": "module",
+  "private": true,
+  "description": "Worker de Cloudflare de la IA integrada (ver LEEME.md)"
+}

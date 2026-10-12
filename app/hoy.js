@@ -61,6 +61,7 @@
 <article class="hoy-versiculo ${animado?'':'hoy-entra'}" aria-labelledby="hoy-vers-titulo"><p class="eyebrow" id="hoy-vers-titulo">VERSÍCULO DEL DÍA</p><blockquote id="hoy-vers-texto">…</blockquote><p class="hoy-cita"><span>${esc(v.cita)}</span> <small id="hoy-vers-edicion"></small></p><div class="hoy-vers-acciones"><button type="button" class="outline" data-hoy="leer">Leer el capítulo</button><button type="button" class="quiet" data-hoy="copiar">Copiar</button></div></article>
 <p class="hoy-progreso" role="status">${hechos===4?'Completaste tu día. Que esta palabra te acompañe.':hechos+' de 4 pasos · unos 8 minutos'}</p>
 <div class="hoy-pasos">${pasos}</div>
+${window.IaBiblia?'<button type="button" class="outline hoy-ia" data-action="ia-biblia-open" data-ia-modo="tema">✦ Pregúntale a la Biblia</button>':''}
 <button type="button" class="outline hoy-seguir" data-hoy="seguir">Continuar leyendo · ${esc(books[p.book].name)} ${p.chapter}</button>
 <nav class="hoy-mas" aria-label="Más para tu camino"><button type="button" class="quiet" data-hoy-ir="dev">Mis devocionales y series</button><button type="button" class="quiet" data-hoy-ir="plan">Mi plan de lectura</button><button type="button" class="quiet" data-hoy-ir="prayer">Oración y testimonios</button></nav>
 <div class="hoy-ajustes"><button type="button" class="quiet hoy-ajustes-abrir" data-hoy="ajustes" aria-expanded="${ajustesAbiertos}" aria-controls="hoy-ajustes-cuerpo">Ajustes de «Hoy» ${ajustesAbiertos?'▴':'▾'}</button><div id="hoy-ajustes-cuerpo" ${ajustesAbiertos?'':'hidden'}>

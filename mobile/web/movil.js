@@ -92,7 +92,7 @@
     // Google Play, la pantalla es una vista previa y no cobra nada).
     if (window.BIBLIA_EDICION === 'tienda') extras.unshift(['hand-heart', 'Apoyar el proyecto', abrirApoyo]);
     for (const [ico, texto, fn] of extras) lista.append(conI(crear('button', { type: 'button', class: 'quiet', texto, onclick: () => { cerrarMas(); fn(); } }), ico));
-    const ICONO_MENU = [[/fuentes/i, 'file-text'], [/guardar copia/i, 'download'], [/recuperar copia/i, 'upload'], [/música/i, 'music'], [/oración/i, 'heart'],
+    const ICONO_MENU = [[/preguntar a la biblia/i, 'sparkles'], [/fuentes/i, 'file-text'], [/guardar copia/i, 'download'], [/recuperar copia/i, 'upload'], [/música/i, 'music'], [/oración/i, 'heart'],
       [/círculo/i, 'users'], [/proteger/i, 'lock'], [/inteligencia/i, 'sliders-horizontal'], [/actualizaciones/i, 'refresh-cw']];
     for (const b of $$('.library-menu-items button')) {
       const t = b.textContent.trim();
@@ -115,7 +115,7 @@
     const SECCIONES = [
       ['Mi estudio', 'estudio'],
       ['Mi camino', /plan de lectura|oración|círculo/i],
-      ['Herramientas', /imagen|estudio con ia|atlas|pantalla completa|escuchar|música/i],
+      ['Herramientas', /preguntar a la biblia|imagen|estudio con ia|atlas|pantalla completa|escuchar|música/i],
       ['Mi biblioteca y ajustes', /./]
     ];
     const botones = $$('button', lista);

@@ -91,10 +91,12 @@ html = html.slice(0, primerScript) + '<script defer src="mobile/capacitor.js"></
 html = html.replace('</head>', '  <link rel="stylesheet" href="mobile/movil.css">\n</head>');
 html = html.replace(/<meta name="viewport"[^>]*>/, '');
 html = html.replace('<head>', '<head>\n  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">');
+// IA integrada: el origen del Worker (app/ia-config.js, lo escribe scripts/configurar-ia.cjs) entra en connect-src.
+const urlIA = (fs.readFileSync(path.join(repo, 'app', 'ia-config.js'), 'utf8').match(/window\.BIBLIA_IA_URL = '([^']*)'/) || [])[1] || '';
 html = html.replace(/<meta http-equiv="Content-Security-Policy" content="[^"]*">/,
   '<meta http-equiv="Content-Security-Policy" content="default-src \'self\'; script-src \'self\'; style-src \'self\'; ' +
   'img-src \'self\' data: blob: https://i.ytimg.com; media-src \'self\' blob:; worker-src \'self\' blob:; ' +
-  'connect-src \'self\' https://openrouter.ai https://generativelanguage.googleapis.com https://www.googleapis.com; ' +
+  'connect-src \'self\' https://openrouter.ai https://generativelanguage.googleapis.com https://www.googleapis.com' + (urlIA ? ' ' + urlIA : '') + '; ' +
   'frame-src https://www.youtube-nocookie.com; object-src \'none\'; base-uri \'none\'; form-action \'none\'">');
 html = html.replace('<html', '<html data-plataforma="movil"');
 // Comprobación de arranque: capacitor.js antes que plataforma.js y arranque.js (o el APK no ve los plugins).
