@@ -123,27 +123,19 @@ async function esperarLista(app, etiqueta) {
   // Entrega 2B (CONSENSO-HABITO.md): la primera vez sale la bienvenida (pantallas cortas); al terminar abre «Hoy» con
   // el versículo del día, 4 pasos que se marcan a mano y el aviso diario programado (14 días, sin alarma exacta).
   try { adb('shell', 'pm', 'grant', PKG, 'android.permission.POST_NOTIFICATIONS'); } catch { /* Android < 13 */ }
-  const hoy1 = await app.evaluar(`let d=null;for(let i=0;i<160&&!(d=document.querySelector('#hoy-bienvenida[open]'));i++)await new Promise(r=>setTimeout(r,250));
-    if(!d)return {bienvenida:false};
-    const pantallas=[];let salidas=0;
-    const fuera=()=>[...d.querySelectorAll('button,label,h2')].filter(e=>{const r=e.getBoundingClientRect();return r.width>0&&(r.right>innerWidth+1||r.left<-1);}).length;
-    for(let i=0;i<7;i++){
-      pantallas.push(d.querySelector('h2')?.textContent||'');salidas+=fuera();
-      if(d.querySelector('input[type=radio]')&&!d.querySelector('input[type=radio]:checked'))d.querySelector('input[type=radio]').click();
-      const h=d.querySelector('input[name=hora]');if(h)h.value='07:00';
-      const botones=[...d.querySelectorAll('button')],ultimo=botones.find(b=>/Ir a/.test(b.textContent));
-      if(ultimo){ultimo.click();break;}
-      botones.find(b=>/^(Empezar|Siguiente)$/.test(b.textContent.trim()))?.click();await new Promise(r=>setTimeout(r,350));
-    }
-    for(let i=0;i<40&&document.querySelector('#hoy-bienvenida');i++)await new Promise(r=>setTimeout(r,250));
+  const hoy1 = await app.evaluar(`for(let i=0;i<160&&document.documentElement.dataset.vistaMovil!=='hoy-view';i++)await new Promise(r=>setTimeout(r,250));
     for(let i=0;i<20&&(document.querySelector('#hoy-vers-texto')?.textContent||'…')==='…';i++)await new Promise(r=>setTimeout(r,250));
+    const bienvenida=!!document.querySelector('#hoy-bienvenida');
+    const b=document.querySelector('[data-hoy=ajustes]');if(b&&b.getAttribute('aria-expanded')!=='true')b.click();
+    const h=document.querySelector('#hoy-hora');if(h){h.value='07:00';h.dispatchEvent(new Event('change',{bubbles:true}));}
+    for(let i=0;i<40&&!/07:00/.test(document.querySelector('#hoy-aviso-estado')?.textContent||'');i++)await new Promise(r=>setTimeout(r,250));
     await new Promise(r=>setTimeout(r,1500));
     const rec=window.BibliaPlataforma.recordatorio,pend=rec?await rec.pendientes():[];
-    return {bienvenida:true,pantallas,salidas,vista:document.documentElement.dataset.vistaMovil,texto:document.querySelector('#hoy-vers-texto')?.textContent||'',cita:document.querySelector('.hoy-cita span')?.textContent||'',pasos:document.querySelectorAll('.hoy-paso').length,perfil:state.hoy.perfil,pendientes:pend.length,primero:pend[0]?{titulo:pend[0].title,texto:(pend[0].body||'').slice(0,40)}:null};`, 90000);
+    return {bienvenida,vista:document.documentElement.dataset.vistaMovil,texto:document.querySelector('#hoy-vers-texto')?.textContent||'',cita:document.querySelector('.hoy-cita span')?.textContent||'',pasos:document.querySelectorAll('.hoy-paso').length,perfil:state.hoy.perfil,pendientes:pend.length,primero:pend[0]?{titulo:pend[0].title,texto:(pend[0].body||'').slice(0,40)}:null};`, 90000);
   captura('1b-hoy');
-  anotar(hoy1.bienvenida && hoy1.salidas === 0 && hoy1.pantallas.length >= 4, 'entrega 2B: bienvenida en pantallas cortas, nada se sale', JSON.stringify({ pantallas: hoy1.pantallas, salidas: hoy1.salidas }));
-  anotar(hoy1.vista === 'hoy-view' && hoy1.texto.length > 20 && hoy1.pasos === 4, 'entrega 2B: al terminar abre «Hoy» con el versículo del día y 4 pasos', JSON.stringify({ cita: hoy1.cita, texto: hoy1.texto.slice(0, 50), pasos: hoy1.pasos }));
-  anotar(hoy1.perfil && hoy1.perfil.hora === '07:00' && hoy1.pendientes === 14 && /Versículo del día/.test((hoy1.primero || {}).titulo || ''), 'entrega 2B: aviso diario del versículo programado (14 días)', JSON.stringify({ pendientes: hoy1.pendientes, primero: hoy1.primero }));
+  anotar(!hoy1.bienvenida, 'entrega 2B: la bienvenida está apagada (pedido de Edward, 12-oct)');
+  anotar(hoy1.vista === 'hoy-view' && hoy1.texto.length > 20 && hoy1.pasos === 4, 'entrega 2B: la primera apertura del día abre «Hoy» con el versículo del día y 4 pasos', JSON.stringify({ cita: hoy1.cita, texto: hoy1.texto.slice(0, 50), pasos: hoy1.pasos }));
+  anotar(hoy1.perfil && hoy1.perfil.hora === '07:00' && hoy1.pendientes === 14 && /Versículo del día/.test((hoy1.primero || {}).titulo || ''), 'entrega 2B: aviso diario del versículo elegido en Ajustes de «Hoy» (14 días)', JSON.stringify({ pendientes: hoy1.pendientes, primero: hoy1.primero }));
   const hoy2 = await app.evaluar(`document.querySelector('[data-hoy-abrir=conexion]').click();await new Promise(r=>setTimeout(r,300));document.querySelector('[data-hoy-hecho=conexion]').click();await new Promise(r=>setTimeout(r,500));document.querySelector('[data-hoy-hecho=versiculo]').click();await new Promise(r=>setTimeout(r,800));return {progreso:document.querySelector('.hoy-progreso').textContent,semana:document.querySelectorAll('.hoy-semana li.hecho').length,total:document.querySelector('.hoy-total').textContent,abierto:document.querySelector('.hoy-paso-cuerpo:not([hidden])')?.id||''};`);
   captura('1c-hoy-pasos');
   anotar(/2 de 4/.test(hoy2.progreso) && hoy2.semana === 1 && /1 día/.test(hoy2.total) && hoy2.abierto === 'hoy-cuerpo-devocion', 'entrega 2B: marcar pasos cuenta el día y abre el siguiente', JSON.stringify(hoy2));

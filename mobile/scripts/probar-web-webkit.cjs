@@ -62,7 +62,7 @@ const servidor = http.createServer((req, res) => {
     exigir(info.subtle, 'WebCrypto disponible');
     exigir(info.csp.length === 0, 'CSP sin violaciones' + (info.csp.length ? ': ' + info.csp.slice(0, 3).join(' | ') : ''));
     exigir(errores.length === 0, 'sin errores en consola' + (errores.length ? ': ' + errores.slice(0, 3).join(' | ') : ''));
-    // Entrega 2B: la bienvenida aparece en el iPhone y «Saltar» lleva a «Hoy» con el versículo del día y sus 4 pasos.
+    // Entrega 2B: la primera apertura del día abre «Hoy» con el versículo del día y sus 4 pasos (bienvenida apagada).
     let hoy = null;
     for (let i = 0; i < 60 && !(hoy && hoy.vista === 'hoy-view' && hoy.texto.length > 20); i++) {
       hoy = await page.evaluate(() => { const d = document.querySelector('#hoy-bienvenida[open]'); if (d && !window.__cspAntes) window.__cspAntes = String((window.__csp || []).length); const b = d && [...d.querySelectorAll('button')].find(x => x.textContent.trim() === 'Saltar'); if (b) b.click(); return { vista: document.documentElement.dataset.vistaMovil, texto: document.querySelector('#hoy-vers-texto')?.textContent || '', pasos: document.querySelectorAll('.hoy-paso').length, ancho: document.documentElement.scrollWidth, vistaAncho: innerWidth, vioBienvenida: !!d }; });

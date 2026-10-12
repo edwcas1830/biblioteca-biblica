@@ -128,7 +128,10 @@ ${avisos?`<label>Aviso diario del versículo<input type="time" id="hoy-hora" val
   // ---------- Bienvenida (teléfono y web): 5 pantallas cortas, se puede saltar, todo queda en el teléfono ----------
   const PROPOSITO={leer:'Leer toda la Biblia',estudiar:'Estudiar a fondo',paz:'Encontrar paz y consuelo',orar:'Aprender a orar'};
   const TRADICION={evangelica:'Evangélica',catolica:'Católica',otra:'Otra',ninguna:'Prefiero no decir'};
-  const necesitaBienvenida=()=>!datos().bienvenida&&!leerLS(LS_BIENVENIDA);
+  // Apagada por Edward (12-oct) hasta rehacer las preguntas para que sirvan para recomendar (conocimiento bíblico,
+  // qué quiere hacer: leer el NT, aprender a estudiar, devocionales, capítulos sugeridos al día…). El código queda.
+  const BIENVENIDA_ACTIVA=false;
+  const necesitaBienvenida=()=>BIENVENIDA_ACTIVA&&!datos().bienvenida&&!leerLS(LS_BIENVENIDA);
   function bienvenida(){
     return new Promise(resolver=>{
       const e=datos(),conAviso=!!plataforma().recordatorio;
