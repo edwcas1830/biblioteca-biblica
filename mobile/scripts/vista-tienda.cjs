@@ -45,6 +45,7 @@ async function conectar() {
 
 (async () => {
   fs.mkdirSync(salida, { recursive: true });
+  try { adb('shell', 'settings', 'put', 'system', 'font_scale', '1.0'); } catch { /* sin ajuste */ }
   try { adb('uninstall', PKG); } catch { /* no estaba */ }
   adb('install', apk);
   adb('shell', 'monkey', '-p', PKG, '-c', 'android.intent.category.LAUNCHER', '1');
@@ -91,6 +92,16 @@ async function conectar() {
   // Diccionarios en español de las Sociedades Bíblicas (CC BY-SA): por número y por palabra, y con su licencia en Fuentes.
   const ubs = await app.evaluar("const g=await window.libraryDesktop.dictionary({group:'ubs-griego',query:'G25'});const a=await window.libraryDesktop.dictionary({group:'ubs-griego',query:'amor'});const h=await window.libraryDesktop.dictionary({group:'ubs-hebreo',query:'H430'});const cat=(await window.libraryDesktop.catalog()).modules.filter(m=>m.id.startsWith('ubs-'));return {g:(g.entries[0]?.text||'').slice(0,40),amor:a.entries.slice(0,3).map(e=>(e.text||'').slice(0,12)),h:/Gn 1:1/.test(h.entries.map(e=>e.text).join(' ')),licencias:cat.map(m=>m.licencia)};");
   anotar(/ἀγαπάω/.test(ubs.g) && /amar|amor/.test(ubs.g) && ubs.amor.some(t => /ἀγαπ|ἀγάπ/.test(t)) && ubs.h && ubs.licencias.length === 2 && ubs.licencias.every(l => /CC BY-SA 4\.0/.test(l)), 'diccionarios griego y hebreo en español (Sociedades Bíblicas)', JSON.stringify(ubs));
+  // Capturas para la ficha de Google Play (p21): cada función en su pantalla, sin diálogos encima. Se arman con título
+  // y marco después (scripts/capturas-play.py). Informativas: no hacen fallar la prueba.
+  const play = async (nombre, js, espera = 1200) => { try { await app.evaluar("document.querySelectorAll('dialog[open]').forEach(d=>d.close());window.BibliaMovil?.cerrarMas?.();" + js + ";await new Promise(r=>setTimeout(r," + espera + "));return true;", 30000); captura('play-' + nombre); } catch (e) { lineas.push('AVISO captura ' + nombre + ': ' + e.message); } };
+  await play('1-biblia', "go(42,3,16);await new Promise(r=>setTimeout(r,800));document.querySelector('#movil-pestanas [data-vista=biblia]').click()");
+  await play('2-hoy', "document.querySelector('#movil-pestanas [data-vista=hoy]').click();await new Promise(r=>setTimeout(r,800));document.querySelector('#main-content')?.scrollTo?.(0,0);window.scrollTo(0,0)");
+  await play('3-diccionario', "go(42,3,16);await new Promise(r=>setTimeout(r,600));document.querySelector('#movil-pestanas [data-vista=diccionario]').click();await new Promise(r=>setTimeout(r,500));const sel=document.querySelector('#dictionary-select');if(sel&&[...sel.options].some(o=>o.value==='ubs-griego')){sel.value='ubs-griego';sel.dispatchEvent(new Event('change',{bubbles:true}));}const q=document.querySelector('#dictionary-query');q.value='amor';document.querySelector('#dictionary-submit')?.click();await new Promise(r=>setTimeout(r,1500));const r=document.querySelector('#dictionary-content button');r&&r.click()", 1500);
+  await play('4-estudio', "go(42,3,16);await new Promise(r=>setTimeout(r,600));document.querySelector('#movil-pestanas [data-vista=comentario]').click();await new Promise(r=>setTimeout(r,500));const m=document.querySelector('#graphics-mode');if(m){m.value='map';m.dispatchEvent(new Event('change',{bubbles:true}));}", 2000);
+  await play('5-temas', "window.TemasBiblia?.abrir('ansiedad')", 1500);
+  await play('6-memorizar', "go(18,119,11);await new Promise(r=>setTimeout(r,500));state.memorizar={'18:119:11':{caja:3,proximo:'2026-01-01',repasos:3}};window.MemorizarBiblia?.abrir();await new Promise(r=>setTimeout(r,300));const add=document.querySelector('[data-mem=agregar]');if(!document.querySelector('.mem-item'))add?.click();await new Promise(r=>setTimeout(r,300));document.querySelector('.mem-item')?.click()", 1200);
+  await play('7-referencias', "go(42,3,16);await new Promise(r=>setTimeout(r,600));document.querySelector('#movil-pestanas [data-vista=referencias]').click()", 1500);
   app.cerrar();
 })().catch(e => { lineas.push('ERROR tienda: ' + e.message); console.error(e); process.exitCode = 1; }).finally(() => {
   fs.appendFileSync(path.join(salida, 'informe.txt'), lineas.join('\n') + '\n');
