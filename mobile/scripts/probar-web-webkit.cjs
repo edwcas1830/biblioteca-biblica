@@ -62,6 +62,16 @@ const servidor = http.createServer((req, res) => {
     exigir(info.subtle, 'WebCrypto disponible');
     exigir(info.csp.length === 0, 'CSP sin violaciones' + (info.csp.length ? ': ' + info.csp.slice(0, 3).join(' | ') : ''));
     exigir(errores.length === 0, 'sin errores en consola' + (errores.length ? ': ' + errores.slice(0, 3).join(' | ') : ''));
+    // Entrega 2B: la bienvenida aparece en el iPhone y «Saltar» lleva a «Hoy» con el versículo del día y sus 4 pasos.
+    let hoy = null;
+    for (let i = 0; i < 60 && !(hoy && hoy.vista === 'hoy-view' && hoy.texto.length > 20); i++) {
+      hoy = await page.evaluate(() => { const d = document.querySelector('#hoy-bienvenida[open]'); const b = d && [...d.querySelectorAll('button')].find(x => x.textContent.trim() === 'Saltar'); if (b) b.click(); return { vista: document.documentElement.dataset.vistaMovil, texto: document.querySelector('#hoy-vers-texto')?.textContent || '', pasos: document.querySelectorAll('.hoy-paso').length, ancho: document.documentElement.scrollWidth, vistaAncho: innerWidth, vioBienvenida: !!d }; });
+      await page.waitForTimeout(500);
+    }
+    fs.mkdirSync('prueba-webkit', { recursive: true });
+    await page.screenshot({ path: 'prueba-webkit/hoy.png' }).catch(() => {});
+    exigir(hoy && hoy.vista === 'hoy-view' && hoy.texto.length > 20 && hoy.pasos === 4 && hoy.ancho <= hoy.vistaAncho, '«Hoy» en el iPhone con el versículo del día y 4 pasos (' + JSON.stringify(hoy).slice(0, 160) + ')');
+    exigir(errores.length === 0, 'sin errores en consola tras «Hoy»' + (errores.length ? ': ' + errores.slice(0, 3).join(' | ') : ''));
     const manifiesto = await (await page.request.get(base + 'manifest.webmanifest')).json();
     exigir(manifiesto.display === 'standalone' && manifiesto.icons.length === 2, 'manifiesto instalable');
     await ctx.close();

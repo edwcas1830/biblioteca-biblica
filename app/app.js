@@ -7,7 +7,7 @@ const planCore = window.PlanCore;
 const appearanceCore=window.AppearanceCore;
 const paneCore=window.PaneLayoutCore;
 const STORE = 'biblioteca-biblica-v1';
-const initial = () => ({ version:1, position:{book:18,chapter:23,verse:1}, notes:{}, highlights:{}, devResponses:{}, planNotes:{}, prayers:[], prayerDrafts:{}, guideResponses:{}, aiStudies:[], aiPrefs:{}, estudio:(window.EstudioCore?EstudioCore.vacio():{marcas:[],colores:{},historial:[]}), privacyEnabled:false, privateLocked:false, music:{url:''}, devotionals:[], plans:[], font:20, night:false, appearance:appearanceCore.normalize() });
+const initial = () => ({ version:1, position:{book:18,chapter:23,verse:1}, notes:{}, highlights:{}, devResponses:{}, planNotes:{}, prayers:[], prayerDrafts:{}, guideResponses:{}, aiStudies:[], aiPrefs:{}, estudio:(window.EstudioCore?EstudioCore.vacio():{marcas:[],colores:{},historial:[]}), hoy:(window.HoyCore?HoyCore.vacio():{}), privacyEnabled:false, privateLocked:false, music:{url:''}, devotionals:[], plans:[], font:20, night:false, appearance:appearanceCore.normalize() });
 let state = initial(), activeView='read', activeDev=null, activeDay=0, toastTimer, searchTimer;
 const desktop=window.libraryDesktop;
 let uiReady=false, storageReady=false, saveQueue=Promise.resolve(), selectedVersion='rv1909', catalogData=null, readingGeneration=0, searchGeneration=0, studyGeneration=0, chapterData=null, savePending=0, saveFailed=false;
@@ -60,6 +60,8 @@ function validateState(candidate) {
   result.music=MusicCore.preference(candidate.music);
   // «Mi estudio» (paso 4 del teléfono): marcadores, etiquetas, memoria, nombres de colores e historial.
   if(window.EstudioCore)result.estudio=EstudioCore.validar(candidate.estudio,validPosition);
+  // «Hoy» (entrega 2B): pasos marcados por día, perfil del cuestionario y hora del aviso.
+  if(window.HoyCore)result.hoy=HoyCore.validar(candidate.hoy);
   result.font=Number.isInteger(candidate.font)?Math.max(16,Math.min(28,candidate.font)):20;
   result.night=candidate.night===true;
   result.appearance=appearanceCore.normalize(candidate.appearance);
@@ -104,6 +106,7 @@ function showView(view) {
   if(view==='dev') renderDevList();
   if(view==='plan') renderPlans();
   if(view==='journey')renderJourney();if(view==='prayer')renderPrayer();
+  if(view==='hoy')window.HoyApp?.render();
 }
 async function renderReader() {
   const p=state.position, book=books[p.book], chapter=book.chapters[p.chapter-1];
@@ -373,7 +376,7 @@ async function start() {
   $('#books-grid').innerHTML=books.map((book,i)=>`<button data-book="${i}">${esc(book.name)}</button>`).join('');
   $('#note').maxLength=100000;
   settings();renderReader();renderDevList();renderPlans();bind();bindPlanImport();
-  bindLibrary();bindAppearance();bindJourneys();bindAi();bindPrayer();bindPrivacy();bindGuides();bindMusic();bindStudy();bindGraphics();bindCircle();bindModuleImport();uiReady=true;if(state.lastJourney)openJourney('dev',state.lastJourney.id);
+  bindLibrary();bindAppearance();bindJourneys();bindAi();bindPrayer();bindPrivacy();bindGuides();bindMusic();bindStudy();bindGraphics();bindCircle();bindModuleImport();window.HoyApp?.enlazar();window.HoyApp?.programarAvisos();uiReady=true;if(state.lastJourney)openJourney('dev',state.lastJourney.id);
 }
 async function loadCatalog(){catalogData=await desktop.catalog();const versions=catalogData.modules.filter(m=>m.tipo==='biblia'&&m.rol==='version');selectedVersion=versions.some(m=>m.id===state.selectedVersion)?state.selectedVersion:versions.some(m=>m.id==='rv1960')?'rv1960':'rv1909';$('#version-select').innerHTML=versions.map(m=>`<option value="${esc(m.id)}">${esc(m.abreviatura||m.titulo)}</option>`).join('');$('#version-select').value=selectedVersion;const comments=catalogData.modules.filter(m=>m.rol==='comentario');$('#comment-select').innerHTML='<option value="">Elegir comentario</option>'+comments.map(m=>`<option value="${esc(m.id)}">${esc(m.titulo)}</option>`).join('');const options=[['strong-es','Strong español'],['vine','Vine · AT y NT'],['drae','RAE · Diccionario español']].filter(([id])=>id==='vine'?catalogData.modules.some(m=>m.id==='vine-at'||m.id==='vine-nt'):id==='drae'?catalogData.modules.some(m=>/^drae-[123]$/.test(m.id)):catalogData.modules.some(m=>m.id===id));for(const m of catalogData.modules.filter(m=>m.tipo==='diccionario'&&!['strong-es','vine-at','vine-nt','drae-1','drae-2','drae-3'].includes(m.id)))options.push([m.id,m.titulo]);$('#dictionary-select').innerHTML=options.map(([id,title])=>`<option value="${id}">${title}</option>`).join('');$('#show-strong').disabled=!(selectedVersion==='rv1960'&&catalogData.modules.some(m=>m.id==='rv1960-strong')||catalogData.modules.some(m=>m.id===selectedVersion&&m.strong));if($('#show-strong').disabled)$('#show-strong').checked=false;$('#comment-select').disabled=!comments.length;if(comments.length)$('#comment-select').value=(['diario-vivir','mundo-hispano'].find(id=>comments.some(m=>m.id===id))||comments[0].id);for(const id of ['dictionary-select','dictionary-query','dictionary-submit'])$('#'+id).disabled=!options.length;renderSources();}
 function renderSources(){if(!catalogData)return;$('#sources-list').innerHTML=catalogData.modules.map(m=>`<section class="source-card"><h4>${esc(m.titulo)}</h4><p>${esc(m.origen)} · ${esc(m.rol)}</p><p>${esc(m.licencia)}</p><p class="fine-print">${esc(m.versificacion)} · Revisión ${esc(m.sha256.slice(0,16))}</p>${m.sourceNotice?`<details><summary>Aviso incluido en la fuente</summary><p class="source-notice">${esc(m.sourceNotice)}</p></details>`:''}</section>`).join('');$('#sources-warning').textContent=catalogData.warnings.join('\n');renderStudySources();}

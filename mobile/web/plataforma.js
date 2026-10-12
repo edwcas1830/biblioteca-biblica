@@ -225,5 +225,40 @@
     al: (tipo, fn) => Lectura.addListener(tipo, fn)
   } : null;
 
-  window.BibliaPlataforma = { capacidades, compartir, pausarMusica, elegirArchivosTraspaso, desempacarPaquete, ...(Share && Filesystem ? { compartirImagen, guardarArchivo } : {}), ...(lectura ? { lectura } : {}) };
+  // Versículo del día: un aviso por día a la hora elegida (CONSENSO-HABITO.md). Se programan los próximos 14 días
+  // y se renuevan cada vez que se abre la app; nunca hay más de un aviso por día. Tocarlo abre «Hoy».
+  const Avisos = plugin('LocalNotifications');
+  const ID_AVISO = 7100, CANAL = 'versiculo-del-dia';
+  let canalListo = null;
+  const recordatorio = Avisos ? {
+    async permiso() {
+      let p = await Avisos.checkPermissions();
+      if (p.display === 'prompt' || p.display === 'prompt-with-rationale') p = await Avisos.requestPermissions();
+      return p.display === 'granted';
+    },
+    async programar(lista) {
+      canalListo = canalListo || Avisos.createChannel({ id: CANAL, name: 'Versículo del día', description: 'Un aviso al día con el versículo de «Hoy».', importance: 3, visibility: 1 }).catch(() => {});
+      await canalListo;
+      await this.cancelar();
+      if (!lista.length) return 0;
+      await Avisos.schedule({ notifications: lista.slice(0, 14).map((a, i) => ({
+        id: ID_AVISO + i, channelId: CANAL, title: 'Versículo del día · ' + a.cita, body: a.texto, largeBody: a.texto,
+        // isExactNotification: false → alarma aproximada: sin pedir «Alarmas y recordatorios» (el permiso se quitó del manifiesto).
+        smallIcon: 'ic_lectura', isExactNotification: false, schedule: { at: a.cuando, allowWhileIdle: true }, extra: { destino: 'hoy', fecha: a.fecha }
+      })) });
+      return Math.min(lista.length, 14);
+    },
+    async cancelar() {
+      const { notifications } = await Avisos.getPending();
+      const nuestras = notifications.filter(n => n.id >= ID_AVISO && n.id < ID_AVISO + 20);
+      if (nuestras.length) await Avisos.cancel({ notifications: nuestras.map(n => ({ id: n.id })) });
+    },
+    pendientes: async () => (await Avisos.getPending()).notifications.filter(n => n.id >= ID_AVISO && n.id < ID_AVISO + 20)
+  } : null;
+  if (Avisos) Avisos.addListener('localNotificationActionPerformed', ({ notification }) => {
+    if (notification && notification.extra && notification.extra.destino === 'hoy') window.dispatchEvent(new CustomEvent('biblioteca:abrir-hoy'));
+  });
+  capacidades.recordatorio = !!recordatorio;
+
+  window.BibliaPlataforma = { capacidades, compartir, pausarMusica, elegirArchivosTraspaso, desempacarPaquete, ...(Share && Filesystem ? { compartirImagen, guardarArchivo } : {}), ...(lectura ? { lectura } : {}), ...(recordatorio ? { recordatorio } : {}) };
 })();

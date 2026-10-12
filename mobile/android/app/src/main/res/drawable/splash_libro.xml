@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Inicio (CONSENSO-HABITO.md): el libro del ícono crece un poco y la cruz se enciende. Dura 0,8 s y no retiene el arranque. -->
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt">
+    <aapt:attr name="android:drawable">
+        <vector
+            android:width="108dp"
+            android:height="108dp"
+            android:viewportWidth="108"
+            android:viewportHeight="108">
+            <group
+                android:name="libro"
+                android:pivotX="54"
+                android:pivotY="54"
+                android:scaleX="0.86"
+                android:scaleY="0.86">
+                <path
+                    android:fillColor="#6B4B3C"
+                    android:strokeColor="#D4B776"
+                    android:strokeWidth="2"
+                    android:pathData="M43,35 H65 Q69,35 69,39 V67 Q69,71 65,71 H43 Q39,71 39,67 V39 Q39,35 43,35 Z" />
+                <path
+                    android:strokeColor="#D4B776"
+                    android:strokeWidth="1.6"
+                    android:pathData="M43.5,35.5 V70.5 M43.5,66 H68.5" />
+                <path
+                    android:name="cruz"
+                    android:strokeColor="#E8CF8F"
+                    android:strokeAlpha="0"
+                    android:strokeWidth="2"
+                    android:strokeLineCap="round"
+                    android:pathData="M56,40 V55 M51,45 H61" />
+                <path
+                    android:fillColor="#A0675A"
+                    android:pathData="M59,64 H64 V73 L61.5,71 L59,73 Z" />
+            </group>
+        </vector>
+    </aapt:attr>
+    <target android:name="libro">
+        <aapt:attr name="android:animation">
+            <set>
+                <objectAnimator
+                    android:duration="500"
+                    android:interpolator="@android:interpolator/decelerate_cubic"
+                    android:propertyName="scaleX"
+                    android:valueFrom="0.86"
+                    android:valueTo="1" />
+                <objectAnimator
+                    android:duration="500"
+                    android:interpolator="@android:interpolator/decelerate_cubic"
+                    android:propertyName="scaleY"
+                    android:valueFrom="0.86"
+                    android:valueTo="1" />
+            </set>
+        </aapt:attr>
+    </target>
+    <target android:name="cruz">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:duration="400"
+                android:startOffset="350"
+                android:propertyName="strokeAlpha"
+                android:valueFrom="0"
+                android:valueTo="1" />
+        </aapt:attr>
+    </target>
+</animated-vector>

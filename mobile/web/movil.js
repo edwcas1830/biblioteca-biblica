@@ -248,7 +248,8 @@
     { id: 'diccionario', texto: 'Diccionario', corto: 'Dicc.', icono: 'book-a' },
     { id: 'original', texto: 'Original', corto: 'Original', icono: 'languages' },
     { id: 'referencias', texto: 'Referencias', corto: 'Refs.', icono: 'link' },
-    { id: 'devocional', texto: 'Devocional', corto: 'Devoc.', icono: 'sun' }
+    // «Hoy» reemplaza a Devocional (CONSENSO-HABITO.md); los devocionales y series siguen dentro de «Hoy».
+    { id: 'hoy', texto: 'Hoy', corto: 'Hoy', icono: 'sun' }
   ];
   let franja;
   function construirPestanas() {
@@ -258,9 +259,10 @@
   }
   function elegirVista(id) {
     cerrarMas();
-    if (id === 'devocional') {
-      estado.pestana = 'devocional'; html.dataset.pestana = 'devocional';
-      botonPorTexto('.compact-nav button', 'devocional')?.click();
+    if (id === 'hoy') {
+      estado.pestana = 'hoy'; html.dataset.pestana = 'hoy';
+      if (typeof showView === 'function') showView('hoy');
+      $('#main-content')?.scrollTo?.(0, 0);
     } else {
       if (vistaActiva() !== 'read-view') botonPorTexto('.compact-nav button', 'mi biblia')?.click();
       estado.pestana = id; html.dataset.pestana = id;
@@ -279,8 +281,8 @@
   function marcarPestana() {
     if (!franja) return;
     const vista = vistaActiva();
-    const actual = vista === 'dev-view' ? 'devocional' : vista === 'read-view' ? (estado.pestana === 'devocional' ? 'biblia' : estado.pestana || 'biblia') : '';
-    if (vista === 'read-view' && estado.pestana === 'devocional') { estado.pestana = 'biblia'; html.dataset.pestana = 'biblia'; }
+    const actual = vista === 'hoy-view' || vista === 'dev-view' ? 'hoy' : vista === 'read-view' ? (estado.pestana === 'hoy' ? 'biblia' : estado.pestana || 'biblia') : '';
+    if (vista === 'read-view' && estado.pestana === 'hoy') { estado.pestana = 'biblia'; html.dataset.pestana = 'biblia'; }
     for (const b of $$('button', franja)) b.setAttribute('aria-selected', String(b.dataset.vista === actual));
   }
   function ajustarPestanas() {
@@ -1000,6 +1002,21 @@
     acciones.insertBefore(boton, $('#smaller', acciones) || null);
   }
 
+  // «Hoy» al abrir: la bienvenida la primera vez (se puede saltar) y luego «Hoy» la primera vez de cada día.
+  // Espera a que la biblioteca esté cargada y a que no haya otro diálogo abierto (p. ej. confirmar un traspaso).
+  async function iniciarHoy() {
+    if (!window.HoyApp) return;
+    for (let i = 0; i < 240 && !(typeof uiReady !== 'undefined' && uiReady); i++) await new Promise(r => setTimeout(r, 250));
+    for (let i = 0; i < 240 && document.querySelector('dialog[open]'); i++) await new Promise(r => setTimeout(r, 250));
+    try {
+      if (window.HoyApp.necesitaBienvenida()) await window.HoyApp.bienvenida();
+      else window.HoyApp.abrirSiToca();
+    } catch (e) { console.warn('Hoy', e); }
+    marcarDestino();
+  }
+  // Al volver a la app otro día (sin cerrarla), también se abre «Hoy».
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && estado.construida && window.HoyApp && typeof uiReady !== 'undefined' && uiReady && !document.querySelector('dialog[open]')) { if (window.HoyApp.abrirSiToca()) marcarDestino(); } });
+
   function activar() {
     html.dataset.telefono = String(consulta.matches);
     if (estado.construida) { moverAjustes(consulta.matches); if (consulta.matches) { marcarDestino(); ajustarAltoLectura(); } else cerrarMas(); return; }
@@ -1035,6 +1052,7 @@
     if (franja) new ResizeObserver(() => ajustarAltoLectura()).observe(franja);
     document.fonts?.ready?.then(() => ajustarAltoLectura());
     setTimeout(ajustarAltoLectura, 400);
+    iniciarHoy();
   }
 
   window.BibliaMovil = { atras, ajustarAltoLectura, ponerAltura, elegirPestana, elegirVista, abrirMas, cerrarMas, estado };

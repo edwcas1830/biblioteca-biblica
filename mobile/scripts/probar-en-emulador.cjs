@@ -120,6 +120,33 @@ async function esperarLista(app, etiqueta) {
   anotar(libres.refs > 0 && libres.onbv, 'recursos libres (referencias y ONBV)', JSON.stringify(libres));
   const voces = await app.evaluar(`try{const v=await window.libraryDesktop.voiceOptions();return 'voces en español: '+v.length;}catch(e){return 'voz: '+e.message;}`);
   anotar(true, 'voz del teléfono (informativo)', voces);
+  // Entrega 2B (CONSENSO-HABITO.md): la primera vez sale la bienvenida (pantallas cortas); al terminar abre «Hoy» con
+  // el versículo del día, 4 pasos que se marcan a mano y el aviso diario programado (14 días, sin alarma exacta).
+  try { adb('shell', 'pm', 'grant', PKG, 'android.permission.POST_NOTIFICATIONS'); } catch { /* Android < 13 */ }
+  const hoy1 = await app.evaluar(`let d=null;for(let i=0;i<160&&!(d=document.querySelector('#hoy-bienvenida[open]'));i++)await new Promise(r=>setTimeout(r,250));
+    if(!d)return {bienvenida:false};
+    const pantallas=[];let salidas=0;
+    const fuera=()=>[...d.querySelectorAll('button,label,h2')].filter(e=>{const r=e.getBoundingClientRect();return r.width>0&&(r.right>innerWidth+1||r.left<-1);}).length;
+    for(let i=0;i<7;i++){
+      pantallas.push(d.querySelector('h2')?.textContent||'');salidas+=fuera();
+      if(d.querySelector('input[type=radio]')&&!d.querySelector('input[type=radio]:checked'))d.querySelector('input[type=radio]').click();
+      const h=d.querySelector('input[name=hora]');if(h)h.value='07:00';
+      const botones=[...d.querySelectorAll('button')],ultimo=botones.find(b=>/Ir a/.test(b.textContent));
+      if(ultimo){ultimo.click();break;}
+      botones.find(b=>/^(Empezar|Siguiente)$/.test(b.textContent.trim()))?.click();await new Promise(r=>setTimeout(r,350));
+    }
+    for(let i=0;i<40&&document.querySelector('#hoy-bienvenida');i++)await new Promise(r=>setTimeout(r,250));
+    for(let i=0;i<20&&(document.querySelector('#hoy-vers-texto')?.textContent||'…')==='…';i++)await new Promise(r=>setTimeout(r,250));
+    await new Promise(r=>setTimeout(r,1500));
+    const rec=window.BibliaPlataforma.recordatorio,pend=rec?await rec.pendientes():[];
+    return {bienvenida:true,pantallas,salidas,vista:document.documentElement.dataset.vistaMovil,texto:document.querySelector('#hoy-vers-texto')?.textContent||'',cita:document.querySelector('.hoy-cita span')?.textContent||'',pasos:document.querySelectorAll('.hoy-paso').length,perfil:state.hoy.perfil,pendientes:pend.length,primero:pend[0]?{titulo:pend[0].title,texto:(pend[0].body||'').slice(0,40)}:null};`, 90000);
+  captura('1b-hoy');
+  anotar(hoy1.bienvenida && hoy1.salidas === 0 && hoy1.pantallas.length >= 4, 'entrega 2B: bienvenida en pantallas cortas, nada se sale', JSON.stringify({ pantallas: hoy1.pantallas, salidas: hoy1.salidas }));
+  anotar(hoy1.vista === 'hoy-view' && hoy1.texto.length > 20 && hoy1.pasos === 4, 'entrega 2B: al terminar abre «Hoy» con el versículo del día y 4 pasos', JSON.stringify({ cita: hoy1.cita, texto: hoy1.texto.slice(0, 50), pasos: hoy1.pasos }));
+  anotar(hoy1.perfil && hoy1.perfil.hora === '07:00' && hoy1.pendientes === 14 && /Versículo del día/.test((hoy1.primero || {}).titulo || ''), 'entrega 2B: aviso diario del versículo programado (14 días)', JSON.stringify({ pendientes: hoy1.pendientes, primero: hoy1.primero }));
+  const hoy2 = await app.evaluar(`document.querySelector('[data-hoy-abrir=conexion]').click();await new Promise(r=>setTimeout(r,300));document.querySelector('[data-hoy-hecho=conexion]').click();await new Promise(r=>setTimeout(r,500));document.querySelector('[data-hoy-hecho=versiculo]').click();await new Promise(r=>setTimeout(r,800));return {progreso:document.querySelector('.hoy-progreso').textContent,semana:document.querySelectorAll('.hoy-semana li.hecho').length,total:document.querySelector('.hoy-total').textContent,abierto:document.querySelector('.hoy-paso-cuerpo:not([hidden])')?.id||''};`);
+  captura('1c-hoy-pasos');
+  anotar(/2 de 4/.test(hoy2.progreso) && hoy2.semana === 1 && /1 día/.test(hoy2.total) && hoy2.abierto === 'hoy-cuerpo-devocion', 'entrega 2B: marcar pasos cuenta el día y abre el siguiente', JSON.stringify(hoy2));
   // 4. Nota que sobrevive a la recarga
   const guardado = await app.evaluar(`const b=await window.libraryDesktop.bootstrap({initial:{version:1,position:{book:42,chapter:3,verse:16},notes:{},highlights:{},plans:[],devotionals:[],prayers:[],prayerDrafts:{},guideResponses:{},aiStudies:[],devResponses:{},planNotes:{},appearance:{design:'a'},font:20},legacy:null,legacyValid:true});const s={...b.state,notes:{...b.state.notes,'42:3:16':'Nota de prueba en el emulador'}};await window.libraryDesktop.savePersonal(s);return 'ok';`);
   anotar(guardado === 'ok', 'guardar nota');
@@ -128,6 +155,8 @@ async function esperarLista(app, etiqueta) {
   app = await esperarLista(app, '2-tras-recargar');
   const nota = await app.evaluar(`const b=await window.libraryDesktop.bootstrap({initial:{version:1,position:{book:42,chapter:3,verse:16},notes:{},highlights:{},plans:[],devotionals:[],prayers:[],prayerDrafts:{},guideResponses:{},aiStudies:[],devResponses:{},planNotes:{},appearance:{design:'a'},font:20},legacy:null,legacyValid:true});return b.state.notes['42:3:16']||'';`);
   anotar(nota === 'Nota de prueba en el emulador', 'nota persistida tras recargar', nota);
+  const hoy3 = await app.evaluar(`for(let i=0;i<60&&!(typeof uiReady!=='undefined'&&uiReady);i++)await new Promise(r=>setTimeout(r,250));await new Promise(r=>setTimeout(r,2000));return {dias:JSON.stringify(state.hoy.dias),vista:document.documentElement.dataset.vistaMovil,bienvenida:!!document.querySelector('#hoy-bienvenida')};`, 30000);
+  anotar(/":3\}/.test(hoy3.dias) && hoy3.vista !== 'hoy-view' && !hoy3.bienvenida, 'entrega 2B: lo marcado sigue tras recargar y «Hoy» no se repite el mismo día', JSON.stringify(hoy3));
   // 5. Traspaso sintético en UN archivo, por el mismo camino que OneDrive: una URI content:// que la app
   //    lee con su ContentResolver. El paquete se deja en la caché de la app y se entrega por su FileProvider.
   if (!paquete) throw new Error('Falta el paquete .bbt sintético');
@@ -343,9 +372,12 @@ async function esperarLista(app, etiqueta) {
   const grande = await app.evaluar(`go(42,3,16);await new Promise(r=>setTimeout(r,900));${MEDIR}const barra=document.querySelector('#movil-barra');const enBarra=medir(barra);document.querySelector('#movil-buscar').click();await new Promise(r=>setTimeout(r,600));const q=document.querySelector('#buscador-campo');q.value='rey';q.dispatchEvent(new Event('input'));await new Promise(r=>setTimeout(r,400));const d=document.querySelector('#buscador');const enBuscador=medir(d).filter(c=>c.h<47||c.fuera||c.corta);const enPestanas=medir(document.querySelector('#movil-pestanas')).filter(c=>c.h<47||c.corta);const enHerr=medir(document.querySelector('#library-controls')).filter(c=>c.h<47||c.fuera||c.corta);const fp=document.querySelector('#movil-pestanas');const pestanas200={filas:fp.dataset.filas,cortadas:[...fp.querySelectorAll('button')].filter(b=>{const s=b.querySelector('span');return !s||s.scrollWidth>s.clientWidth+1||b.getBoundingClientRect().right>innerWidth+1;}).map(b=>b.dataset.vista)};return {pestanas200,enHerr,enPestanas,escala:devicePixelRatio,alto:Math.round(barra.getBoundingClientRect().height),malosBarra:enBarra.filter(c=>c.h<47||c.fuera||c.corta),enBuscador,horizontal:document.documentElement.scrollWidth<=innerWidth+1};`);
   captura('7b-buscador-letra-200');
   await app.evaluar(`document.querySelector('#buscador').close();return true;`);
+  const hoy200 = await app.evaluar(`document.querySelector('#movil-pestanas [data-vista=hoy]').click();await new Promise(r=>setTimeout(r,1200));const fuera=[...document.querySelectorAll('#hoy-view *')].filter(e=>{const r=e.getBoundingClientRect();return r.width>0&&(r.right>innerWidth+1||r.left<-1);}).map(e=>(e.className||e.tagName)+'').slice(0,5);return {vista:document.documentElement.dataset.vistaMovil,fuera,ancho:document.documentElement.scrollWidth,innerWidth};`);
+  captura('7c-hoy-letra-200');
   adb('shell', 'settings', 'put', 'system', 'font_scale', '1.3');
   anotar(grande.malosBarra.length === 0 && grande.enBuscador.length === 0 && grande.enPestanas.length === 0 && grande.enHerr.length === 0 && grande.horizontal, 'paso 1 con letra al 200 %: nada se sale ni se corta', JSON.stringify(grande));
   anotar(grande.pestanas200.cortadas.length === 0, 'entrega 1 con letra al 200 %: los nombres de las pestañas se siguen viendo', JSON.stringify(grande.pestanas200));
+  anotar(hoy200.vista === 'hoy-view' && hoy200.fuera.length === 0 && hoy200.ancho <= hoy200.innerWidth + 1, 'entrega 2B: «Hoy» con letra al 200 % sin salirse', JSON.stringify(hoy200));
   fs.writeFileSync(path.join(salida, 'consola.txt'), app.consola.join('\n'));
   app.cerrar();
 })().catch(e => {
