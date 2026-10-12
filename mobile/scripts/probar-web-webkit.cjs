@@ -33,6 +33,22 @@ const servidor = http.createServer((req, res) => {
     page.on('pageerror', e => errores.push(String(e.message || e)));
     page.on('console', m => { if (m.type() === 'error') errores.push(m.text()); });
     await page.addInitScript(() => { window.__csp = []; document.addEventListener('securitypolicyviolation', e => window.__csp.push(e.violatedDirective + ' ' + e.blockedURI + ' @ ' + (e.sourceFile || '').split('/').pop() + ':' + e.lineNumber + ' «' + (e.sample || '').slice(0, 60) + '»')); });
+    // Diagnóstico de la CSP en WebKit: quién crea <style> o mete «<style» por innerHTML (con la pila de llamadas).
+    await page.addInitScript(() => {
+      window.__estilos = [];
+      const pila = () => (new Error().stack || '').split('\n').slice(2, 6).map(l => l.trim().split('/').pop()).join(' < ');
+      const crear = Document.prototype.createElement;
+      Document.prototype.createElement = function (t, ...r) { if (String(t).toLowerCase() === 'style') window.__estilos.push('createElement(style) ' + pila()); return crear.call(this, t, ...r); };
+      for (const [proto, prop] of [[Element.prototype, 'innerHTML'], [Element.prototype, 'outerHTML']]) {
+        const d = Object.getOwnPropertyDescriptor(proto, prop);
+        Object.defineProperty(proto, prop, { configurable: true, get: d.get, set(v) { if (/<style|<link/i.test(String(v))) window.__estilos.push(prop + ' con <style/link> en ' + (this.id || this.tagName) + ' ' + pila()); return d.set.call(this, v); } });
+      }
+      const ins = Element.prototype.insertAdjacentHTML;
+      Element.prototype.insertAdjacentHTML = function (pos, v) { if (/<style|<link/i.test(String(v))) window.__estilos.push('insertAdjacentHTML ' + pila()); return ins.call(this, pos, v); };
+      document.addEventListener('securitypolicyviolation', () => window.__estilos.push('VIOLACIÓN en ' + (document.documentElement.dataset.vistaMovil || '?') + ' tras: ' + (window.__ultimaAccion || '')));
+      const sombra = Element.prototype.attachShadow;
+      Element.prototype.attachShadow = function (o) { window.__estilos.push('attachShadow ' + this.tagName + ' ' + pila()); return sombra.call(this, o); };
+    });
     await page.goto(base);
     // waitForFunction evalúa texto en la página y la CSP (sin 'unsafe-eval') lo bloquea en WebKit: se consulta en bucle.
     for (let i = 0; ; i++) {
@@ -74,6 +90,7 @@ const servidor = http.createServer((req, res) => {
     const cspHoy = await page.evaluate(() => window.__csp || []);
     const estilos = await page.evaluate(() => ({ antesDeSaltar: window.__cspAntes || 'sin bienvenida', despues: (window.__csp || []).length, style: [...document.querySelectorAll('style')].map(x => (x.parentElement?.id || x.parentElement?.tagName) + ':' + x.textContent.slice(0, 50)), detalles: document.querySelectorAll('details').length }));
     console.log('Diagnóstico CSP tras «Hoy»:', JSON.stringify(estilos));
+    console.log('Diagnóstico de estilos:', JSON.stringify(await page.evaluate(() => window.__estilos || [])));
     exigir(errores.length === 0 && cspHoy.length === 0, 'sin errores en consola tras «Hoy»' + (errores.length ? ': ' + errores.slice(0, 2).join(' | ') : '') + (cspHoy.length ? ' · CSP: ' + cspHoy.slice(0, 4).join(' | ') : ''));
     const manifiesto = await (await page.request.get(base + 'manifest.webmanifest')).json();
     exigir(manifiesto.display === 'standalone' && manifiesto.icons.length === 2, 'manifiesto instalable');
