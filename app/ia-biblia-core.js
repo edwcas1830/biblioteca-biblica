@@ -22,16 +22,18 @@
   // «Juan 3:16», «1 Juan 4:7-8», «Sal 23:1», «Filipenses 4:6,7» → referencias {book, chapter, verse, endVerse, texto, inicio, fin}.
   function extraerCitas(texto,nombres){
     const mapa=indiceDeLibros(nombres),resultado=[];
-    const re=/((?:[123]\s?)?[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+(?:\s(?:de\s)?(?:los\s)?[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)?)\.?\s(\d{1,3}):(\d{1,3})(?:\s?[-–]\s?(\d{1,3})|,\s?(\d{1,3}))?/g;
+    const re=/((?:[123]\s?)?[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+(?:\s(?:de\s)?(?:los\s)?[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)?)\.?\s(\d{1,3}):(\d{1,3})(?:\s?[-–‑‐]\s?(\d{1,3})|,\s?(\d{1,3}))?/g;
     let m;
     while((m=re.exec(String(texto||'')))){
       let nombre=sinTildes(m[1]).replace(/\s+/g,' ').trim();
       let book=mapa.get(nombre);
       // «… en Juan 3:16»: si el nombre trae una palabra de más delante, se prueba con la última.
-      if(book===undefined){const partes=nombre.split(' ');for(let k=1;k<partes.length&&book===undefined;k++)book=mapa.get(partes.slice(k).join(' '));}
+      // La cita marcada empieza en el nombre del libro, sin la palabra de más («y», «en»…).
+      let sobra=0;
+      if(book===undefined){const partes=m[1].trim().split(/\s+/);for(let k=1;k<partes.length&&book===undefined;k++){book=mapa.get(sinTildes(partes.slice(k).join(' ')));if(book!==undefined)sobra=m[0].indexOf(partes[k],m[0].length-m[0].trimStart().length);}}
       if(book===undefined||book<0)continue;
-      const verse=Number(m[3]),fin=Number(m[4]||m[5]||0);
-      resultado.push({book,chapter:Number(m[2]),verse,...(fin>verse?{endVerse:fin}:{}),texto:m[0].replace(/^\s+/,''),inicio:m.index+(m[0].length-m[0].replace(/^\s+/,'').length),fin:m.index+m[0].length});
+      const verse=Number(m[3]),fin=Number(m[4]||m[5]||0),inicio=m.index+(sobra||(m[0].length-m[0].trimStart().length));
+      resultado.push({book,chapter:Number(m[2]),verse,...(fin>verse?{endVerse:fin}:{}),texto:m[0].slice(inicio-m.index),inicio,fin:m.index+m[0].length});
     }
     return resultado;
   }

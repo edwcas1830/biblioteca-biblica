@@ -29,6 +29,7 @@ test('Detecta el tema de preguntas reales', () => {
 });
 
 test('Extrae citas en el formato de la IA, con abreviaturas y rangos', () => {
+  assert.equal(C.extraerCitas('Filipenses 4:6‑7 nos anima', NOMBRES)[0].endVerse, 7, 'guion no separable de los modelos');
   const t = 'Dios nos ama (Juan 3:16). Ver también 1 Juan 4:7-8, Sal 23:1, Filipenses 4:6,7 y Romanos 8:28. En Juan 99:1 no hay nada. Lo dijo Pablo en 2 Corintios 12:9.';
   const c = C.extraerCitas(t, NOMBRES).map(x => NOMBRES[x.book] + ' ' + x.chapter + ':' + x.verse + (x.endVerse ? '-' + x.endVerse : ''));
   assert.deepEqual(c, ['Juan 3:16', '1 Juan 4:7-8', 'Salmos 23:1', 'Filipenses 4:6-7', 'Romanos 8:28', 'Juan 99:1', '2 Corintios 12:9']);

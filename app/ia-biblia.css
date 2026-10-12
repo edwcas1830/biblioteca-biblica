@@ -28,6 +28,8 @@ dialog#ia-biblia { width: min(680px, 94vw); padding: 18px 20px 20px; }
 #ia-historial-caja summary { cursor: pointer; color: var(--muted); padding: 6px 0; }
 .ia-hist { display: block; width: 100%; text-align: left; border: 0; border-top: 1px solid var(--line); background: none; color: var(--ink); padding: 10px 2px; font-size: .9rem; }
 .ia-hist b { color: var(--accent); font-weight: 600; margin-right: 4px; }
+.ia-equipo { font-size: .75rem; color: var(--muted); margin: 14px 0 0; }
+#ia-equipo { font-family: ui-monospace, Consolas, monospace; letter-spacing: .05em; }
 .hoy-ia { width: 100%; min-height: 48px; margin: 8px 0 0; font-size: .95rem; }
 
 /* «Temas de la Biblia» (Explorar · búsqueda por tema). */

@@ -1,67 +1,82 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Inicio (CONSENSO-HABITO.md): el libro del ícono crece un poco y la cruz se enciende. Dura 0,8 s y no retiene el arranque. -->
+<!-- Inicio (CONSENSO-HABITO.md) con el logo B1 que eligió Edward: el libro crece un poco y la llama se enciende
+     desde abajo. Dura 0,8 s y no retiene el arranque. Mismos trazos que app/icono-b1.svg. -->
 <animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt">
     <aapt:attr name="android:drawable">
         <vector
             android:width="108dp"
             android:height="108dp"
-            android:viewportWidth="108"
-            android:viewportHeight="108">
+            android:viewportWidth="1024"
+            android:viewportHeight="1024">
             <group
                 android:name="libro"
-                android:pivotX="54"
-                android:pivotY="54"
-                android:scaleX="0.86"
-                android:scaleY="0.86">
+                android:pivotX="512"
+                android:pivotY="512"
+                android:scaleX="0.56"
+                android:scaleY="0.56">
                 <path
-                    android:fillColor="#6B4B3C"
-                    android:strokeColor="#D4B776"
-                    android:strokeWidth="2"
-                    android:pathData="M43,35 H65 Q69,35 69,39 V67 Q69,71 65,71 H43 Q39,71 39,67 V39 Q39,35 43,35 Z" />
+                    android:fillColor="#F5EEE0"
+                    android:pathData="M240,486C360,488 452,540 499,640V842C421,790 331,761 251,746C226,741 213,722 213,701V513C213,498 225,486 240,486Z" />
                 <path
-                    android:strokeColor="#D4B776"
-                    android:strokeWidth="1.6"
-                    android:pathData="M43.5,35.5 V70.5 M43.5,66 H68.5" />
-                <path
-                    android:name="cruz"
-                    android:strokeColor="#E8CF8F"
-                    android:strokeAlpha="0"
-                    android:strokeWidth="2"
-                    android:strokeLineCap="round"
-                    android:pathData="M56,40 V55 M51,45 H61" />
-                <path
-                    android:fillColor="#A0675A"
-                    android:pathData="M59,64 H64 V73 L61.5,71 L59,73 Z" />
+                    android:fillColor="#F5EEE0"
+                    android:pathData="M784,486C664,488 572,540 525,640V842C603,790 693,761 773,746C798,741 811,722 811,701V513C811,498 799,486 784,486Z" />
+                <group
+                    android:name="llama"
+                    android:pivotX="512"
+                    android:pivotY="590"
+                    android:scaleX="0.2"
+                    android:scaleY="0.2">
+                    <path
+                        android:name="llama_a"
+                        android:fillAlpha="0"
+                        android:pathData="M512,590C468,548 396,484 393,404C390,334 446,286 496,216C512,194 507,170 503,156C542,192 566,234 561,292C557,342 521,364 492,402C471,432 470,482 493,522Z">
+                        <aapt:attr name="android:fillColor">
+                            <gradient android:type="linear" android:startX="470" android:startY="590" android:endX="560" android:endY="160"
+                                android:startColor="#D2A04A" android:endColor="#F3D98E" />
+                        </aapt:attr>
+                    </path>
+                    <path
+                        android:name="llama_b"
+                        android:fillAlpha="0"
+                        android:pathData="M512,590C496,562 482,522 488,472C494,422 544,382 571,334C577,322 581,308 580,298C610,332 634,372 631,422C628,482 570,532 512,590Z">
+                        <aapt:attr name="android:fillColor">
+                            <gradient android:type="linear" android:startX="470" android:startY="590" android:endX="560" android:endY="160"
+                                android:startColor="#D2A04A" android:endColor="#F3D98E" />
+                        </aapt:attr>
+                    </path>
+                </group>
             </group>
         </vector>
     </aapt:attr>
     <target android:name="libro">
         <aapt:attr name="android:animation">
             <set>
-                <objectAnimator
-                    android:duration="500"
-                    android:interpolator="@android:interpolator/decelerate_cubic"
-                    android:propertyName="scaleX"
-                    android:valueFrom="0.86"
-                    android:valueTo="1" />
-                <objectAnimator
-                    android:duration="500"
-                    android:interpolator="@android:interpolator/decelerate_cubic"
-                    android:propertyName="scaleY"
-                    android:valueFrom="0.86"
-                    android:valueTo="1" />
+                <objectAnimator android:duration="450" android:interpolator="@android:interpolator/decelerate_cubic"
+                    android:propertyName="scaleX" android:valueFrom="0.5" android:valueTo="0.56" />
+                <objectAnimator android:duration="450" android:interpolator="@android:interpolator/decelerate_cubic"
+                    android:propertyName="scaleY" android:valueFrom="0.5" android:valueTo="0.56" />
             </set>
         </aapt:attr>
     </target>
-    <target android:name="cruz">
+    <target android:name="llama">
         <aapt:attr name="android:animation">
-            <objectAnimator
-                android:duration="400"
-                android:startOffset="350"
-                android:propertyName="strokeAlpha"
-                android:valueFrom="0"
-                android:valueTo="1" />
+            <set>
+                <objectAnimator android:duration="500" android:startOffset="250" android:interpolator="@android:interpolator/decelerate_cubic"
+                    android:propertyName="scaleX" android:valueFrom="0.2" android:valueTo="1" />
+                <objectAnimator android:duration="500" android:startOffset="250" android:interpolator="@android:interpolator/decelerate_cubic"
+                    android:propertyName="scaleY" android:valueFrom="0.2" android:valueTo="1" />
+            </set>
+        </aapt:attr>
+    </target>
+    <target android:name="llama_a">
+        <aapt:attr name="android:animation">
+            <objectAnimator android:duration="350" android:startOffset="250" android:propertyName="fillAlpha" android:valueFrom="0" android:valueTo="1" />
+        </aapt:attr>
+    </target>
+    <target android:name="llama_b">
+        <aapt:attr name="android:animation">
+            <objectAnimator android:duration="350" android:startOffset="300" android:propertyName="fillAlpha" android:valueFrom="0" android:valueTo="1" />
         </aapt:attr>
     </target>
 </animated-vector>

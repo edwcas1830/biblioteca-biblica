@@ -9,7 +9,7 @@ binding = "AI"
 [[d1_databases]]
 binding = "DB"
 database_name = "biblia-ia"
-database_id = "PONER-AQUI-EL-ID-QUE-DA-wrangler-d1-create"
+database_id = "bd566255-b15d-45a0-8282-44e14dd291e7"
 
 [vars]
 MODELO = "@cf/openai/gpt-oss-120b"

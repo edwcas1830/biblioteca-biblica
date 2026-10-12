@@ -1,1 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#30392f"/><path d="M15 13h29a5 5 0 0 1 5 5v34H20a5 5 0 0 1-5-5Z" fill="#6b4b3c" stroke="#d0b47d" stroke-width="2"/><path d="M20 13v39M15 47h34M34 21v17m-6-11h12" stroke="#d0b47d" stroke-width="2"/><path d="M37 44v12l4-3 4 3V44" fill="#9c6656"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Biblioteca Bíblica">
+  <!-- Logo B1 (elegido por Edward el 12-oct-2026): libro abierto del que sale una llama. «Lámpara es a mis pies tu palabra». -->
+  <defs>
+    <linearGradient id="llama" x1="0" y1="1" x2="0.3" y2="0">
+      <stop offset="0" stop-color="#D2A04A"/>
+      <stop offset="1" stop-color="#F3D98E"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="190" fill="#30392F"/>
+  <path fill="url(#llama)" d="M512 590C468 548 396 484 393 404C390 334 446 286 496 216C512 194 507 170 503 156C542 192 566 234 561 292C557 342 521 364 492 402C471 432 470 482 493 522Z"/>
+  <path fill="url(#llama)" d="M512 590C496 562 482 522 488 472C494 422 544 382 571 334C577 322 581 308 580 298C610 332 634 372 631 422C628 482 570 532 512 590Z"/>
+  <path fill="#F5EEE0" d="M240 486C360 488 452 540 499 640V842C421 790 331 761 251 746C226 741 213 722 213 701V513C213 498 225 486 240 486Z"/>
+  <path fill="#F5EEE0" d="M784 486C664 488 572 540 525 640V842C603 790 693 761 773 746C798 741 811 722 811 701V513C811 498 799 486 784 486Z"/>
+</svg>

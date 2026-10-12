@@ -97,7 +97,8 @@
 <div class="ia-acciones"><button type="button" class="primary" data-ia="enviar">Preguntar</button><span id="ia-cuota" class="ia-cuota" role="status"></span></div>
 </section>
 <section id="ia-resultado" aria-live="polite"></section>
-<details id="ia-historial-caja" hidden><summary>Mis preguntas anteriores</summary><div id="ia-historial"></div></details>`;
+<details id="ia-historial-caja" hidden><summary>Mis preguntas anteriores</summary><div id="ia-historial"></div></details>
+<p class="ia-equipo">Código de este equipo: <span id="ia-equipo"></span></p>`;
     document.body.append(dlg);
     dlg.addEventListener('click',alClic);
     dlg.addEventListener('cancel',()=>{});
@@ -160,6 +161,7 @@
     if(opciones.pregunta)q('#ia-pregunta').value=opciones.pregunta;
     elegirModo(opciones.modo||modo);
     pintarHistorial();
+    q('#ia-equipo').textContent=dispositivo().slice(0,8);
     if(!dlg.open)dlg.showModal();
     if(d.consentido){actualizarCuota();q('#ia-pregunta').focus({preventScroll:true});}
   }
