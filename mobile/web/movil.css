@@ -73,7 +73,7 @@
 :root[data-telefono="true"] #pane-biblia {
   width: 100% !important; max-width: none;
   height: var(--alto-libro, 60dvh) !important;
-  min-height: 320px;
+  min-height: 160px; /* pantallas chicas con letra grande: el pie y las pestañas nunca tapan el texto */
   border-radius: 0; margin: 0; box-shadow: none;
   display: flex; flex-direction: column;
 }
@@ -625,3 +625,6 @@ html[data-edicion="tienda"] #sources-dialog > p.muted { display: none !important
 .movil-mas-voz { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px 12px; margin: 8px 0 0; }
 .movil-mas-voz label { margin: 0; font-size: 1rem; color: inherit; }
 :root[data-telefono="true"] .movil-mas-voz select { display: block !important; width: 100%; min-height: 48px; margin: 0; }
+
+/* Dos filas (letra muy grande): icono al lado del nombre y 48 px de alto por fila, para gastar menos pantalla. */
+:root[data-telefono="true"] #movil-pestanas[data-filas="dos"] button { flex-direction: row; gap: 6px; min-height: 48px; padding: 0 4px; }

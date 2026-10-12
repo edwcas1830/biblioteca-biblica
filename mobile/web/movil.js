@@ -692,7 +692,7 @@
     const pie = (franja ? franja.getBoundingClientRect().height : 0) || parseFloat(getComputedStyle(html).getPropertyValue('--nav-alto')) || 56;
     const cab = estado.pestana === 'biblia' ? (parseFloat(getComputedStyle(html).getPropertyValue('--pie-capitulo')) || 0) : 0;
     html.style.setProperty('--cabeceras-lectura', Math.max(0, Math.round(arriba)) + 'px');
-    html.style.setProperty('--alto-libro', Math.max(320, window.innerHeight - arriba - pie - cab) + 'px');
+    html.style.setProperty('--alto-libro', Math.max(160, window.innerHeight - arriba - pie - cab) + 'px');
   }
 
   // En el teléfono no hay programas de terminal (Codex, Claude, Gemini CLI): solo OpenRouter y Gemini con clave.
