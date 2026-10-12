@@ -255,9 +255,14 @@
     },
     pendientes: async () => (await Avisos.getPending()).notifications.filter(n => n.id >= ID_AVISO && n.id < ID_AVISO + 20)
   } : null;
-  if (Avisos) Avisos.addListener('localNotificationActionPerformed', ({ notification }) => {
-    if (notification && notification.extra && notification.extra.destino === 'hoy') window.dispatchEvent(new CustomEvent('biblioteca:abrir-hoy'));
-  });
+  // Sin el plugin nativo (pruebas en Node o APK viejo) el oyente falla: no debe tumbar el arranque.
+  if (Avisos) {
+    try {
+      Promise.resolve(Avisos.addListener('localNotificationActionPerformed', ({ notification }) => {
+        if (notification && notification.extra && notification.extra.destino === 'hoy') window.dispatchEvent(new CustomEvent('biblioteca:abrir-hoy'));
+      })).catch(() => {});
+    } catch { /* sin avisos */ }
+  }
   capacidades.recordatorio = !!recordatorio;
 
   window.BibliaPlataforma = { capacidades, compartir, pausarMusica, elegirArchivosTraspaso, desempacarPaquete, ...(Share && Filesystem ? { compartirImagen, guardarArchivo } : {}), ...(lectura ? { lectura } : {}), ...(recordatorio ? { recordatorio } : {}) };

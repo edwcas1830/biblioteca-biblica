@@ -1,6 +1,22 @@
 /* Modo enfoque: un solo panel a pantalla completa (escritorio y teléfono). Usa los tokens de cada diseño.
    Los selectores repiten el atributo para ganar a las reglas de diseño y de la capa móvil. */
-.enfoque-abrir { min-height: 32px; padding: 0 10px; font-size: .85rem; line-height: 1; white-space: nowrap; }
+.enfoque-abrir, .refs-abrir { min-height: 32px; padding: 0 10px; font-size: .85rem; line-height: 1; white-space: nowrap; }
+/* PC: acciones en la fila del título de cada panel (Comparar, Pantalla completa, Referencias cruzadas). */
+:root:not([data-telefono="true"]) .pane-heading { flex-wrap: wrap; align-self: stretch; min-width: 0; max-width: 100%; }
+.pane-ref-fila { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px 8px; margin-top: auto; min-width: 0; }
+#pane-biblia .pane-ref-fila { align-self: stretch; }
+#pane-biblia .pane-ref-fila > .pane-ref { margin-top: 0 !important; flex: 0 1 auto !important; width: auto !important; min-width: 0; }
+/* Las acciones no se encogen: si no caben junto al título, bajan juntas a la línea siguiente (nunca bajo la ×). */
+.pane-heading .pane-acciones, .pane-ref-fila .pane-acciones { flex: 0 0 auto; max-width: 100%; }
+.pane-ref-fila .pane-acciones, .pane-heading .pane-acciones { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 4px 6px; margin-left: auto; min-width: 0; }
+.pane-acciones .comparison-actions { display: flex; gap: 6px; }
+.pane-acciones .outline { min-height: 32px; padding: 0 10px; font-size: .85rem; white-space: nowrap; }
+:root:not([data-telefono="true"]) #comparison-controls:not(:has(.comparison-actions)):not(:has(#compare-options:not([hidden]))) { display: none; }
+:root:not([data-telefono="true"]) #connections-box > summary { display: none; }
+:root:not([data-telefono="true"]) #connections-box:not([open]) { display: none; }
+:root[data-telefono="true"] .refs-abrir { display: none !important; }
+.pane-acciones.compactas .etq { display: none; }
+.pane-acciones.compactas :is(.enfoque-abrir, .refs-abrir) { min-width: 32px; padding: 0 8px; font-size: 1rem; }
 #enfoque-barra { display: none; }
 
 :root[data-enfoque][data-enfoque][data-enfoque] :is(.topbar, .reading-toolbar, .rail, .app-footer, .pane-notes, #ai-pane, #ai-resizer, .pane-resizer,

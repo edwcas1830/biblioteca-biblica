@@ -17,7 +17,10 @@
 
   function datos(){if(!state.hoy)state.hoy=H.vacio();return state.hoy;}
   function guardar(){try{save();}catch{/* app.js avisa si no se pudo */}}
-  const sinEtiquetas=html=>new DOMParser().parseFromString(String(html||''),'text/html').body.textContent.replace(/\s+/g,' ').trim();
+  // Texto plano del HTML del módulo: se quitan las etiquetas y un <textarea> traduce las entidades (&aacute;…).
+  // Sin DOMParser: en el iPhone (WebKit) el documento que crea choca con la CSP de la app.
+  const descodificador=document.createElement('textarea');
+  const sinEtiquetas=html=>{descodificador.innerHTML=String(html||'').replace(/<sup[^>]*>.*?<\/sup>/gis,' ').replace(/<[^>]*>/g,'');return descodificador.value.replace(/\s+/g,' ').trim();};
   // El texto sale de la Biblia elegida en el lector; si no está disponible, de la Reina-Valera 1909 que viene con la app.
   async function textoDe(ref){
     const fin=ref.endVerse||ref.verse;
