@@ -17,7 +17,7 @@
   function crear(etiqueta, attrs = {}, hijos = []) {
     const el = document.createElement(etiqueta);
     for (const [k, v] of Object.entries(attrs)) {
-      if (k === 'texto') el.textContent = v;
+      if (k === 'texto') { if (v === '✕' && window.BibliaIconos) el.append(window.BibliaIconos.svg('x')); else el.textContent = v; }
       else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
       else el.setAttribute(k, v);
     }
@@ -25,41 +25,11 @@
     return el;
   }
 
-  // ---------- Navegación inferior ----------
-  const ICONOS = {
-    leer: 'M3 5.5C5.5 4 8.5 4 12 6c3.5-2 6.5-2 9-.5V19c-2.5-1.5-5.5-1.5-9 .5-3.5-2-6.5-2-9-.5zM12 6v13.5',
-    plan: 'M7 3v3M17 3v3M4 8h16M5 5h14v15H5zM9 14l2 2 4-4',
-    devocional: 'M12 21c-4-3-7-6-7-10a7 7 0 0 1 14 0c0 4-3 7-7 10zM12 7v7M9 10h6',
-    oracion: 'M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z',
-    mas: 'M5 7h14M5 12h14M5 17h14'
-  };
-  function icono(id) {
-    const ns = 'http://www.w3.org/2000/svg';
-    const svg = document.createElementNS(ns, 'svg');
-    svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('class', 'movil-nav-icono');
-    const path = document.createElementNS(ns, 'path');
-    path.setAttribute('d', ICONOS[id]); svg.append(path);
-    return svg;
-  }
-  const DESTINOS = [
-    { id: 'leer', icono: '📖', texto: 'Leer', vista: 'read-view', accion: () => { if (vistaActiva() === 'read-view' && estado.hoja !== 'plegada') { ponerAltura('plegada'); return; } botonPorTexto('.compact-nav button', 'mi biblia')?.click(); } },
-    { id: 'plan', icono: '✓', texto: 'Plan', vista: 'plan-view', accion: () => botonPorTexto('.compact-nav button', 'mi plan')?.click() },
-    { id: 'devocional', icono: '❦', texto: 'Devocional', vista: 'dev-view', accion: () => botonPorTexto('.compact-nav button', 'devocional')?.click() },
-    { id: 'oracion', icono: '🙏', texto: 'Oración', vista: 'prayer-view', accion: () => botonPorTexto('.library-menu-items button', 'oración')?.click() },
-    { id: 'mas', icono: '☰', texto: 'Más', accion: () => abrirMas() }
-  ];
+  // Iconos Lucide (mobile/iconos.js, CONSENSO-BIBLIAS.md): un solo sistema, sin emojis.
+  const I = n => (window.BibliaIconos ? window.BibliaIconos.svg(n) : document.createTextNode(''));
+  const conI = (b, n) => (window.BibliaIconos ? window.BibliaIconos.enBoton(b, n) : b);
 
-  function construirNavegacion() {
-    const nav = crear('nav', { id: 'movil-nav', 'aria-label': 'Secciones' });
-    for (const d of DESTINOS) {
-      nav.append(crear('button', { type: 'button', 'data-destino': d.id, onclick: () => { cerrarMas(); d.accion(); setTimeout(marcarDestino, 60); } }, [
-        icono(d.id),
-        crear('span', { class: 'movil-nav-texto', texto: d.texto })
-      ]));
-    }
-    document.body.append(nav);
-  }
-
+  // ---------- Vista activa ----------
   function vistaActiva() {
     return $$('main > section.view').find(v => !v.hidden && getComputedStyle(v).display !== 'none')?.id || 'read-view';
   }
@@ -67,10 +37,6 @@
     const vista = vistaActiva();
     html.dataset.vistaMovil = vista;
     marcarPestana();
-    for (const b of $$('#movil-nav button')) {
-      const d = DESTINOS.find(x => x.id === b.dataset.destino);
-      b.setAttribute('aria-current', d.vista === vista ? 'page' : 'false');
-    }
   }
 
   // ---------- Menú «Más» ----------
@@ -88,6 +54,7 @@
   function construirMas() {
     hojaMas = crear('dialog', { id: 'movil-mas', 'aria-label': 'Más opciones' });
     const ajustes = crear('div', { class: 'movil-mas-ajustes' });
+    const opSistema = $('#theme-select option[value="sistema"]'); if (opSistema) opSistema.textContent = 'Según el teléfono';
     ajustesMas = ajustes;
     moverAjustes(true);
     const lista = crear('div', { class: 'movil-mas-lista' });
@@ -107,21 +74,30 @@
       caja.checked = origenStrong.checked;
       ajustes.append(crear('label', { class: 'movil-mas-strong', for: 'movil-strong' }, [crear('span', { texto: 'Números Strong en el texto' }), caja]));
     }
+    // Lectura en voz alta: voz y velocidad (CONSENSO-BIBLIAS.md). Se mueven los selectores reales.
+    const voz = $('#voice-select'), velocidad = $('#voice-rate');
+    if (voz && velocidad) ajustes.append(crear('div', { class: 'movil-mas-voz' }, [
+      crear('label', { for: 'voice-select', texto: 'Voz de lectura' }), voz,
+      crear('label', { for: 'voice-rate', texto: 'Velocidad' }), velocidad
+    ]));
     const extras = [
-      ['🖼 Imagen con versículos', () => window.BibliaImagen?.abrir()],
-      ['Estudio con IA', () => botonPorTexto('.reading-actions button', 'ia')?.click()],
-      ['◎ Atlas y contexto', () => $('#graphics-open')?.click()],
-      ['⤢ Pantalla completa', () => $('#pane-biblia .enfoque-abrir')?.click()],
-      ['🔊 Mostrar Strong y escuchar', () => { html.dataset.herramientas = 'abiertas'; try { localStorage.setItem('biblia-herramientas', 'abiertas'); } catch { /* sin almacenamiento */ } $('#movil-herr-plegar') && ($('#movil-herr-plegar').textContent = '⌃'); setTimeout(ajustarAltoLectura, 0); }]
+      ['image', 'Imagen con versículos', () => window.BibliaImagen?.abrir()],
+      ['sparkles', 'Estudio con IA', () => botonPorTexto('.reading-actions button', 'ia')?.click()],
+      ['map', 'Atlas y contexto', () => $('#graphics-open')?.click()],
+      ['maximize-2', 'Pantalla completa', () => $('#pane-biblia .enfoque-abrir')?.click()],
+      ['volume-2', 'Mostrar Strong y escuchar', () => { html.dataset.herramientas = 'abiertas'; try { localStorage.setItem('biblia-herramientas', 'abiertas'); } catch { /* sin almacenamiento */ } pintarPlegar(); setTimeout(ajustarAltoLectura, 0); }]
     ];
     // Edición tienda: «Apoyar el proyecto» (CONSENSO-PLAY: aporte con Google Play Billing; hasta que la app esté en
     // Google Play, la pantalla es una vista previa y no cobra nada).
-    if (window.BIBLIA_EDICION === 'tienda') extras.unshift(['♡ Apoyar el proyecto', abrirApoyo]);
-    for (const [texto, fn] of extras) lista.append(crear('button', { type: 'button', class: 'quiet', texto, onclick: () => { cerrarMas(); fn(); } }));
+    if (window.BIBLIA_EDICION === 'tienda') extras.unshift(['hand-heart', 'Apoyar el proyecto', abrirApoyo]);
+    for (const [ico, texto, fn] of extras) lista.append(conI(crear('button', { type: 'button', class: 'quiet', texto, onclick: () => { cerrarMas(); fn(); } }), ico));
+    const ICONO_MENU = [[/fuentes/i, 'file-text'], [/guardar copia/i, 'download'], [/recuperar copia/i, 'upload'], [/música/i, 'music'], [/oración/i, 'heart'],
+      [/círculo/i, 'users'], [/proteger/i, 'lock'], [/inteligencia/i, 'sliders-horizontal'], [/actualizaciones/i, 'refresh-cw']];
     for (const b of $$('.library-menu-items button')) {
       const t = b.textContent.trim();
       if (lista.querySelector(`[data-original="${CSS.escape(t)}"]`)) continue;
-      lista.append(crear('button', { type: 'button', class: 'quiet', 'data-original': t, texto: t, onclick: () => { cerrarMas(); b.click(); } }));
+      const nuevo = crear('button', { type: 'button', class: 'quiet', 'data-original': t, texto: t, onclick: () => { cerrarMas(); b.click(); } });
+      lista.append(conI(nuevo, (ICONO_MENU.find(([re]) => re.test(t)) || [, 'chevron-right'])[1]));
     }
     hojaMas.append(
       crear('div', { class: 'movil-mas-cabecera' }, [
@@ -131,12 +107,12 @@
       ajustes, lista
     );
     // Secciones (paso 2): Mi camino · Herramientas · Mi biblioteca y ajustes.
-    const plan = crear('button', { type: 'button', class: 'quiet', texto: '📅 Plan de lectura', onclick: () => { cerrarMas(); botonPorTexto('.compact-nav button', 'mi plan')?.click(); } });
+    const plan = conI(crear('button', { type: 'button', class: 'quiet', texto: 'Plan de lectura', onclick: () => { cerrarMas(); botonPorTexto('.compact-nav button', 'mi plan')?.click(); } }), 'calendar-check');
     lista.prepend(plan);
-    const miEstudio = VISTAS_ESTUDIO.map(v => crear('button', { type: 'button', class: 'quiet', 'data-estudio': v.id, texto: { historial: '🕘 ', marcador: '🔖 ', resaltados: '🖍 ', etiqueta: '🏷 ', notas: '✎ ', memoria: '🧠 ' }[v.id] + v.texto, onclick: () => { cerrarMas(); abrirMiEstudio(v.id); } }));
+    const miEstudio = VISTAS_ESTUDIO.map(v => conI(crear('button', { type: 'button', class: 'quiet', 'data-estudio': v.id, texto: v.texto, onclick: () => { cerrarMas(); abrirMiEstudio(v.id); } }), v.icono));
     lista.prepend(...miEstudio);
     const SECCIONES = [
-      ['Mi estudio', /^(🕘|🔖|🖍|🏷|✎|🧠) /],
+      ['Mi estudio', 'estudio'],
       ['Mi camino', /plan de lectura|oración|círculo/i],
       ['Herramientas', /imagen|estudio con ia|atlas|pantalla completa|escuchar|música/i],
       ['Mi biblioteca y ajustes', /./]
@@ -145,7 +121,7 @@
     lista.replaceChildren();
     const usados = new Set();
     for (const [titulo, re] of SECCIONES) {
-      const grupo = botones.filter(b => !usados.has(b) && re.test(b.textContent));
+      const grupo = botones.filter(b => !usados.has(b) && (re === 'estudio' ? !!b.dataset.estudio : re.test(b.textContent)));
       if (!grupo.length) continue;
       grupo.forEach(b => usados.add(b));
       lista.append(crear('h3', { class: 'movil-mas-seccion', texto: titulo }), ...grupo);
@@ -192,6 +168,7 @@
   function cerrarMas() { if (hojaMas?.open) hojaMas.close(); }
 
 
+  let pintarPlegar = () => {};
   // ---------- Fila de herramientas de lectura (Edward, 11-oct) ----------
   // Visible por defecto en la Biblia: Strong · ▷ Escuchar · ⏸ · ■ · ⤢ pantalla completa · ⌃ minimizar.
   // Minimizada queda una franja delgada con ⌄ para volver al mismo tamaño; se recuerda la elección.
@@ -204,20 +181,20 @@
     // Textos cortos en el teléfono (los botones son los de la app: conservan sus eventos).
     const etiqueta = fila.querySelector('label.checkbox-label');
     if (etiqueta) { for (const n of [...etiqueta.childNodes]) if (n.nodeType === 3) n.textContent = ' Strong'; etiqueta.title = 'Ver números Strong'; }
-    const corto = (sel, texto, nombre) => { const b = $(sel); if (b) { b.textContent = texto; b.setAttribute('aria-label', nombre); b.title = nombre; } };
-    corto('#voice-play', '▷ Escuchar', 'Escuchar el capítulo');
-    corto('#voice-pause', '⏸', 'Pausa o continuar');
-    corto('#voice-stop', '■', 'Detener la lectura');
-    const completa = crear('button', { type: 'button', id: 'movil-herr-completa', class: 'quiet', 'aria-label': 'Pantalla completa: solo el texto', title: 'Pantalla completa', texto: '⤢', onclick: () => $('#pane-biblia .enfoque-abrir')?.click() });
+    const corto = (sel, ico, texto, nombre) => { const b = $(sel); if (b) { b.replaceChildren(I(ico), ...(texto ? [crear('span', { texto })] : [])); b.setAttribute('aria-label', nombre); b.title = nombre; } };
+    corto('#voice-play', 'play', 'Escuchar', 'Escuchar el capítulo');
+    corto('#voice-pause', 'pause', '', 'Pausa o continuar');
+    corto('#voice-stop', 'square', '', 'Detener la lectura');
+    const completa = crear('button', { type: 'button', id: 'movil-herr-completa', class: 'quiet', 'aria-label': 'Pantalla completa: solo el texto', title: 'Pantalla completa', onclick: () => $('#pane-biblia .enfoque-abrir')?.click() }, [I('maximize-2')]);
     const plegar = crear('button', { type: 'button', id: 'movil-herr-plegar', class: 'quiet', onclick: () => {
       const mini = html.dataset.herramientas !== 'mini';
       html.dataset.herramientas = mini ? 'mini' : 'abiertas';
       try { localStorage.setItem('biblia-herramientas', html.dataset.herramientas); } catch { /* sin almacenamiento */ }
       pintarPlegar(); setTimeout(ajustarAltoLectura, 0);
     } });
-    const pintarPlegar = () => {
+    pintarPlegar = () => {
       const mini = html.dataset.herramientas === 'mini';
-      plegar.textContent = mini ? '⌄ Strong y escuchar' : '⌃';
+      plegar.replaceChildren(I(mini ? 'chevron-down' : 'chevron-up'), ...(mini ? [crear('span', { texto: 'Strong y escuchar' })] : []));
       plegar.setAttribute('aria-expanded', String(!mini));
       plegar.setAttribute('aria-label', mini ? 'Mostrar Strong y escuchar' : 'Minimizar la fila');
     };
@@ -243,12 +220,13 @@
     const texto = crear('span', { class: 'movil-barra-texto', texto: textoReferencia() });
     const ref = crear('button', { type: 'button', class: 'movil-barra-ref', 'aria-label': 'Elegir libro y capítulo', onclick: () => window.BibliaBuscador?.abrir({ indice: true }) },
       [texto, crear('span', { class: 'movil-barra-flecha', 'aria-hidden': 'true', texto: '▾' })]);
-    const buscar = crear('button', { type: 'button', class: 'movil-barra-icono', id: 'movil-buscar', 'aria-label': 'Buscar libro, cita o palabra', onclick: () => window.BibliaBuscador?.abrir({ indice: false }) }, [iconoBuscar()]);
-    const menu = crear('button', { type: 'button', class: 'movil-barra-icono', id: 'movil-menu', 'aria-label': 'Menú', texto: '☰', onclick: abrirMas });
+    const buscar = crear('button', { type: 'button', class: 'movil-barra-icono', id: 'movil-buscar', 'aria-label': 'Buscar libro, cita o palabra', onclick: () => window.BibliaBuscador?.abrir({ indice: false }) }, [window.BibliaIconos ? I('search') : iconoBuscar()]);
+    const menu = crear('button', { type: 'button', class: 'movil-barra-icono', id: 'movil-menu', 'aria-label': 'Menú', onclick: abrirMas }, [I('menu')]);
     vista.prepend(crear('header', { id: 'movil-barra' }, [menu, ref, buscar]));
     // Versión y «Comparar» comparten una sola fila al comienzo de la Biblia (se mueve el nodo: conserva sus eventos).
     const cabeza = $('#pane-biblia > .pane-head'), comparar = $('#comparison-controls');
     if (cabeza && comparar && comparar.parentElement !== cabeza) cabeza.append(comparar);
+    conI($('#compare-toggle'), 'arrow-left-right');
     const actualizar = () => { texto.textContent = textoReferencia(); };
     const origen = $('#bible-ref');
     if (origen) new MutationObserver(actualizar).observe(origen, { childList: true, characterData: true, subtree: true });
@@ -260,18 +238,20 @@
   // ---------- Paso 2 del diseño (CONSENSO-MOVIL.md): pestañas abajo, una cosa a la vez ----------
   // Biblia · Comentario · Diccionario · Original · Referencias · Devocional. Cada una ocupa toda la pantalla
   // entre la barra de arriba y las pestañas, y sigue al versículo elegido. Plan, Oración y lo demás van en ☰.
+  // Edward eligió las 6 fijas con icono y nombre corto (12-oct, opción A). Si la letra del sistema es tan grande
+  // que un nombre no cabe, la franja pasa a dos filas de tres: el nombre nunca desaparece.
   const VISTAS = [
-    { id: 'biblia', texto: 'Biblia' },
-    { id: 'comentario', texto: 'Comentario' },
-    { id: 'diccionario', texto: 'Diccionario' },
-    { id: 'original', texto: 'Original' },
-    { id: 'referencias', texto: 'Referencias' },
-    { id: 'devocional', texto: 'Devocional' }
+    { id: 'biblia', texto: 'Biblia', corto: 'Biblia', icono: 'book-open' },
+    { id: 'comentario', texto: 'Comentario', corto: 'Coment.', icono: 'message-square-text' },
+    { id: 'diccionario', texto: 'Diccionario', corto: 'Dicc.', icono: 'book-a' },
+    { id: 'original', texto: 'Original', corto: 'Original', icono: 'languages' },
+    { id: 'referencias', texto: 'Referencias', corto: 'Refs.', icono: 'link' },
+    { id: 'devocional', texto: 'Devocional', corto: 'Devoc.', icono: 'sun' }
   ];
   let franja;
   function construirPestanas() {
     franja = crear('nav', { id: 'movil-pestanas', role: 'tablist', 'aria-label': 'Qué ver' });
-    for (const v of VISTAS) franja.append(crear('button', { type: 'button', role: 'tab', 'data-vista': v.id, 'aria-selected': 'false', texto: v.texto, onclick: () => elegirVista(v.id) }));
+    for (const v of VISTAS) franja.append(crear('button', { type: 'button', role: 'tab', 'data-vista': v.id, 'aria-selected': 'false', 'aria-label': v.texto, title: v.texto, onclick: () => elegirVista(v.id) }, [I(v.icono), crear('span', { texto: v.corto })]));
     document.body.append(franja);
   }
   function elegirVista(id) {
@@ -300,14 +280,40 @@
     const actual = vista === 'dev-view' ? 'devocional' : vista === 'read-view' ? (estado.pestana === 'devocional' ? 'biblia' : estado.pestana || 'biblia') : '';
     if (vista === 'read-view' && estado.pestana === 'devocional') { estado.pestana = 'biblia'; html.dataset.pestana = 'biblia'; }
     for (const b of $$('button', franja)) b.setAttribute('aria-selected', String(b.dataset.vista === actual));
-    franja.querySelector('[aria-selected="true"]')?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
   }
-  // Capítulos: flechas a los lados y deslizar sobre el texto (no desde los bordes: ahí está el «atrás» de Android).
+  function ajustarPestanas() {
+    if (!franja) return;
+    franja.dataset.filas = 'una';
+    const noCabe = $$('button > span', franja).some(s => s.scrollWidth > s.clientWidth + 1);
+    franja.dataset.filas = noCabe ? 'dos' : 'una';
+  }
+  // Capítulos: un pie fino sobre las pestañas que dice adónde vas («‹ Salmos 22 · Salmos 24 ›»), nunca encima
+  // del texto (CONSENSO-BIBLIAS.md), y deslizar sobre el texto (no desde los bordes: ahí está el «atrás» de Android).
+  function vecinos() {
+    try {
+      const p = state.position, b = books;
+      const ant = p.chapter > 1 ? [p.book, p.chapter - 1] : p.book > 0 ? [p.book - 1, b[p.book - 1].chapters.length] : null;
+      const sig = p.chapter < b[p.book].chapters.length ? [p.book, p.chapter + 1] : p.book < b.length - 1 ? [p.book + 1, 1] : null;
+      const nombre = x => x && b[x[0]].name + ' ' + x[1];
+      return { ant: nombre(ant), sig: nombre(sig) };
+    } catch { return { ant: 'Anterior', sig: 'Siguiente' }; }
+  }
   function construirFlechas() {
     const libro = $('#pane-biblia');
     if (!libro || $('#movil-flecha-ant')) return;
-    const flecha = (id, texto, etiqueta, destino) => crear('button', { type: 'button', id, class: 'movil-flecha', 'aria-label': etiqueta, texto, onclick: () => $(destino)?.click() });
-    libro.append(flecha('movil-flecha-ant', '‹', 'Capítulo anterior', '#previous'), flecha('movil-flecha-sig', '›', 'Capítulo siguiente', '#next'));
+    const flecha = (id, ico, etiqueta, destino, alFinal) => crear('button', { type: 'button', id, class: 'movil-flecha', 'aria-label': etiqueta, onclick: () => $(destino)?.click() },
+      alFinal ? [crear('span', { class: 'movil-flecha-texto' }), I(ico)] : [I(ico), crear('span', { class: 'movil-flecha-texto' })]);
+    const ant = flecha('movil-flecha-ant', 'chevron-left', 'Capítulo anterior', '#previous'), sig = flecha('movil-flecha-sig', 'chevron-right', 'Capítulo siguiente', '#next', true);
+    const pie = crear('nav', { id: 'movil-pie', 'aria-label': 'Capítulo anterior y siguiente' }, [ant, sig]);
+    document.body.append(pie);
+    const pintar = () => {
+      const v = vecinos();
+      $('.movil-flecha-texto', ant).textContent = v.ant || ''; ant.hidden = !v.ant; ant.setAttribute('aria-label', v.ant ? 'Ir a ' + v.ant : 'Capítulo anterior');
+      $('.movil-flecha-texto', sig).textContent = v.sig || ''; sig.hidden = !v.sig; sig.setAttribute('aria-label', v.sig ? 'Ir a ' + v.sig : 'Capítulo siguiente');
+    };
+    const origen = $('#bible-ref');
+    if (origen) new MutationObserver(pintar).observe(origen, { childList: true, characterData: true, subtree: true });
+    pintar();
     const versos = $('#verses');
     let toque = null;
     versos?.addEventListener('touchstart', e => { const t = e.touches[0]; toque = t && t.clientX > 24 && t.clientX < window.innerWidth - 24 ? { x: t.clientX, y: t.clientY, t: Date.now() } : null; }, { passive: true });
@@ -318,14 +324,42 @@
     }, { passive: true });
   }
 
-  // ---------- Hoja de estudio ----------
-  let cabeceraHoja;
-  const PESTANAS = [
-    { id: 'comentario', texto: 'Comentario', toggle: '#pane-comment-toggle' },
-    { id: 'diccionario', texto: 'Diccionario', toggle: '#pane-dictionary-toggle' },
-    { id: 'original', texto: 'Original', toggle: '#pane-dictionary-toggle' }
-  ];
-
+  // ---------- Comentario (CONSENSO-BIBLIAS.md): qué ver en fichas, un solo selector de fuente y nunca vacío ----------
+  // Las fichas reemplazan el segundo selector («Comentario / Mapa / Línea de tiempo…»). La fuente solo aparece en
+  // «Comentario». Si no hay comentarios instalados (edición de Play), se ofrece lo que sí hay para el capítulo.
+  const MODOS_COMENTARIO = { comment: 'Comentario', map: 'Mapa', events: 'Línea de tiempo', kings: 'Reyes y profetas', people: 'Personas', harmony: 'Evangelios', outline: 'Bosquejo' };
+  function construirComentario() {
+    const modo = $('#graphics-mode'), fuente = $('#comment-select'), contenido = $('#comment-content');
+    if (!modo || !fuente || !contenido || $('#movil-coment-modos')) return;
+    const fichas = crear('div', { id: 'movil-coment-modos', role: 'group', 'aria-label': 'Qué ver para este capítulo' },
+      [...modo.options].map(o => crear('button', { type: 'button', 'data-modo': o.value, 'aria-pressed': 'false', texto: MODOS_COMENTARIO[o.value] || o.textContent, onclick: () => elegirModo(o.value) })));
+    const elegirModo = v => { if (modo.value !== v) { modo.value = v; modo.dispatchEvent(new Event('change', { bubbles: true })); } pintarModo(); };
+    const vacio = crear('div', { id: 'movil-coment-vacio', class: 'movil-vacio', hidden: '' }, [
+      I('message-square-text'),
+      crear('p', { class: 'movil-vacio-titulo', texto: 'Esta versión todavía no trae comentarios' }),
+      crear('p', { texto: 'Mientras tanto, mira lo que sí hay para este capítulo:' }),
+      crear('div', { class: 'movil-vacio-acciones' }, [
+        conI(crear('button', { type: 'button', class: 'outline', texto: 'Mapa del capítulo', onclick: () => elegirModo('map') }), 'map'),
+        conI(crear('button', { type: 'button', class: 'outline', texto: 'Línea de tiempo', onclick: () => elegirModo('events') }), 'history'),
+        conI(crear('button', { type: 'button', class: 'outline', texto: 'Referencias cruzadas', onclick: () => elegirVista('referencias') }), 'link')
+      ])
+    ]);
+    const pintarModo = () => {
+      html.dataset.comentModo = modo.value;
+      for (const b of $$('button', fichas)) b.setAttribute('aria-pressed', String(b.dataset.modo === modo.value));
+      const sinFuentes = [...fuente.options].filter(o => o.value).length === 0;
+      // Hay comentarios pero ninguno elegido: se abre el primero en vez de una pantalla vacía.
+      if (modo.value === 'comment' && !sinFuentes && !fuente.value) { fuente.value = [...fuente.options].find(o => o.value).value; fuente.dispatchEvent(new Event('change', { bubbles: true })); }
+      vacio.hidden = !(modo.value === 'comment' && sinFuentes);
+      html.dataset.sinComentarios = String(sinFuentes);
+    };
+    $('#pane-comentario .graphics-toolbar')?.before(fichas);
+    contenido.before(vacio);
+    modo.addEventListener('change', pintarModo);
+    new MutationObserver(pintarModo).observe(fuente, { childList: true });
+    pintarModo();
+  }
+  // ---------- Paneles de estudio ----------
   function asegurarPanelesVisibles() {
     for (const sel of ['#pane-bible-toggle', '#pane-comment-toggle', '#pane-dictionary-toggle']) {
       const b = $(sel);
@@ -333,40 +367,9 @@
     }
   }
 
-  function construirHoja() {
-    cabeceraHoja = crear('div', { id: 'movil-hoja-cabecera', role: 'tablist', 'aria-label': 'Estudio' });
-    const asa = crear('button', { type: 'button', class: 'movil-hoja-asa', 'aria-label': 'Ampliar o reducir el estudio', onclick: alternarAltura }, [crear('span')]);
-    // Con la hoja abierta, un botón con texto devuelve a la Biblia (el asa sola no se entiende).
-    const volver = crear('button', { type: 'button', class: 'movil-hoja-volver', 'aria-label': 'Volver a la Biblia', onclick: () => ponerAltura('plegada') }, [crear('span', { 'aria-hidden': 'true', texto: '⌄' }), crear('span', { texto: 'Biblia' })]);
-    const pestanas = crear('div', { class: 'movil-hoja-pestanas' });
-    for (const p of PESTANAS) {
-      pestanas.append(crear('button', { type: 'button', role: 'tab', 'data-pestana': p.id, texto: p.texto, onclick: () => elegirPestana(p.id, true) }));
-    }
-    const fijar = crear('button', { type: 'button', class: 'movil-hoja-fijar quiet', 'aria-pressed': 'false', title: 'Fijar: el estudio deja de seguir el versículo', texto: '📌', onclick: () => {
-      estado.fijada = !estado.fijada; fijar.setAttribute('aria-pressed', String(estado.fijada)); html.dataset.hojaFijada = String(estado.fijada);
-    } });
-    cabeceraHoja.append(crear('div', { class: 'movil-hoja-izquierda' }, [asa, volver]), pestanas, fijar);
-    document.body.append(cabeceraHoja);
-
-    // Arrastrar el asa: hacia arriba amplía, hacia abajo reduce.
-    let inicioY = null;
-    asa.addEventListener('pointerdown', e => { inicioY = e.clientY; });
-    window.addEventListener('pointerup', e => {
-      if (inicioY === null) return;
-      const dy = e.clientY - inicioY; inicioY = null;
-      if (Math.abs(dy) < 24) return;
-      const orden = ['plegada', 'media', 'completa'];
-      const i = orden.indexOf(estado.hoja) + (dy < 0 ? 1 : -1);
-      ponerAltura(orden[Math.max(0, Math.min(2, i))]);
-    });
-  }
-
   function ponerAltura(altura) {
     estado.hoja = altura;
     html.dataset.hoja = altura;
-  }
-  function alternarAltura() {
-    ponerAltura(estado.hoja === 'plegada' ? 'media' : estado.hoja === 'media' ? 'completa' : 'plegada');
   }
   function elegirPestana(id, abrir) {
     if (abrir) { elegirVista(id); return; }
@@ -399,16 +402,16 @@
     const tintas = crear('div', { class: 'movil-tintas' });
     for (const b of $$('.ink-colors [data-ink]')) {
       const copia = crear('button', { type: 'button', class: b.className, 'aria-label': b.getAttribute('aria-label') || b.textContent.trim(), onclick: () => { b.click(); ocultarBarra(); } });
-      if (b.dataset.ink === 'none') copia.textContent = '✕';
+      if (b.dataset.ink === 'none') copia.append(I('x'));
       tintas.append(copia);
     }
-    const accion = (texto, fn, etiqueta) => crear('button', { type: 'button', class: 'quiet', texto, 'aria-label': etiqueta || texto, onclick: fn });
+    const accion = (ico, texto, fn, etiqueta) => crear('button', { type: 'button', class: 'quiet con-ico', 'aria-label': etiqueta || texto, onclick: fn }, [I(ico), crear('span', { texto })]);
     barra.append(
       tintas,
-      accion('Nota', () => { const n = $('.pane-notes'); if (n) { n.open = true; html.dataset.notas = 'abiertas'; $('#note')?.focus(); } ocultarBarra(); }),
-      accion('⧉ Copiar', copiarVersiculo, 'Copiar versículo'),
-      accion('↗ Compartir', compartirVersiculo, 'Compartir versículo'),
-      crear('button', { type: 'button', class: 'quiet movil-mas-acciones', id: 'movil-mas-acciones', texto: '⋯', 'aria-label': 'Más acciones del versículo', onclick: abrirAcciones })
+      accion('pencil', 'Nota', () => { const n = $('.pane-notes'); if (n) { n.open = true; html.dataset.notas = 'abiertas'; $('#note')?.focus(); } ocultarBarra(); }),
+      accion('copy', 'Copiar', copiarVersiculo, 'Copiar versículo'),
+      accion('share-2', 'Compartir', compartirVersiculo, 'Compartir versículo'),
+      crear('button', { type: 'button', class: 'quiet movil-mas-acciones', id: 'movil-mas-acciones', 'aria-label': 'Más acciones del versículo', onclick: abrirAcciones }, [I('ellipsis')])
     );
     document.body.append(barra);
     setTimeout(pintarColores, 0);
@@ -429,8 +432,8 @@
   // Historial · Marcadores · Resaltados (con nombre por color) · Etiquetas · Notas · Para memorizar.
   // Los datos viven en state.estudio (EstudioCore) y en state.highlights / state.notes de siempre.
   const VISTAS_ESTUDIO = [
-    { id: 'historial', texto: 'Historial' }, { id: 'marcador', texto: 'Marcadores' }, { id: 'resaltados', texto: 'Resaltados' },
-    { id: 'etiqueta', texto: 'Etiquetas' }, { id: 'notas', texto: 'Notas' }, { id: 'memoria', texto: 'Para memorizar' }
+    { id: 'historial', texto: 'Historial', icono: 'history' }, { id: 'marcador', texto: 'Marcadores', icono: 'bookmark' }, { id: 'resaltados', texto: 'Resaltados', icono: 'highlighter' },
+    { id: 'etiqueta', texto: 'Etiquetas', icono: 'tag' }, { id: 'notas', texto: 'Notas', icono: 'pencil' }, { id: 'memoria', texto: 'Para memorizar', icono: 'repeat' }
   ];
   const NOMBRE_COLOR = { gold: 'Dorado', sage: 'Verde', rose: 'Rosa' };
   let hojaEstudio, filtroEstudio = 'historial', etiquetaElegida = '';
@@ -528,18 +531,18 @@
   // ---------- Paso 3 (CONSENSO-MOVIL.md): «⋯» con todas las acciones y varios versículos a la vez ----------
   let hojaAcciones;
   function construirHojaAcciones() {
-    const fila = (texto, fn, extra = {}) => crear('button', { type: 'button', class: 'quiet', texto, ...extra, onclick: () => { hojaAcciones.close(); fn(); } });
+    const fila = (ico, texto, fn, extra = {}) => crear('button', { type: 'button', class: 'quiet con-ico', ...extra, onclick: () => { hojaAcciones.close(); fn(); } }, [I(ico), crear('span', { texto })]);
     hojaAcciones = crear('dialog', { id: 'movil-acciones', 'aria-label': 'Acciones del versículo' }, [
       crear('div', { class: 'movil-mas-cabecera' }, [crear('h2', { id: 'movil-acciones-titulo', texto: 'Versículo' }), crear('button', { type: 'button', class: 'quiet', 'aria-label': 'Cerrar', texto: '✕', onclick: () => hojaAcciones.close() })]),
       crear('div', { class: 'movil-mas-lista' }, [
-        fila('🔖 Marcar / quitar marcador', () => marcar('marcador')),
-        fila('🏷 Etiquetar…', etiquetar),
-        fila('🧠 Para memorizar / quitar', () => marcar('memoria')),
-        fila('☑ Elegir varios versículos', () => entrarSeleccion($('#verses .verse.selected'))),
-        fila('🖼 Imagen con este versículo', () => window.BibliaImagen?.abrir()),
-        fila('✦ Preguntar a la IA', () => $('#ai-verse-ask')?.click(), { id: 'movil-preguntar' }),
-        fila('⇄ Comparar versiones', () => { if ($('#compare-toggle')?.getAttribute('aria-pressed') !== 'true') $('#compare-toggle')?.click(); }),
-        fila('✎ Nota del versículo', () => { const n = $('.pane-notes'); if (n) { n.open = true; html.dataset.notas = 'abiertas'; $('#note')?.focus(); } })
+        fila('bookmark', 'Marcar / quitar marcador', () => marcar('marcador')),
+        fila('tag', 'Etiquetar…', etiquetar),
+        fila('repeat', 'Para memorizar / quitar', () => marcar('memoria')),
+        fila('square-check', 'Elegir varios versículos', () => entrarSeleccion($('#verses .verse.selected'))),
+        fila('image', 'Imagen con este versículo', () => window.BibliaImagen?.abrir()),
+        fila('sparkles', 'Preguntar a la IA', () => $('#ai-verse-ask')?.click(), { id: 'movil-preguntar' }),
+        fila('arrow-left-right', 'Comparar versiones', () => { if ($('#compare-toggle')?.getAttribute('aria-pressed') !== 'true') $('#compare-toggle')?.click(); }),
+        fila('pencil', 'Nota del versículo', () => { const n = $('.pane-notes'); if (n) { n.open = true; html.dataset.notas = 'abiertas'; $('#note')?.focus(); } })
       ])
     ]);
     hojaAcciones.addEventListener('click', e => { if (e.target === hojaAcciones) hojaAcciones.close(); });
@@ -555,15 +558,15 @@
   const elegidos = new Set();
   let barraSeleccion;
   function construirSeleccion() {
-    const boton = (texto, fn, etiqueta) => crear('button', { type: 'button', class: 'quiet', texto, 'aria-label': etiqueta || texto, onclick: fn });
+    const boton = (ico, texto, fn, etiqueta) => crear('button', { type: 'button', class: 'quiet con-ico', 'aria-label': etiqueta || texto, onclick: fn }, [I(ico), ...(texto ? [crear('span', { texto })] : [])]);
     barraSeleccion = crear('div', { id: 'movil-seleccion', role: 'toolbar', 'aria-label': 'Versículos elegidos', hidden: '' }, [
       crear('span', { class: 'movil-seleccion-cuenta', role: 'status' }),
-      boton('⧉ Copiar', () => copiarSeleccion(false), 'Copiar los versículos elegidos'),
-      boton('↗ Compartir', () => copiarSeleccion(true), 'Compartir los versículos elegidos'),
-      boton('🖼 Imagen', imagenSeleccion, 'Imagen con los versículos elegidos'),
-      boton('🧠', () => { marcar('memoria'); salirSeleccion(); }, 'Memorizar los versículos elegidos'),
-      boton('🏷', () => { etiquetar(); }, 'Etiquetar los versículos elegidos'),
-      boton('✕', salirSeleccion, 'Terminar la selección')
+      boton('copy', 'Copiar', () => copiarSeleccion(false), 'Copiar los versículos elegidos'),
+      boton('share-2', 'Compartir', () => copiarSeleccion(true), 'Compartir los versículos elegidos'),
+      boton('image', 'Imagen', imagenSeleccion, 'Imagen con los versículos elegidos'),
+      boton('repeat', '', () => { marcar('memoria'); salirSeleccion(); }, 'Memorizar los versículos elegidos'),
+      boton('tag', '', () => { etiquetar(); }, 'Etiquetar los versículos elegidos'),
+      boton('x', '', salirSeleccion, 'Terminar la selección')
     ]);
     document.body.append(barraSeleccion);
     const versos = $('#verses');
@@ -682,9 +685,12 @@
     const libro = $('#pane-biblia');
     if (!libro || !consulta.matches) return;
     const arriba = libro.getBoundingClientRect().top + window.scrollY;
+    ajustarPestanas();
     if (franja) html.style.setProperty('--nav-alto', Math.round(franja.getBoundingClientRect().height || 56) + 'px');
+    const pieCap = $('#movil-pie');
+    if (pieCap) html.style.setProperty('--pie-capitulo', Math.round(pieCap.getBoundingClientRect().height || 0) + 'px');
     const pie = (franja ? franja.getBoundingClientRect().height : 0) || parseFloat(getComputedStyle(html).getPropertyValue('--nav-alto')) || 56;
-    const cab = 0;
+    const cab = estado.pestana === 'biblia' ? (parseFloat(getComputedStyle(html).getPropertyValue('--pie-capitulo')) || 0) : 0;
     html.style.setProperty('--cabeceras-lectura', Math.max(0, Math.round(arriba)) + 'px');
     html.style.setProperty('--alto-libro', Math.max(320, window.innerHeight - arriba - pie - cab) + 'px');
   }
@@ -817,7 +823,7 @@
       dialogoTraspaso.addEventListener('close', () => { if (recargarAlCerrar) location.reload(); });
     }
     if (!botonTraspaso) {
-      botonTraspaso = crear('button', { type: 'button', class: 'quiet', id: 'movil-traer-pc', texto: '⇣ Traer desde la PC', onclick: () => { cerrarMas(); dialogoTraspaso.showModal(); iniciarTraspaso(); } });
+      botonTraspaso = conI(crear('button', { type: 'button', class: 'quiet', id: 'movil-traer-pc', texto: 'Traer desde la PC', onclick: () => { cerrarMas(); dialogoTraspaso.showModal(); iniciarTraspaso(); } }), 'laptop');
       const seccionBiblioteca = [...$$('.movil-mas-seccion', hojaMas)].find(h => /biblioteca/i.test(h.textContent));
       if (seccionBiblioteca) seccionBiblioteca.after(botonTraspaso); else $('.movil-mas-lista', hojaMas).prepend(botonTraspaso);
     }
@@ -998,6 +1004,8 @@
     construirPestanas();
     construirFlechas();
     construirBarraVersiculo();
+    construirComentario();
+    $('#restore-file')?.removeAttribute('accept');
     construirControlesLectura();
     prepararTraspaso();
     soloProveedoresDelTelefono();

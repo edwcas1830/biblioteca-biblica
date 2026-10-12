@@ -185,6 +185,13 @@ jobs:
           grep -q "^OK  la palabra elegida sigue al cambiar de diccionario" prueba-emulador/informe.txt
           grep -q "^OK  palabra con original (RV1960): el diccionario la recibe y no la pierde" prueba-emulador/informe.txt
           grep -q "^OK  paso 4: Mi estudio guarda marcadores, etiquetas, memoria, colores e historial" prueba-emulador/informe.txt
+          grep -q "^OK  entrega 1: las 6 pestañas fijas con icono, sin deslizar ni cortarse" prueba-emulador/informe.txt
+          grep -q "^OK  entrega 1: el pie dice adónde vas y no tapa el texto" prueba-emulador/informe.txt
+          grep -q "^OK  entrega 1: ningún emoji en la barra, el menú ni las pestañas" prueba-emulador/informe.txt
+          grep -q "^OK  entrega 1: voz y velocidad en el menú y Detener a la vista" prueba-emulador/informe.txt
+          grep -q "^OK  entrega 1: Comentario con fichas, un solo selector y nunca vacío" prueba-emulador/informe.txt
+          grep -q "^OK  entrega 1: guardar copia en el teléfono y recuperarla (vuelve la nota borrada)" prueba-emulador/informe.txt
+          grep -q "^OK  entrega 1 con letra al 200 %: los nombres de las pestañas se siguen viendo" prueba-emulador/informe.txt
 
       - name: Resultados de la prueba en el emulador
         if: always()

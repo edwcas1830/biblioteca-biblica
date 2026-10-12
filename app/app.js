@@ -85,7 +85,7 @@ function reference(p=state.position) { return `${books[p.book].name} ${p.chapter
 function settings() {
   state.appearance=appearanceCore.normalize(state.appearance);
   state.appearance.views=paneCore.normalize(state.appearance.views,state.appearance.panes);
-  const root=document.documentElement,theme=appearanceCore.themeAt(state.appearance.theme);
+  const root=document.documentElement,theme=appearanceCore.themeAt(state.appearance.theme,undefined,!!window.matchMedia?.('(prefers-color-scheme: dark)').matches);
   root.dataset.design=state.appearance.design;root.dataset.theme=theme;
   const link=$('#design-css'),href='designs/design-'+state.appearance.design+'.css';
   if(link.getAttribute('href')!==href)link.setAttribute('href',href);
@@ -354,9 +354,11 @@ function bind() {
   });
   $('#backup').addEventListener('click',async()=>{
     await saveQueue;if(saveFailed){toast('Guarda los cambios antes de hacer la copia.');return;}let exported;try{exported=desktop?.exportBackup?await desktop.exportBackup():state;}catch(e){toast(e.message);return;}
-    const blob=new Blob([JSON.stringify(exported,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;
-    const date=new Date();const stamp=[date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-');
-    a.download=`mi-biblioteca-${stamp}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);toast('Copia preparada: notas, subrayados, devocionales y planes.');
+    const date=new Date();const stamp=[date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-'),nombre=`mi-biblioteca-${stamp}.json`,texto=JSON.stringify(exported,null,2);
+    // En el teléfono el «descargar» del navegador no hace nada: la plataforma guarda el archivo y abre «Compartir».
+    if(window.BibliaPlataforma?.guardarArchivo){try{const r=await window.BibliaPlataforma.guardarArchivo({nombre,texto,titulo:'Mi biblioteca · copia de seguridad'});toast(r.compartido?'Copia guardada: notas, subrayados, devocionales y planes.':'No elegiste dónde guardarla. Vuelve a tocar «Guardar copia».');}catch(e){toast('No se pudo guardar la copia: '+e.message);}return;}
+    const blob=new Blob([texto],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;
+    a.download=nombre;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);toast('Copia preparada: notas, subrayados, devocionales y planes.');
   });
   $('#restore').addEventListener('click',()=>$('#restore-file').click());
   $('#restore-file').addEventListener('change',async event=>{
@@ -567,6 +569,7 @@ function bindAppearance(){
   $('#design-select').addEventListener('change',()=>{state.appearance.design=$('#design-select').value;settings();save();});
   $('#theme-select').addEventListener('change',()=>{state.appearance.theme=$('#theme-select').value;settings();save();});
   setInterval(()=>{if(state.appearance.theme==='auto')settings();},60000);
+  window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener?.('change',()=>{if(state.appearance.theme==='sistema')settings();});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&state.appearance.theme==='auto')settings();});
   const scrollAreas=()=>[document.scrollingElement,$('#main-content'),$('#verses')];
   const updateTop=()=>{const visible=window.scrollY>600||scrollAreas().some(el=>el&&el.scrollTop>600);const button=$('#back-to-top');button.classList.toggle('is-visible',visible);button.setAttribute('aria-hidden',String(!visible));button.tabIndex=visible?0:-1;};
@@ -594,5 +597,7 @@ function voiceController(){
 async function loadVoices(){try{await voiceController().loadVoices();}catch{$('#voice-play').disabled=true;$('#voice-pause').disabled=true;$('#voice-status').textContent='No se pudieron consultar las voces del dispositivo.';}}
 function stopVoice(){if(readerVoiceController)return readerVoiceController.stop().catch(()=>{$('#voice-status').textContent='No se pudo detener la voz del dispositivo.';});window.speechSynthesis?.cancel();return Promise.resolve();}
 async function toggleVoicePause(){try{await voiceController().togglePause();}catch{$('#voice-status').textContent='No se pudo pausar la voz del dispositivo.';}}
-async function playVoice(){if(!chapterData){toast('Espera a que se cargue el capítulo y elige una voz.');return;}try{await voiceController().play(chapterData.verses.map(v=>v.text).join('\n'),$('#voice-select').value);}catch(error){toast(error.message);}}
+async function playVoice(){if(!chapterData){toast('Espera a que se cargue el capítulo y elige una voz.');return;}try{await voiceController().play(chapterData.verses.map(v=>v.text).join('\n'),$('#voice-select').value,Number($('#voice-rate')?.value||1));}catch(error){toast(error.message);}}
+// La velocidad de lectura se recuerda en este equipo (preferencia, no dato de estudio).
+(()=>{const r=document.getElementById('voice-rate');if(!r)return;try{const v=localStorage.getItem('biblioteca-voz-velocidad');if(v&&[...r.options].some(o=>o.value===v))r.value=v;}catch{}r.addEventListener('change',()=>{try{localStorage.setItem('biblioteca-voz-velocidad',r.value);}catch{}});})();
 start();

@@ -11,7 +11,7 @@
   --hoja-media: 48dvh;
   --hoja-completa: calc(100dvh - var(--seguro-arriba) - var(--pie) - 12px);
   --hoja-alto: var(--hoja-plegada);
-  --fondo-hoja: var(--paper, var(--surface, Canvas));
+  --fondo-hoja: var(--paper, Canvas);
   --borde-hoja: color-mix(in srgb, currentColor 18%, transparent);
   -webkit-text-size-adjust: 100%;
 }
@@ -405,7 +405,7 @@ html[data-edicion="tienda"] #sources-dialog > p.muted { display: none !important
 :root[data-telefono="true"] .movil-barra-ref {
   flex: 1; min-width: 0; min-height: 48px; display: flex; align-items: center; justify-content: center; gap: 8px;
   padding: 0 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--ink);
-  font-family: var(--serif, Georgia, serif); font-size: 1.125rem; font-weight: 600;
+  font-family: var(--font-reader, Georgia, serif); font-size: 1.125rem; font-weight: 600;
 }
 :root[data-telefono="true"] .movil-barra-texto { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 :root[data-telefono="true"] .movil-barra-flecha { flex: none; font-size: .875rem; color: var(--muted); }
@@ -552,7 +552,76 @@ html[data-edicion="tienda"] #sources-dialog > p.muted { display: none !important
 :root[data-telefono="true"]:not([data-pestana="biblia"]) #library-controls { display: none !important; }
 
 /* La fila cabe en 360 px: sin «■ detener» (⏸ pausa y continúa), separaciones de 4 y botones de icono de 44 de ancho. */
-:root[data-telefono="true"] #library-controls #voice-stop { display: none !important; }
+/* Detener vuelve a la vista (Entrega 1): pausa, detener y pantalla completa como iconos de 44 px. */
 :root[data-telefono="true"][data-controles-lectura="abiertos"] #library-controls { gap: 4px; padding: 4px 12px; flex-wrap: wrap; overflow-x: visible; }
 :root[data-telefono="true"] #library-controls button { min-width: 44px; padding: 0 6px; }
 :root[data-telefono="true"] #library-controls .voice-controls { gap: 4px; }
+
+/* ---------- Entrega 1 (CONSENSO-BIBLIAS.md, decisiones de Edward del 12-oct) ---------- */
+/* Iconos Lucide: 24×24, trazo 1,75, del color del texto. */
+:root[data-telefono="true"] svg.ico { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+:root[data-telefono="true"] .movil-barra-icono svg.ico { width: 24px; height: 24px; }
+:root[data-telefono="true"] button.con-ico { display: flex; align-items: center; gap: 12px; text-align: left; }
+:root[data-telefono="true"] #movil-versiculo button.con-ico { gap: 4px; }
+:root[data-telefono="true"] #movil-seleccion button.con-ico { justify-content: center; gap: 4px; }
+#movil-acciones .movil-mas-lista button.con-ico { display: flex; }
+:root[data-telefono="true"] #library-controls button { display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
+
+/* Las 6 pestañas fijas, con icono y nombre corto (opción A). Si un nombre no cabe (letra del sistema muy grande),
+   movil.js pone data-filas="dos": dos filas de tres y el nombre sigue a la vista. */
+:root[data-telefono="true"] #movil-pestanas {
+  display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0; padding: 0 0 var(--seguro-abajo); overflow: visible;
+}
+:root[data-telefono="true"] #movil-pestanas[data-filas="dos"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+:root[data-telefono="true"] #movil-pestanas button {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 0; min-height: 56px;
+  padding: 6px 2px 4px; border: 0; border-top: 3px solid transparent; border-radius: 0; background: none; color: var(--muted);
+  font-size: .6875rem; font-weight: 600; line-height: 1.15; white-space: nowrap;
+}
+:root[data-telefono="true"] #movil-pestanas button > span { display: block; max-width: 100%; overflow: hidden; }
+:root[data-telefono="true"] #movil-pestanas button[aria-selected="true"] { color: var(--accent); border-top-color: var(--accent); }
+
+/* Pie de capítulo: «‹ Salmos 22 · Salmos 24 ›» sobre las pestañas, nunca encima del texto. */
+#movil-pie { display: none; }
+:root[data-telefono="true"][data-vista-movil="read-view"][data-pestana="biblia"] #movil-pie {
+  display: flex; justify-content: space-between; align-items: stretch; position: fixed; left: 0; right: 0; bottom: var(--pie); z-index: 44;
+  padding: 0 4px; background: var(--paper); border-top: 1px solid var(--line);
+}
+:root[data-telefono="true"][data-barra-versiculo="visible"] #movil-pie,
+:root[data-telefono="true"][data-seleccion="varios"] #movil-pie,
+:root.lectura-inmersiva #movil-pie { display: none !important; }
+:root[data-telefono="true"] #movil-pie .movil-flecha {
+  position: static; display: inline-flex; align-items: center; gap: 4px; width: auto; max-width: 50%; height: auto; min-height: 48px;
+  padding: 0 12px; border: 0; border-radius: 0; background: none; color: var(--accent); font-size: .875rem; font-weight: 600; opacity: 1;
+}
+:root[data-telefono="true"] #movil-pie .movil-flecha[hidden] { display: none; }
+:root[data-telefono="true"] #movil-pie #movil-flecha-sig { margin-left: auto; }
+:root[data-telefono="true"] #movil-pie .movil-flecha-texto { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+/* Comentario: fichas de qué ver; la fuente solo en «Comentario»; estado vacío que guía. */
+#movil-coment-modos { display: none; }
+:root[data-telefono="true"] #movil-coment-modos { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 8px 16px; flex: none; }
+:root[data-telefono="true"] #movil-coment-modos::-webkit-scrollbar { display: none; }
+:root[data-telefono="true"] #movil-coment-modos button { flex: none; min-height: 40px; padding: 0 14px; border: 1px solid var(--line); border-radius: 20px; background: var(--bg); color: var(--ink); font-size: .875rem; font-weight: 600; white-space: nowrap; }
+:root[data-telefono="true"] #movil-coment-modos button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+:root[data-telefono="true"] #pane-comentario .graphics-toolbar #graphics-mode { display: none; }
+:root[data-telefono="true"]:not([data-coment-modo="comment"]) #comment-select,
+:root[data-telefono="true"][data-sin-comentarios="true"] #comment-select { display: none !important; }
+:root[data-telefono="true"] #comment-select { width: 100%; }
+:root[data-telefono="true"][data-coment-modo="comment"][data-sin-comentarios="true"] #comment-content { display: none !important; }
+.movil-vacio { display: grid; justify-items: start; gap: 8px; padding: 24px 16px; color: var(--ink); }
+.movil-vacio svg.ico { width: 32px; height: 32px; color: var(--muted); }
+.movil-vacio p { margin: 0; line-height: 1.5; color: var(--muted); }
+.movil-vacio .movil-vacio-titulo { font-weight: 700; color: var(--ink); font-size: 1.0625rem; }
+.movil-vacio-acciones { display: grid; gap: 8px; width: 100%; margin-top: 8px; }
+.movil-vacio-acciones button { min-height: 48px; justify-content: flex-start; }
+/* Diccionario: fuente a lo ancho, búsqueda debajo; aviso de idioma. */
+:root[data-telefono="true"] #dictionary-form { display: grid !important; grid-template-columns: minmax(0, 1fr) !important; gap: 8px; width: 100%; }
+:root[data-telefono="true"] #dictionary-form #dictionary-select { width: 100%; max-width: none; }
+:root[data-telefono="true"] #dictionary-form .dictionary-query-row { display: grid !important; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.movil-aviso-idioma { margin: 0; font-size: .8125rem; color: var(--muted); }
+
+/* Voz y velocidad en ☰. */
+.movil-mas-voz { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px 12px; margin: 8px 0 0; }
+.movil-mas-voz label { margin: 0; font-size: 1rem; color: inherit; }
+:root[data-telefono="true"] .movil-mas-voz select { display: block !important; width: 100%; min-height: 48px; margin: 0; }

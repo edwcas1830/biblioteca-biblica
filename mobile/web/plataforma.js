@@ -206,5 +206,15 @@
     catch (e) { if (!/cancel/i.test((e && e.message) || '')) throw e; }
   }
 
-  window.BibliaPlataforma = { capacidades, compartir, pausarMusica, elegirArchivosTraspaso, desempacarPaquete, ...(Share && Filesystem ? { compartirImagen } : {}) };
+  // Copia de seguridad (y cualquier archivo de texto): caché de la app → «Compartir» → Drive, Archivos, correo…
+  async function guardarArchivo({ nombre, texto, titulo } = {}) {
+    if (!Share || !Filesystem) throw Object.assign(new Error('Guardar archivos solo funciona en el teléfono.'), { code: 'UNAVAILABLE' });
+    const archivo = 'copias/' + (String(nombre || 'copia.json').replace(/[^A-Za-z0-9._-]/g, '-') || 'copia.json');
+    await Filesystem.writeFile({ directory: 'CACHE', path: archivo, data: String(texto || ''), encoding: 'utf8', recursive: true });
+    const { uri } = await Filesystem.getUri({ directory: 'CACHE', path: archivo });
+    try { await Share.share({ title: titulo || 'Copia de seguridad', dialogTitle: 'Guardar la copia en…', files: [uri] }); return { compartido: true, uri }; }
+    catch (e) { if (/cancel/i.test((e && e.message) || '')) return { compartido: false, uri }; throw e; }
+  }
+
+  window.BibliaPlataforma = { capacidades, compartir, pausarMusica, elegirArchivosTraspaso, desempacarPaquete, ...(Share && Filesystem ? { compartirImagen, guardarArchivo } : {}) };
 })();

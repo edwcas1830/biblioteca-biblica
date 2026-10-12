@@ -1,8 +1,8 @@
 (function(root){
   'use strict';
-  const designs=['a','b','c'],themes=['auto','marfil','sepia','noche'];
+  const designs=['a','b','c'],themes=['sistema','auto','marfil','sepia','noche'];
   function normalize(value){
-    const result={design:designs.includes(value?.design)?value.design:'a',theme:themes.includes(value?.theme)?value.theme:'auto'};
+    const result={design:designs.includes(value?.design)?value.design:'a',theme:themes.includes(value?.theme)?value.theme:'sistema'};
     if(value?.views&&typeof value.views==='object')result.views=value.views;
     const panes=value?.panes;
     if(panes&&['biblia','comentario','diccionario'].every(id=>Number.isFinite(panes[id])&&panes[id]>=10&&panes[id]<=80)){
@@ -11,7 +11,8 @@
     }
     return result;
   }
-  function themeAt(preference,hour=new Date().getHours()){return preference!=='auto'&&themes.includes(preference)?preference:(hour>=7&&hour<19?'marfil':'noche');}
+  // «sistema» sigue al modo oscuro del teléfono o de Windows (CONSENSO-BIBLIAS.md); «auto», a la hora del día.
+  function themeAt(preference,hour=new Date().getHours(),oscuro=false){if(preference==='sistema')return oscuro?'noche':'marfil';return preference!=='auto'&&themes.includes(preference)?preference:(hour>=7&&hour<19?'marfil':'noche');}
   const api={normalize,themeAt};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.AppearanceCore=api;
 })(typeof window==='object'?window:globalThis);

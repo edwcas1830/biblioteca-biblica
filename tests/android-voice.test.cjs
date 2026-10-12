@@ -8,7 +8,14 @@ test('Voice uses advertised bridge operations, keeps native voice IDs and exclud
   const calls=[],statuses=[],bridge=bridgeFixture();bridge.playVoice=async data=>{calls.push(data);};
   const controller=voiceCore.create({bridge,speech:{getVoices(){throw Error('Should not use speech shim');}},onStatus:text=>statuses.push(text)});
   assert.deepEqual((await controller.loadVoices()).map(v=>v.id),['7']);
-  await controller.play('Primer versículo.\nSegundo versículo.','7');assert.equal(calls.length,2);assert.equal(calls[0].voice,'7');assert.equal(calls[0].lang,'es-ES');assert.equal(statuses.at(-1),'Lectura terminada.');await controller.destroy();
+  await controller.play('Primer versículo.\nSegundo versículo.','7');assert.equal(calls.length,2);assert.equal(calls[0].voice,'7');assert.equal(calls[0].lang,'es-ES');assert.equal(statuses.at(-1),'Lectura terminada.');assert.equal(calls[0].rate,1);await controller.destroy();
+});
+test('La velocidad elegida llega al puente y se limita a 0,5–2',async()=>{
+  const calls=[],bridge=bridgeFixture();bridge.playVoice=async data=>{calls.push(data);};
+  const controller=voiceCore.create({bridge,speech:{getVoices(){return [];}}});await controller.loadVoices();
+  await controller.play('Uno.','7',1.25);assert.equal(calls.at(-1).rate,1.25);
+  await controller.play('Dos.','7',9);assert.equal(calls.at(-1).rate,2);
+  await controller.play('Tres.','7','x');assert.equal(calls.at(-1).rate,1);await controller.destroy();
 });
 test('Native pause repeats current verse; stale completion cannot skip a verse or finish a newer request',async()=>{
   const requests=[],bridge=bridgeFixture();bridge.playVoice=data=>new Promise((resolve,reject)=>requests.push({data,resolve,reject}));

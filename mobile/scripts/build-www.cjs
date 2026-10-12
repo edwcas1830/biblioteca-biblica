@@ -79,7 +79,7 @@ if (!fs.existsSync(capacitorCore)) throw new Error('Falta @capacitor/core/dist/c
 fs.copyFileSync(capacitorCore, path.join(out, 'mobile', 'capacitor.js'));
 fs.writeFileSync(path.join(out, 'mobile', 'edicion.js'), `'use strict';\nwindow.BIBLIA_EDICION = ${JSON.stringify(EDICION)};\n`);
 html = html.replace('<html', `<html data-edicion="${EDICION}"`);
-const scriptsMovil = [...nucleos, ...puentes, 'mobile/manifiestos.js', 'mobile/edicion.js', 'mobile/plataforma.js', 'mobile/arranque.js', 'mobile/movil.js']
+const scriptsMovil = [...nucleos, ...puentes, 'mobile/manifiestos.js', 'mobile/edicion.js', 'mobile/plataforma.js', 'mobile/arranque.js', 'mobile/iconos.js', 'mobile/movil.js']
   .filter(f => fs.existsSync(path.join(out, f)))
   .map(f => `<script defer src="${f}"></script>`).join('\n  ');
 const ancla = '<script defer src="bible-data.js"></script>';

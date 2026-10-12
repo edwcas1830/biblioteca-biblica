@@ -45,7 +45,7 @@
       const runId=++session.run;
       try{
         while(active===session&&!session.paused&&session.index<session.parts.length){
-          await bridge.playVoice({text:session.parts[session.index],voice:session.voice.id,lang:session.voice.lang,rate:1});
+          await bridge.playVoice({text:session.parts[session.index],voice:session.voice.id,lang:session.voice.lang,rate:session.rate});
           if(active!==session||session.paused||session.run!==runId)return;
           session.index++;
         }
@@ -55,16 +55,17 @@
         active=null;status('La voz no pudo leer. Prueba otra voz del dispositivo.');session.finish();
       }
     }
-    async function play(text,voiceId){
+    async function play(text,voiceId,rate=1){
       if(typeof text!=='string'||!text.trim()||text.length>200000)throw Error('No hay texto válido para leer.');
+      const speed=Number.isFinite(Number(rate))?Math.min(2,Math.max(.5,Number(rate))):1;
       const voice=voices.find(v=>v.id===voiceId);if(!voice)throw Error('Elige una voz disponible en español.');
       const expected=generation+1;await stop();if(generation!==expected)return;
       let finish;const done=new Promise(resolve=>{finish=resolve;});
-      const session={voice,finish,paused:false,index:0,parts:chunks(text),run:0};active=session;
+      const session={voice,finish,paused:false,index:0,parts:chunks(text),run:0,rate:speed};active=session;
       status('Leyendo…');
       if(mode==='bridge')void run(session);
       else{
-        const utterance=new Utterance(text);utterance.voice=voice.native;utterance.lang=voice.lang;
+        const utterance=new Utterance(text);utterance.voice=voice.native;utterance.lang=voice.lang;utterance.rate=speed;
         utterance.onend=()=>{if(active!==session)return;active=null;status('Lectura terminada.');finish();};
         utterance.onerror=()=>{if(active!==session)return;active=null;status('La voz no pudo leer. Prueba otra voz del dispositivo.');finish();};
         try{speech.speak(utterance);}catch(error){active=null;finish();throw error;}
