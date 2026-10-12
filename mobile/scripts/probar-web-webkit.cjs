@@ -71,7 +71,8 @@ const servidor = http.createServer((req, res) => {
     fs.mkdirSync('prueba-webkit', { recursive: true });
     await page.screenshot({ path: 'prueba-webkit/hoy.png' }).catch(() => {});
     exigir(hoy && hoy.vista === 'hoy-view' && hoy.texto.length > 20 && hoy.pasos === 4 && hoy.ancho <= hoy.vistaAncho, '«Hoy» en el iPhone con el versículo del día y 4 pasos (' + JSON.stringify(hoy).slice(0, 160) + ')');
-    exigir(errores.length === 0, 'sin errores en consola tras «Hoy»' + (errores.length ? ': ' + errores.slice(0, 3).join(' | ') : ''));
+    const cspHoy = await page.evaluate(() => window.__csp || []);
+    exigir(errores.length === 0 && cspHoy.length === 0, 'sin errores en consola tras «Hoy»' + (errores.length ? ': ' + errores.slice(0, 2).join(' | ') : '') + (cspHoy.length ? ' · CSP: ' + cspHoy.slice(0, 4).join(' | ') : ''));
     const manifiesto = await (await page.request.get(base + 'manifest.webmanifest')).json();
     exigir(manifiesto.display === 'standalone' && manifiesto.icons.length === 2, 'manifiesto instalable');
     await ctx.close();
