@@ -65,13 +65,15 @@ const servidor = http.createServer((req, res) => {
     // Entrega 2B: la bienvenida aparece en el iPhone y «Saltar» lleva a «Hoy» con el versículo del día y sus 4 pasos.
     let hoy = null;
     for (let i = 0; i < 60 && !(hoy && hoy.vista === 'hoy-view' && hoy.texto.length > 20); i++) {
-      hoy = await page.evaluate(() => { const d = document.querySelector('#hoy-bienvenida[open]'); const b = d && [...d.querySelectorAll('button')].find(x => x.textContent.trim() === 'Saltar'); if (b) b.click(); return { vista: document.documentElement.dataset.vistaMovil, texto: document.querySelector('#hoy-vers-texto')?.textContent || '', pasos: document.querySelectorAll('.hoy-paso').length, ancho: document.documentElement.scrollWidth, vistaAncho: innerWidth, vioBienvenida: !!d }; });
+      hoy = await page.evaluate(() => { const d = document.querySelector('#hoy-bienvenida[open]'); if (d && !window.__cspAntes) window.__cspAntes = String((window.__csp || []).length); const b = d && [...d.querySelectorAll('button')].find(x => x.textContent.trim() === 'Saltar'); if (b) b.click(); return { vista: document.documentElement.dataset.vistaMovil, texto: document.querySelector('#hoy-vers-texto')?.textContent || '', pasos: document.querySelectorAll('.hoy-paso').length, ancho: document.documentElement.scrollWidth, vistaAncho: innerWidth, vioBienvenida: !!d }; });
       await page.waitForTimeout(500);
     }
     fs.mkdirSync('prueba-webkit', { recursive: true });
     await page.screenshot({ path: 'prueba-webkit/hoy.png' }).catch(() => {});
     exigir(hoy && hoy.vista === 'hoy-view' && hoy.texto.length > 20 && hoy.pasos === 4 && hoy.ancho <= hoy.vistaAncho, '«Hoy» en el iPhone con el versículo del día y 4 pasos (' + JSON.stringify(hoy).slice(0, 160) + ')');
     const cspHoy = await page.evaluate(() => window.__csp || []);
+    const estilos = await page.evaluate(() => ({ antesDeSaltar: window.__cspAntes || 'sin bienvenida', despues: (window.__csp || []).length, style: [...document.querySelectorAll('style')].map(x => (x.parentElement?.id || x.parentElement?.tagName) + ':' + x.textContent.slice(0, 50)), detalles: document.querySelectorAll('details').length }));
+    console.log('Diagnóstico CSP tras «Hoy»:', JSON.stringify(estilos));
     exigir(errores.length === 0 && cspHoy.length === 0, 'sin errores en consola tras «Hoy»' + (errores.length ? ': ' + errores.slice(0, 2).join(' | ') : '') + (cspHoy.length ? ' · CSP: ' + cspHoy.slice(0, 4).join(' | ') : ''));
     const manifiesto = await (await page.request.get(base + 'manifest.webmanifest')).json();
     exigir(manifiesto.display === 'standalone' && manifiesto.icons.length === 2, 'manifiesto instalable');
