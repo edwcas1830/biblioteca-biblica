@@ -47,6 +47,35 @@
     return `<p class="hoy-oracion">${esc(H.oracion())}</p><p class="muted">Termina con tus propias palabras.</p><button type="button" class="outline" data-hoy="oracion">Abrir mi cuaderno de oración</button>${boton}`;
   }
 
+  // Insignias provisionales (trazos simples, mismo grosor que los íconos de la app) hasta el lote de imágenes.
+  const TRAZOS={semilla:'<path d="M12 21v-8"/><path d="M12 13c0-4 3-6 7-6 0 4-3 6-7 6Z"/><path d="M12 15c0-3-2-5-6-5 0 3 2 5 6 5Z"/>',
+    pacto:'<path d="M5 20h14l-2-9H7Z"/><path d="M9 11l3-6 3 6"/>',lampara:'<path d="M4 15h11a4 4 0 0 0 4-4h-3"/><path d="M4 15c0 2 2 4 6 4s6-2 6-4"/><path d="M16 7c1-1 1-3 0-4-1 2-3 2-2 4"/>',
+    faro:'<path d="M9 21l1-12h4l1 12"/><path d="M8 9h8"/><path d="M12 9V5"/><path d="M5 4l3 2M19 4l-3 2"/>',raices:'<path d="M12 3v11"/><path d="M12 14l-4 5M12 14l4 5M12 14v6"/><path d="M7 8c2 0 5 1 5 3 0-2 3-3 5-3"/>',
+    olivo:'<path d="M5 19C9 15 13 11 19 5"/><path d="M9 15c-2 0-3-1-3-3 2 0 3 1 3 3Z"/><path d="M13 11c0-2 1-3 3-3 0 2-1 3-3 3Z"/><path d="M15 9c2 0 3 1 3 3-2 0-3-1-3-3Z"/>',
+    emaus:'<path d="M4 20c4-4 4-8 8-10s8-2 8-6"/><circle cx="6" cy="18" r="1.5"/><circle cx="17" cy="6" r="1.5"/>',principio:'<path d="M4 5a2 2 0 0 1 2-2h12v16H6a2 2 0 0 0-2 2Z"/><path d="m9 10 2 2 4-4"/>',
+    escudrinar:'<circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/><path d="M9 11h4M11 9v4"/>',testigos:'<circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M3 20c0-3 2-5 5-5s5 2 5 5M11 20c0-3 2-5 5-5s5 2 5 5"/>',
+    peregrino:'<path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2Z"/><path d="M9 4v14M15 6v14"/>',atesorado:'<path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10Z"/>'};
+  const insignia=id=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TRAZOS[id]||''}</svg>`;
+  let caminoAbierto=false;
+  // Lo que vive fuera de «Hoy» y cuenta para los logros.
+  const extras=()=>({capitulos:books.map(b=>b.chapters.length),planesTerminados:(state.plans||[]).filter(p=>(p.completed||[]).length>=(p.days||p.entries?.length||Infinity)).length,memoria:(state.estudio?.marcas||[]).filter(m=>m.tipo==='memoria').length});
+  function bloqueCamino(e,hoy){
+    if(e.mostrarCamino===false)return '';
+    const s=H.semanaActual(e,hoy),sem=H.semanasDeFe(e),lista=H.progresoLogros(e,extras()),ganados=lista.filter(l=>l.ganado).length;
+    const frase=s.cumplida?'Semana de fe cumplida. ¡Bien!':s.dias?`Semana de fe: ${s.dias} de ${s.meta} días · te ${s.faltan===1?'falta 1':'faltan '+s.faltan}`:`Semana de fe: ${s.meta} días esta semana, a tu ritmo`;
+    return `<section class="hoy-camino" aria-labelledby="hoy-camino-titulo"><div class="hoy-camino-cabeza"><h2 id="hoy-camino-titulo">Mi camino</h2><button type="button" class="quiet" data-hoy="camino" aria-expanded="${caminoAbierto}" aria-controls="hoy-logros">${ganados} de ${lista.length} logros ${caminoAbierto?'▴':'▾'}</button></div>
+<p class="hoy-camino-semana">${esc(frase)}</p><p class="hoy-camino-datos">${sem===1?'1 semana de fe cumplida':sem+' semanas de fe cumplidas'} · ${H.totalDias(e)===1?'1 día':H.totalDias(e)+' días'} en la Palabra</p>
+<ul id="hoy-logros" class="hoy-logros" ${caminoAbierto?'':'hidden'}>${lista.map(l=>`<li class="${l.ganado?'ganado':''}"><span class="hoy-insignia">${insignia(l.id)}</span><span><b>${esc(l.nombre)}</b><small>${esc(l.regla)}${l.ganado?'':' · '+l.valor+' de '+l.meta}</small></span></li>`).join('')}</ul></section>`;
+  }
+  // Revisa logros después de cualquier avance; celebra una sola vez cada uno (si «Mi camino» está encendido).
+  function revisar(){
+    const r=H.revisarLogros(datos(),extras());
+    if(!r.nuevos.length)return;
+    state.hoy=r.estado;guardar();
+    if(state.hoy.mostrarCamino!==false)toast((r.nuevos.length===1?'Nuevo logro: ':'Nuevos logros: ')+r.nuevos.map(l=>'«'+l.nombre+'»').join(', '));
+  }
+  function anotarAvance(cambio){const antes=datos(),despues=cambio(antes);if(despues===antes)return;state.hoy=despues;guardar();revisar();}
+
   async function render(){
     const vista=q('#hoy-view');if(!vista)return;
     const e=datos(),hoy=new Date(),f=H.clave(hoy),v=H.delDia(hoy),gen=++generacion;
@@ -61,11 +90,13 @@
 <article class="hoy-versiculo ${animado?'':'hoy-entra'}" aria-labelledby="hoy-vers-titulo"><p class="eyebrow" id="hoy-vers-titulo">VERSÍCULO DEL DÍA</p><blockquote id="hoy-vers-texto">…</blockquote><p class="hoy-cita"><span>${esc(v.cita)}</span> <small id="hoy-vers-edicion"></small></p><div class="hoy-vers-acciones"><button type="button" class="outline" data-hoy="leer">Leer el capítulo</button><button type="button" class="quiet" data-hoy="copiar">Copiar</button></div></article>
 <p class="hoy-progreso" role="status">${hechos===4?'Completaste tu día. Que esta palabra te acompañe.':hechos+' de 4 pasos · unos 8 minutos'}</p>
 <div class="hoy-pasos">${pasos}</div>
+${bloqueCamino(e,hoy)}
 ${window.IaBiblia?'<button type="button" class="outline hoy-ia" data-action="ia-biblia-open" data-ia-modo="tema">✦ Pregúntale a la Biblia</button>':''}
 <button type="button" class="outline hoy-seguir" data-hoy="seguir">Continuar leyendo · ${esc(books[p.book].name)} ${p.chapter}</button>
 <nav class="hoy-mas" aria-label="Más para tu camino"><button type="button" class="quiet" data-hoy-ir="dev">Mis devocionales y series</button><button type="button" class="quiet" data-hoy-ir="plan">Mi plan de lectura</button><button type="button" class="quiet" data-hoy-ir="prayer">Oración y testimonios</button></nav>
 <div class="hoy-ajustes"><button type="button" class="quiet hoy-ajustes-abrir" data-hoy="ajustes" aria-expanded="${ajustesAbiertos}" aria-controls="hoy-ajustes-cuerpo">Ajustes de «Hoy» ${ajustesAbiertos?'▴':'▾'}</button><div id="hoy-ajustes-cuerpo" ${ajustesAbiertos?'':'hidden'}>
 <label class="checkbox-label"><input type="checkbox" id="hoy-abrir-primero" ${e.abrirEnHoy?'checked':''}> Abrir «Hoy» la primera vez de cada día</label>
+<label class="checkbox-label"><input type="checkbox" id="hoy-mostrar-camino" ${e.mostrarCamino!==false?'checked':''}> Mostrar «Mi camino»: semana de fe y logros</label>
 ${avisos?`<label>Aviso diario del versículo<input type="time" id="hoy-hora" value="${esc(e.perfil.hora)}"></label><button type="button" class="quiet" id="hoy-sin-aviso" ${e.perfil.hora?'':'hidden'}>Quitar el aviso diario</button><p class="fine-print" id="hoy-aviso-estado" role="status">${e.perfil.hora?'Un aviso al día a las '+esc(e.perfil.hora)+'.':'Sin aviso diario.'}</p>`:''}
 </div></div>`;
     animado=true;
@@ -74,7 +105,7 @@ ${avisos?`<label>Aviso diario del versículo<input type="time" id="hoy-hora" val
   }
 
   async function marcar(id){
-    const e=datos(),f=H.clave();state.hoy=H.marcar(e,f,id,!H.hecho(e,f,id));guardar();
+    const e=datos(),f=H.clave();state.hoy=H.marcar(e,f,id,!H.hecho(e,f,id));guardar();revisar();
     const siguiente=H.PASOS.find(p=>!H.hecho(state.hoy,f,p.id));abierto=H.hecho(state.hoy,f,id)?(siguiente?.id||null):id;
     await render();
     if(abierto)q(`[data-paso="${abierto}"]`)?.scrollIntoView({block:'nearest',behavior:'smooth'});
@@ -116,14 +147,21 @@ ${avisos?`<label>Aviso diario del versículo<input type="time" id="hoy-hora" val
       else if(accion==='seguir'){const p=state.position;go(p.book,p.chapter,p.verse);}
       else if(accion==='copiar')copiar();
       else if(accion==='oracion')showView('prayer');
+      else if(accion==='camino'){caminoAbierto=!caminoAbierto;const l=q('#hoy-logros');if(l)l.hidden=!caminoAbierto;b.setAttribute('aria-expanded',String(caminoAbierto));b.textContent=b.textContent.replace(/[▴▾]$/,caminoAbierto?'▴':'▾');}
       else if(accion==='ajustes'){ajustesAbiertos=!ajustesAbiertos;const c=q('#hoy-ajustes-cuerpo');if(c)c.hidden=!ajustesAbiertos;b.setAttribute('aria-expanded',String(ajustesAbiertos));b.textContent='Ajustes de «Hoy» '+(ajustesAbiertos?'▴':'▾');}
       else if(b.id==='hoy-sin-aviso'){const h=q('#hoy-hora');if(h)h.value='';elegirHora('');}
     });
     vista.addEventListener('change',ev=>{
       if(ev.target.id==='hoy-abrir-primero'){state.hoy={...datos(),abrirEnHoy:ev.target.checked};guardar();}
+      if(ev.target.id==='hoy-mostrar-camino'){state.hoy={...datos(),mostrarCamino:ev.target.checked};guardar();render();}
       if(ev.target.id==='hoy-hora')elegirHora(ev.target.value);
     });
     window.addEventListener('biblioteca:abrir-hoy',()=>showView('hoy'));
+    const envolver=(nombre,antes)=>{const f=window[nombre];if(typeof f!=='function'||f.envueltaPorHoy)return;const w=function(...a){try{antes(...a);}catch{}return f.apply(this,a);};w.envueltaPorHoy=true;window[nombre]=w;};
+    envolver('openOriginal',()=>anotarAvance(e=>H.contar(e,'strong')));
+    envolver('setGraphics',modo=>{if(modo==='map')anotarAvance(e=>H.contar(e,'mapas'));});
+    envolver('renderReader',()=>{const p=state.position;if(p)anotarAvance(e=>H.leerCapitulo(e,p.book,p.chapter));});
+    q('#compare-toggle')?.addEventListener('click',()=>setTimeout(()=>{if(q('#compare-toggle')?.getAttribute('aria-pressed')==='true'){const p=state.position;anotarAvance(e=>H.contar(e,'comparar',p.book+':'+p.chapter+':'+p.verse));}},0));
   }
 
   // ---------- Bienvenida (teléfono y web): 5 pantallas cortas, se puede saltar, todo queda en el teléfono ----------

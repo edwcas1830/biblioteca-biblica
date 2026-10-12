@@ -124,7 +124,9 @@
   const oracion=(d=new Date())=>ORACION[indiceDelAno(d)%ORACION.length];
   function devocion(d=new Date()){const i=indiceDelAno(d);return {piensa:PIENSA[i%PIENSA.length],aplica:APLICA[(i+3)%APLICA.length]};}
 
-  const vacio=()=>({bienvenida:'',perfil:{proposito:'',meta:4,hora:'',tradicion:''},dias:{},abrirEnHoy:true,ultimoDia:''});
+  // «Mi camino» (entrega 2C): contadores de estudio, capítulos abiertos por libro y logros ganados (con su fecha).
+  const vacio=()=>({bienvenida:'',perfil:{proposito:'',meta:4,hora:'',tradicion:''},dias:{},abrirEnHoy:true,ultimoDia:'',
+    mostrarCamino:true,cuenta:{strong:0,mapas:0,comparados:[]},leidos:{},logros:{}});
   function validar(entrada){
     const e=vacio();
     if(!entrada||typeof entrada!=='object'||Array.isArray(entrada))return e;
@@ -139,6 +141,13 @@
     for(const [k,v] of validos)e.dias[k]=v;
     e.abrirEnHoy=entrada.abrirEnHoy!==false;
     if(typeof entrada.ultimoDia==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(entrada.ultimoDia))e.ultimoDia=entrada.ultimoDia;
+    e.mostrarCamino=entrada.mostrarCamino!==false;
+    const c=entrada.cuenta||{},n=v=>Number.isInteger(v)&&v>=0?Math.min(v,1e6):0;
+    e.cuenta={strong:n(c.strong),mapas:n(c.mapas),comparados:Array.isArray(c.comparados)?[...new Set(c.comparados.filter(k=>typeof k==='string'&&/^\d{1,2}:\d{1,3}:\d{1,3}$/.test(k)))].slice(0,20):[]};
+    const l=entrada.leidos&&typeof entrada.leidos==='object'&&!Array.isArray(entrada.leidos)?entrada.leidos:{};
+    for(const [b,caps] of Object.entries(l)){const libro=Number(b);if(!Number.isInteger(libro)||libro<0||libro>65||!Array.isArray(caps))continue;const v=[...new Set(caps.filter(x=>Number.isInteger(x)&&x>0&&x<=150))].sort((x,y)=>x-y);if(v.length)e.leidos[libro]=v;}
+    const g=entrada.logros&&typeof entrada.logros==='object'&&!Array.isArray(entrada.logros)?entrada.logros:{};
+    for(const [id,f] of Object.entries(g))if(LOGROS.some(x=>x.id===id)&&typeof f==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(f))e.logros[id]=f;
     return e;
   }
   const bitDe=id=>PASOS.find(p=>p.id===id)?.bit||0;
@@ -156,6 +165,40 @@
     const lunes=new Date(hoy.getFullYear(),hoy.getMonth(),hoy.getDate()-((hoy.getDay()+6)%7)),k=clave(hoy);
     return LETRAS.map((letra,i)=>{const d=new Date(lunes.getFullYear(),lunes.getMonth(),lunes.getDate()+i),f=clave(d);return {fecha:f,letra,hecho:!!e.dias[f],hoy:f===k,futuro:f>k};});
   }
+  // ---------- «Mi camino» (CONSENSO-HABITO.md · 2C): semana de fe con gracia, días que nunca bajan, 12 logros ----------
+  const lunesDe=f=>{const d=fechaDe(f);return clave(new Date(d.getFullYear(),d.getMonth(),d.getDate()-((d.getDay()+6)%7)));};
+  // Semanas (de lunes a domingo) en que hubo al menos «meta» días con algún paso. No hace falta que sean seguidas.
+  function semanasDeFe(e){const por={};for(const f of Object.keys(e.dias)){const l=lunesDe(f);por[l]=(por[l]||0)+1;}const meta=e.perfil?.meta||4;return Object.values(por).filter(n=>n>=meta).length;}
+  function semanaActual(e,hoy=new Date()){const l=lunesDe(clave(hoy)),n=Object.keys(e.dias).filter(f=>lunesDe(f)===l).length,meta=e.perfil?.meta||4;return {dias:n,meta,cumplida:n>=meta,faltan:Math.max(0,meta-n)};}
+  const diasConPaso=(e,id)=>Object.values(e.dias).filter(v=>v&bitDe(id)).length;
+  const completos=e=>Object.values(e.dias).filter(v=>v===15).length;
+  // extra: lo que vive fuera de «Hoy» (planes terminados, versículos para memorizar, capítulos por libro).
+  const LOGROS=[
+    {id:'semilla',nombre:'Primera semilla',regla:'Completar los 4 pasos de «Hoy» por primera vez',meta:1,valor:(e)=>completos(e)},
+    {id:'pacto',nombre:'Piedra del Pacto',regla:'5 días en la Palabra',meta:5,valor:e=>totalDias(e)},
+    {id:'lampara',nombre:'Lámpara encendida',regla:'Cumplir 1 semana de fe',meta:1,valor:e=>semanasDeFe(e)},
+    {id:'faro',nombre:'Faro del Camino',regla:'Cumplir 4 semanas de fe (aunque no sean seguidas)',meta:4,valor:e=>semanasDeFe(e)},
+    {id:'raices',nombre:'Raíces junto al agua',regla:'30 días en la Palabra',meta:30,valor:e=>totalDias(e)},
+    {id:'olivo',nombre:'Rama de olivo',regla:'Orar 7 días (paso Oración)',meta:7,valor:e=>diasConPaso(e,'oracion')},
+    {id:'emaus',nombre:'Camino de Emaús',regla:'Terminar un plan de lectura',meta:1,valor:(e,x)=>x.planesTerminados||0},
+    {id:'principio',nombre:'De principio a fin',regla:'Leer todos los capítulos de un libro',meta:1,valor:(e,x)=>librosCompletos(e,x.capitulos||[])},
+    {id:'escudrinar',nombre:'Escudriñar las Escrituras',regla:'Consultar 10 palabras en griego o hebreo',meta:10,valor:e=>e.cuenta?.strong||0},
+    {id:'testigos',nombre:'Dos testigos',regla:'Comparar traducciones en 3 pasajes',meta:3,valor:e=>(e.cuenta?.comparados||[]).length},
+    {id:'peregrino',nombre:'Peregrino',regla:'Abrir 5 mapas',meta:5,valor:e=>e.cuenta?.mapas||0},
+    {id:'atesorado',nombre:'Atesorado en el corazón',regla:'Guardar 5 versículos para memorizar',meta:5,valor:(e,x)=>x.memoria||0}
+  ];
+  // capitulos: cantidad de capítulos de cada libro (66 números).
+  function librosCompletos(e,capitulos){return Object.entries(e.leidos||{}).filter(([b,c])=>capitulos[b]&&c.length>=capitulos[b]).length;}
+  function progresoLogros(e,extra={}){return LOGROS.map(l=>{const v=Math.min(l.meta,l.valor(e,extra));return {id:l.id,nombre:l.nombre,regla:l.regla,meta:l.meta,valor:v,ganado:!!e.logros?.[l.id]||v>=l.meta,fecha:e.logros?.[l.id]||''};});}
+  // Devuelve los logros recién ganados (para celebrar una sola vez) y el estado con su fecha guardada.
+  function revisarLogros(e,extra={},hoy=new Date()){
+    const nuevos=[],logros={...(e.logros||{})};
+    for(const l of LOGROS)if(!logros[l.id]&&l.valor(e,extra)>=l.meta){logros[l.id]=clave(hoy);nuevos.push(l);}
+    return {estado:nuevos.length?{...e,logros}:e,nuevos};
+  }
+  const contar=(e,que,clave2)=>{const c={...(e.cuenta||{strong:0,mapas:0,comparados:[]})};if(que==='strong')c.strong=(c.strong||0)+1;else if(que==='mapas')c.mapas=(c.mapas||0)+1;else if(que==='comparar'&&clave2&&!(c.comparados||[]).includes(clave2))c.comparados=[...(c.comparados||[]),clave2].slice(-20);return {...e,cuenta:c};};
+  function leerCapitulo(e,book,chapter){const l={...(e.leidos||{})},v=l[book]||[];if(v.includes(chapter))return e;l[book]=[...v,chapter].sort((a,b)=>a-b);return {...e,leidos:l};}
+
   // Abre «Hoy» la primera vez de cada día (si la persona no lo apagó).
   const abrirPrimero=(e,hoy=new Date())=>e.abrirEnHoy!==false&&e.ultimoDia!==clave(hoy);
   // Avisos: uno por día, los próximos N días, a la hora elegida (fecha local).
@@ -165,6 +208,6 @@
     for(let i=0;r.length<n&&i<n+1;i++){const d=new Date(desde.getFullYear(),desde.getMonth(),desde.getDate()+i,h,mi);if(d>desde)r.push({fecha:clave(d),cuando:d,...delDia(d)});}
     return r;
   }
-  const api={LIBROS,VERSICULOS,CONEXION,PIENSA,APLICA,ORACION,PASOS,PROPOSITOS,TRADICIONES,parsear,clave,fechaDe,indiceDelAno,delDia,conexion,oracion,devocion,vacio,validar,hecho,marcar,pasosHechos,totalDias,semana,abrirPrimero,proximosAvisos};
+  const api={LIBROS,VERSICULOS,CONEXION,PIENSA,APLICA,ORACION,PASOS,PROPOSITOS,TRADICIONES,LOGROS,parsear,clave,fechaDe,indiceDelAno,delDia,conexion,oracion,devocion,vacio,validar,hecho,marcar,pasosHechos,totalDias,semana,abrirPrimero,proximosAvisos,semanasDeFe,semanaActual,progresoLogros,revisarLogros,contar,leerCapitulo,librosCompletos};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.HoyCore=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

@@ -47,6 +47,22 @@
 #hoy-ajustes-cuerpo { padding: 4px 0 8px; }
 .hoy-ajustes input[type="time"] { max-width: 12rem; }
 
+/* «Mi camino»: semana de fe y 12 logros (insignias provisionales con trazo). */
+.hoy-camino { margin: 14px 0 4px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
+.hoy-camino-cabeza { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.hoy-camino h2 { font: normal 1.15rem Georgia, serif; margin: 0; color: var(--ink); }
+.hoy-camino-semana { margin: 6px 0 2px; color: var(--ink); font-size: .95rem; }
+.hoy-camino-datos { margin: 0; color: var(--muted); font-size: .82rem; }
+.hoy-logros { list-style: none; padding: 0; margin: 12px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr)); gap: 8px; }
+.hoy-logros li { display: flex; gap: 10px; align-items: center; opacity: .55; min-width: 0; }
+.hoy-logros li.ganado { opacity: 1; }
+.hoy-logros li > span:last-child { min-width: 0; }
+.hoy-logros b { display: block; font-size: .92rem; color: var(--ink); }
+.hoy-logros small { display: block; font-size: .78rem; color: var(--muted); overflow-wrap: anywhere; }
+.hoy-insignia { flex: 0 0 2.4rem; height: 2.4rem; border-radius: 50%; display: grid; place-items: center; border: 1.5px solid var(--line); color: var(--muted); }
+.hoy-insignia svg { width: 1.3rem; height: 1.3rem; }
+.hoy-logros li.ganado .hoy-insignia { background: color-mix(in srgb, var(--gold) 22%, transparent); border-color: var(--gold); color: var(--accent); }
+
 /* Bienvenida: 5 pantallas cortas. */
 dialog#hoy-bienvenida { width: min(460px, 92vw); padding: 22px 20px; }
 #hoy-bienvenida h2 { font: normal 1.5rem/1.25 Georgia, serif; margin: 6px 0 12px; color: var(--ink); text-wrap: balance; }

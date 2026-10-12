@@ -74,3 +74,34 @@ test('Abrir en «Hoy» solo la primera vez del día y avisos de los próximos d�
   assert.equal(H.proximosAvisos('20:00', 3, hoy)[0].fecha, '2026-10-12');
   assert.deepEqual(H.proximosAvisos('', 3, hoy), []);
 });
+
+test('Mi camino: semana de fe con gracia, semanas no seguidas y logros que se celebran una vez', () => {
+  let e = H.vacio();
+  // Semana del 5 al 11 de octubre: 4 días (cumple la meta de 4). Semana siguiente: 2 días. Otra semana más tarde: 4.
+  for (const f of ['2026-10-05', '2026-10-06', '2026-10-08', '2026-10-10', '2026-10-13', '2026-10-14', '2026-10-26', '2026-10-27', '2026-10-28', '2026-10-30']) e = H.marcar(e, f, 'versiculo');
+  assert.equal(H.semanasDeFe(e), 2, 'cuentan aunque no sean seguidas');
+  assert.deepEqual(H.semanaActual(e, new Date(2026, 9, 14)), { dias: 2, meta: 4, cumplida: false, faltan: 2 });
+  e = { ...e, perfil: { ...e.perfil, meta: 2 } };
+  assert.equal(H.semanasDeFe(e), 3, 'con meta 2 también cuenta la segunda semana');
+  const r1 = H.revisarLogros(e, {}, new Date(2026, 9, 30));
+  assert.deepEqual(r1.nuevos.map(l => l.id).sort(), ['lampara', 'pacto'].sort());
+  assert.equal(r1.estado.logros.lampara, '2026-10-30');
+  assert.deepEqual(H.revisarLogros(r1.estado, {}).nuevos, [], 'no se celebra dos veces');
+  // Logros que dependen del estudio.
+  let s = H.vacio();
+  for (let i = 0; i < 10; i++) s = H.contar(s, 'strong');
+  for (const k of ['1:1:1', '1:1:1', '42:3:16', '18:23:1']) s = H.contar(s, 'comparar', k);
+  for (let c = 1; c <= 4; c++) s = H.leerCapitulo(s, 56, c); // Filemón tiene 1; Judas 1; usamos Rut (4 caps)
+  s = H.leerCapitulo(H.leerCapitulo(H.leerCapitulo(H.leerCapitulo(s, 7, 1), 7, 2), 7, 3), 7, 4);
+  const caps = Array(66).fill(50); caps[7] = 4;
+  const ids = H.revisarLogros(s, { capitulos: caps, memoria: 5, planesTerminados: 1 }).nuevos.map(l => l.id).sort();
+  assert.deepEqual(ids, ['atesorado', 'emaus', 'escudrinar', 'principio', 'testigos'].sort());
+  const p = H.progresoLogros(s, { capitulos: caps });
+  assert.equal(p.length, 12); assert.equal(p.find(x => x.id === 'testigos').valor, 3);
+  // La validación conserva lo bueno y descarta lo raro.
+  const v = H.validar({ ...s, logros: { lampara: '2026-10-30', inventado: '2026-10-30', faro: 'ayer' }, leidos: { 7: [1, 2, 2, 999], 99: [1] }, cuenta: { strong: -3, mapas: 2, comparados: ['1:1:1', 'x'] } });
+  assert.deepEqual(v.logros, { lampara: '2026-10-30' });
+  assert.deepEqual(v.leidos, { 7: [1, 2] });
+  assert.deepEqual(v.cuenta, { strong: 0, mapas: 2, comparados: ['1:1:1'] });
+  assert.equal(H.LOGROS.length, 12);
+});
