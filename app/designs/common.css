@@ -118,3 +118,4 @@ html[data-design] #panes[data-layout="rows"] .pane-body>.dictionary-entry{max-wi
 
 /* 0.6.9: la velocidad de la voz ocupa solo lo que necesita. */
 #voice-rate{width:auto;min-width:72px;max-width:96px;flex:none}
+#voice-until{width:auto;max-width:230px;flex:none}

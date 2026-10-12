@@ -52,3 +52,12 @@ test('Ordered mobile manifest loads dependencies before adapters and native serv
   assert.ok(list.indexOf('platform/ai/service.js')>list.indexOf('ai-core.js'));assert.ok(list.indexOf('platform/ai/service.js')>list.indexOf('shared/ai-context.js'));assert.ok(list.indexOf('platform/android/services.js')>list.indexOf('platform/ai/service.js'));
   assert.ok(list.indexOf('shared/personal-model.js')>list.indexOf('shared/references.js'));assert.ok(list.indexOf('platform/web/bridge.js')>list.indexOf('platform/web/personal-store.js'));assert.ok(list.indexOf('platform/android/services.js')>list.indexOf('platform/bridge-contract.js'));
 });
+test('La voz avisa si terminó el capítulo (para seguir con el siguiente) o si la detuvieron',async()=>{
+  const bridge=bridgeFixture();bridge.playVoice=async()=>{};
+  const controller=voiceCore.create({bridge,speech:{getVoices(){return [];}}});await controller.loadVoices();
+  assert.deepEqual(await controller.play('Uno.\nDos.','7'),{completado:true});
+  const lenta=bridgeFixture();let soltar;lenta.playVoice=()=>new Promise(r=>{soltar=r;});
+  const c2=voiceCore.create({bridge:lenta,speech:{getVoices(){return [];}}});await c2.loadVoices();
+  const leyendo=c2.play('Uno.','7');await tick();await c2.stop();soltar();
+  assert.deepEqual(await leyendo,{completado:false});await controller.destroy();await c2.destroy();
+});

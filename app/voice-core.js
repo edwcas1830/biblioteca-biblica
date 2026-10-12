@@ -21,7 +21,7 @@
       if(mode==='bridge'){const next=stopQueue.catch(()=>{}).then(()=>bridge.stopVoice());stopQueue=next;return next;}
       speech?.cancel();return Promise.resolve();
     };
-    async function stop(){generation++;const previous=active;active=null;previous?.finish();await stopEngine();}
+    async function stop(){generation++;const previous=active;active=null;previous?.finish({completado:false});await stopEngine();}
     async function loadVoices(){
       const id=++discovery;let caps;
       if(bridge?.getCapabilities)caps=await bridge.getCapabilities();
@@ -49,10 +49,10 @@
           if(active!==session||session.paused||session.run!==runId)return;
           session.index++;
         }
-        if(active===session&&!session.paused&&session.run===runId){active=null;status('Lectura terminada.');session.finish();}
+        if(active===session&&!session.paused&&session.run===runId){active=null;status('Lectura terminada.');session.finish({completado:true});}
       }catch{
         if(active!==session||session.paused||session.run!==runId)return;
-        active=null;status('La voz no pudo leer. Prueba otra voz del dispositivo.');session.finish();
+        active=null;status('La voz no pudo leer. Prueba otra voz del dispositivo.');session.finish({completado:false});
       }
     }
     async function play(text,voiceId,rate=1){
@@ -66,9 +66,9 @@
       if(mode==='bridge')void run(session);
       else{
         const utterance=new Utterance(text);utterance.voice=voice.native;utterance.lang=voice.lang;utterance.rate=speed;
-        utterance.onend=()=>{if(active!==session)return;active=null;status('Lectura terminada.');finish();};
-        utterance.onerror=()=>{if(active!==session)return;active=null;status('La voz no pudo leer. Prueba otra voz del dispositivo.');finish();};
-        try{speech.speak(utterance);}catch(error){active=null;finish();throw error;}
+        utterance.onend=()=>{if(active!==session)return;active=null;status('Lectura terminada.');finish({completado:true});};
+        utterance.onerror=()=>{if(active!==session)return;active=null;status('La voz no pudo leer. Prueba otra voz del dispositivo.');finish({completado:false});};
+        try{speech.speak(utterance);}catch(error){active=null;finish({completado:false});throw error;}
       }
       return done;
     }

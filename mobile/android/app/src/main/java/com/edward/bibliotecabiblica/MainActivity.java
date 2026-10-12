@@ -10,6 +10,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(TraspasoPaquetePlugin.class);
         // Plugin propio: llavero en el Android Keystore para las claves de IA.
         registerPlugin(LlaveroSeguroPlugin.class);
+        // Plugin propio: lectura en voz alta en segundo plano (servicio con controles en la pantalla bloqueada).
+        registerPlugin(LecturaVozPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

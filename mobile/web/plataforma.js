@@ -216,5 +216,14 @@
     catch (e) { if (/cancel/i.test((e && e.message) || '')) return { compartido: false, uri }; throw e; }
   }
 
-  window.BibliaPlataforma = { capacidades, compartir, pausarMusica, elegirArchivosTraspaso, desempacarPaquete, ...(Share && Filesystem ? { compartirImagen, guardarArchivo } : {}) };
+  // Lectura en voz alta en segundo plano: servicio nativo (LecturaVozService) con controles en la notificación
+  // y en la pantalla bloqueada. Pide el permiso de notificaciones la primera vez (Android 13+).
+  const Lectura = plugin('LecturaVoz');
+  const lectura = Lectura ? {
+    async iniciar(opciones) { try { await Lectura.permiso(); } catch { /* sin permiso: suena igual, sin controles visibles */ } return Lectura.iniciar(opciones); },
+    pausar: () => Lectura.pausar(), reanudar: () => Lectura.reanudar(), siguiente: () => Lectura.siguiente(), detener: () => Lectura.detener(),
+    al: (tipo, fn) => Lectura.addListener(tipo, fn)
+  } : null;
+
+  window.BibliaPlataforma = { capacidades, compartir, pausarMusica, elegirArchivosTraspaso, desempacarPaquete, ...(Share && Filesystem ? { compartirImagen, guardarArchivo } : {}), ...(lectura ? { lectura } : {}) };
 })();

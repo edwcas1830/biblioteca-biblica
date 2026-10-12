@@ -1,5 +1,5 @@
 {
-  "fecha": "2026-10-12T11:42:59.570Z",
+  "fecha": "2026-10-12T15:08:06.120Z",
   "archivos": 390,
   "megabytes": 25.5,
   "prohibidos": [],
@@ -50,5 +50,5 @@
     "platform/android/documents.js",
     "platform/android/bridge.js"
   ],
-  "huellaIndex": "9cf8efd3de75644a"
+  "huellaIndex": "ecead431ae9322cd"
 }

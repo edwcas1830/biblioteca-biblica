@@ -75,10 +75,11 @@
       ajustes.append(crear('label', { class: 'movil-mas-strong', for: 'movil-strong' }, [crear('span', { texto: 'Números Strong en el texto' }), caja]));
     }
     // Lectura en voz alta: voz y velocidad (CONSENSO-BIBLIAS.md). Se mueven los selectores reales.
-    const voz = $('#voice-select'), velocidad = $('#voice-rate');
+    const voz = $('#voice-select'), velocidad = $('#voice-rate'), hasta = $('#voice-until');
     if (voz && velocidad) ajustes.append(crear('div', { class: 'movil-mas-voz' }, [
       crear('label', { for: 'voice-select', texto: 'Voz de lectura' }), voz,
-      crear('label', { for: 'voice-rate', texto: 'Velocidad' }), velocidad
+      crear('label', { for: 'voice-rate', texto: 'Velocidad' }), velocidad,
+      ...(hasta ? [crear('label', { for: 'voice-until', texto: 'Leer hasta' }), hasta] : [])
     ]));
     const extras = [
       ['image', 'Imagen con versículos', () => window.BibliaImagen?.abrir()],

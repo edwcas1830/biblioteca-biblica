@@ -590,14 +590,52 @@ function voiceController(){
   if(!readerVoiceController)readerVoiceController=window.LibraryVoiceCore.create({
     bridge:desktop,speech:window.speechSynthesis,Utterance:window.SpeechSynthesisUtterance,
     onStatus:text=>$('#voice-status').textContent=text,
-    onVoices:voices=>{const previous=$('#voice-select').value;$('#voice-select').innerHTML=voices.map(v=>`<option value="${esc(v.id)}">${esc(v.name)}</option>`).join('');if(voices.some(v=>v.id===previous))$('#voice-select').value=previous;$('#voice-play').disabled=!voices.length;$('#voice-pause').disabled=!voices.length;}
+    onVoices:voices=>{const previous=$('#voice-select').value;$('#voice-select').innerHTML=voices.map(v=>`<option value="${esc(v.id)}" data-uri="${esc(v.uri||'')}">${esc(v.name)}</option>`).join('');if(voices.some(v=>v.id===previous))$('#voice-select').value=previous;$('#voice-play').disabled=!voices.length;$('#voice-pause').disabled=!voices.length;}
   });
   return readerVoiceController;
 }
 async function loadVoices(){try{await voiceController().loadVoices();}catch{$('#voice-play').disabled=true;$('#voice-pause').disabled=true;$('#voice-status').textContent='No se pudieron consultar las voces del dispositivo.';}}
-function stopVoice(){if(readerVoiceController)return readerVoiceController.stop().catch(()=>{$('#voice-status').textContent='No se pudo detener la voz del dispositivo.';});window.speechSynthesis?.cancel();return Promise.resolve();}
-async function toggleVoicePause(){try{await voiceController().togglePause();}catch{$('#voice-status').textContent='No se pudo pausar la voz del dispositivo.';}}
-async function playVoice(){if(!chapterData){toast('Espera a que se cargue el capítulo y elige una voz.');return;}try{await voiceController().play(chapterData.verses.map(v=>v.text).join('\n'),$('#voice-select').value,Number($('#voice-rate')?.value||1));}catch(error){toast(error.message);}}
-// La velocidad de lectura se recuerda en este equipo (preferencia, no dato de estudio).
-(()=>{const r=document.getElementById('voice-rate');if(!r)return;try{const v=localStorage.getItem('biblioteca-voz-velocidad');if(v&&[...r.options].some(o=>o.value===v))r.value=v;}catch{}r.addEventListener('change',()=>{try{localStorage.setItem('biblioteca-voz-velocidad',r.value);}catch{}});})();
+function stopVoice(){clearTimeout(voiceTimer);voiceUntil=0;const nat=window.BibliaPlataforma?.lectura;if(nat&&nativeVoice.active){nativeVoice.active=false;return nat.detener().catch(()=>{});}if(readerVoiceController)return readerVoiceController.stop().catch(()=>{$('#voice-status').textContent='No se pudo detener la voz del dispositivo.';});window.speechSynthesis?.cancel();return Promise.resolve();}
+async function toggleVoicePause(){const nat=window.BibliaPlataforma?.lectura;if(nat&&nativeVoice.active){try{await(nativeVoice.paused?nat.reanudar():nat.pausar());}catch{}return;}try{await voiceController().togglePause();}catch{$('#voice-status').textContent='No se pudo pausar la voz del dispositivo.';}}
+let voiceUntil=0,voiceTimer=null;
+// Teléfono: la lectura la hace un servicio nativo (sigue con la pantalla apagada, controles en la pantalla bloqueada).
+// Se le manda el capítulo actual y los siguientes (hasta 12); la app sigue el capítulo que suena.
+const nativeVoice={active:false,paused:false,until:'seguir',listening:false};
+async function playNativeVoice(nat,until){
+  const queue=[];let {book,chapter}=state.position;const count=until==='capitulo'?1:12;
+  for(let i=0;i<count;i++){
+    const verses=i===0?chapterData.verses:(await desktop.chapter({module:selectedVersion,book,chapter})).verses;
+    queue.push({titulo:books[book].name+' '+chapter,libro:book,capitulo:chapter,partes:verses.map(v=>v.text)});
+    chapter++;if(chapter>books[book].chapters.length){book++;chapter=1;}if(book>=books.length)break;
+  }
+  if(!nativeVoice.listening){
+    nativeVoice.listening=true;
+    nat.al('capitulo',e=>{if(e.item>0&&(state.position.book!==e.libro||state.position.chapter!==e.capitulo))go(e.libro,e.capitulo);});
+    nat.al('estado',e=>{nativeVoice.active=!!e.activo;nativeVoice.paused=!!e.pausado;$('#voice-status').textContent=!e.activo?'Lectura terminada.':e.pausado?'Lectura en pausa.':'Leyendo…';});
+    nat.al('temporizador',()=>toast('Se apagó la lectura (temporizador).'));
+    nat.al('error',e=>toast(e.mensaje||'La voz no pudo leer.'));
+    nat.al('terminado',async()=>{nativeVoice.active=false;if(nativeVoice.until!=='seguir')return;const {book,chapter}=state.position;if(book===books.length-1&&chapter===books[book].chapters.length)return;changeChapter(1);for(let i=0;i<60&&!chapterData;i++)await new Promise(r=>setTimeout(r,250));if(chapterData)await playNativeVoice(nat,'seguir');});
+  }
+  nativeVoice.until=until;nativeVoice.active=true;nativeVoice.paused=false;
+  const min=Number(until),voice=$('#voice-select').selectedOptions[0]?.dataset.uri||'';
+  await nat.iniciar({cola:queue,voz:voice,velocidad:Number($('#voice-rate')?.value||1),apagarMs:min>0?min*60000:0});
+  $('#voice-status').textContent='Leyendo… (sigue con la pantalla apagada)';
+}
+async function playVoice(event,continuing=false){
+  if(!chapterData){toast('Espera a que se cargue el capítulo y elige una voz.');return;}
+  const until=$('#voice-until')?.value||'seguir';
+  const nat=window.BibliaPlataforma?.lectura;
+  if(nat){try{await playNativeVoice(nat,until);}catch(error){toast(error.message||'No se pudo leer en segundo plano.');}return;}
+  // Temporizador: se arma al tocar «Escuchar» (no en cada capítulo siguiente) y apaga la voz aunque esté a mitad de capítulo.
+  if(!continuing){clearTimeout(voiceTimer);voiceUntil=0;const min=Number(until);if(min>0){voiceUntil=Date.now()+min*60000;voiceTimer=setTimeout(()=>{voiceUntil=0;void stopVoice();toast('Se apagó la lectura (temporizador).');},min*60000);}}
+  let result;
+  try{result=await voiceController().play(chapterData.verses.map(v=>v.text).join('\n'),$('#voice-select').value,Number($('#voice-rate')?.value||1));}catch(error){toast(error.message);return;}
+  if(!result?.completado||until==='capitulo'||(voiceUntil&&Date.now()>=voiceUntil))return;
+  const {book,chapter}=state.position;if(book===books.length-1&&chapter===books[book].chapters.length)return; // Apocalipsis 22: fin
+  changeChapter(1);
+  for(let i=0;i<60&&!chapterData;i++)await new Promise(r=>setTimeout(r,250));
+  if(chapterData)await playVoice(null,true);
+}
+// La velocidad y «Leer hasta…» se recuerdan en este equipo (preferencias, no datos de estudio).
+for(const [id,clave] of [['voice-rate','biblioteca-voz-velocidad'],['voice-until','biblioteca-voz-hasta']]){const r=document.getElementById(id);if(!r)continue;try{const v=localStorage.getItem(clave);if(v&&[...r.options].some(o=>o.value===v))r.value=v;}catch{}r.addEventListener('change',()=>{try{localStorage.setItem(clave,r.value);}catch{}});}
 start();

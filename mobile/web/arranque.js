@@ -62,7 +62,7 @@
       const { voices } = await TTS.getSupportedVoices();
       return (voices || [])
         // El id es el índice original del plugin: se conserva aunque se filtre por idioma.
-        .map((v, i) => ({ id: String(i), name: v.name || `Voz ${i + 1}`, lang: v.lang || '', ...(typeof v.localService === 'boolean' ? { localService: v.localService } : {}) }))
+        .map((v, i) => ({ id: String(i), name: v.name || `Voz ${i + 1}`, lang: v.lang || '', uri: typeof v.voiceURI === 'string' ? v.voiceURI.slice(0, 200) : '', ...(typeof v.localService === 'boolean' ? { localService: v.localService } : {}) }))
         .filter(v => /^es/i.test(v.lang));
     };
     integraciones.playVoice = async ({ text, lang = 'es-ES', voice, rate = 1 }) => {

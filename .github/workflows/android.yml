@@ -193,6 +193,7 @@ jobs:
           grep -q "^OK  entrega 1: voz y velocidad en el menú y Detener a la vista" prueba-emulador/informe.txt
           grep -q "^OK  entrega 1: Comentario con fichas, un solo selector y nunca vacío" prueba-emulador/informe.txt
           grep -q "^OK  entrega 1: guardar copia en el teléfono y recuperarla (vuelve la nota borrada)" prueba-emulador/informe.txt
+          grep -q "^OK  entrega 2: la lectura sigue en segundo plano con controles y termina el capítulo" prueba-emulador/informe.txt
           grep -q "^OK  entrega 1 con letra al 200 %: los nombres de las pestañas se siguen viendo" prueba-emulador/informe.txt
 
       - name: Resultados de la prueba en el emulador
