@@ -630,3 +630,5 @@ html[data-edicion="tienda"] #sources-dialog > p.muted { display: none !important
 :root[data-telefono="true"] #movil-pestanas[data-filas="dos"] button { flex-direction: row; gap: 6px; min-height: 48px; padding: 0 4px; }
 :root[data-telefono="true"] #movil-pestanas[data-filas="dos-alta"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 :root[data-telefono="true"] #movil-pestanas[data-filas="dos-alta"] button { flex-direction: column; gap: 2px; min-height: 56px; padding: 4px 2px; font-size: .625rem; }
+:root[data-telefono="true"] #library-controls[data-compacta="si"] #voice-play span { display: none; }
+:root[data-telefono="true"] #pane-biblia #comparison-controls .comparison-actions { flex-wrap: nowrap; }

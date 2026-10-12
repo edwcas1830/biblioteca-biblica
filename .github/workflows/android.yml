@@ -42,6 +42,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+          cache: gradle  # evita bajar todo de Maven Central en cada vuelta (429 Too Many Requests)
 
       - name: Dependencias de la app común
         run: npm ci

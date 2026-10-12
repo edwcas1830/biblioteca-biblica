@@ -227,6 +227,7 @@
     const cabeza = $('#pane-biblia > .pane-head'), comparar = $('#comparison-controls');
     if (cabeza && comparar && comparar.parentElement !== cabeza) cabeza.append(comparar);
     conI($('#compare-toggle'), 'arrow-left-right');
+    { const c = $('#compare-toggle span'); if (c) { c.textContent = 'Comparar'; $('#compare-toggle').setAttribute('aria-label', 'Comparar versiones'); } }
     const actualizar = () => { texto.textContent = textoReferencia(); };
     const origen = $('#bible-ref');
     if (origen) new MutationObserver(actualizar).observe(origen, { childList: true, characterData: true, subtree: true });
@@ -686,6 +687,9 @@
     if (!libro || !consulta.matches) return;
     const arriba = libro.getBoundingClientRect().top + window.scrollY;
     ajustarPestanas();
+    // Fila Strong · Escuchar…: si no cabe en un renglón, «Escuchar» queda solo con su icono (sin perder el nombre accesible).
+    const fila = $('#library-controls');
+    if (fila && html.dataset.herramientas !== 'mini') { fila.dataset.compacta = 'no'; if (fila.getBoundingClientRect().height > 64) fila.dataset.compacta = 'si'; }
     if (franja) html.style.setProperty('--nav-alto', Math.round(franja.getBoundingClientRect().height || 56) + 'px');
     const pieCap = $('#movil-pie');
     if (pieCap) html.style.setProperty('--pie-capitulo', Math.round(pieCap.getBoundingClientRect().height || 0) + 'px');
