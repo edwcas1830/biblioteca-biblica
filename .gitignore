@@ -21,3 +21,4 @@ dist-v06/
 # IA integrada: resultados de la prueba de calidad y estado local de wrangler
 servidor/ia/calidad/resultados.json
 servidor/ia/.wrangler/
+servidor/ia/calidad/resultados-*.json

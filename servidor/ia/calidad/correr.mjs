@@ -10,7 +10,8 @@ globalThis.window = {}; require('../../../app/bible-data.js'); const B = globalT
 
 const url = (process.argv[2] || '').replace(/\/$/, ''), token = process.env.TOKEN_ADMIN || '';
 if (!url || !token) { console.error('Falta la dirección del Worker o TOKEN_ADMIN.'); process.exit(1); }
-const MODELOS = ['@cf/openai/gpt-oss-120b', '@cf/meta/llama-3.3-70b-instruct-fp8-fast', '@cf/qwen/qwen3-30b-a3b-fp8', '@cf/meta/llama-3.1-8b-instruct-fp8-fast'];
+const MODELOS = process.env.MODELOS ? process.env.MODELOS.split(',') : ['@cf/openai/gpt-oss-120b', '@cf/meta/llama-3.3-70b-instruct-fp8-fast', '@cf/qwen/qwen3-30b-a3b-fp8', '@cf/meta/llama-3.1-8b-instruct-fp8-fast'];
+const SALIDA = process.env.SALIDA || 'resultados.json';
 const casos = JSON.parse(fs.readFileSync(new URL('./preguntas.json', import.meta.url))).casos;
 const nombre = r => B[r.book].name + ' ' + r.chapter + ':' + r.verse + (r.endVerse ? '-' + r.endVerse : '');
 const texto = r => B[r.book].chapters[r.chapter - 1].slice(r.verse - 1, r.endVerse || r.verse).join(' ').slice(0, 700);
@@ -32,5 +33,5 @@ for (const [i, c] of casos.entries()) {
   salida.push({ n: i + 1, ...c, respuestas });
   console.log(`${i + 1}/${casos.length} ${c.pregunta.slice(0, 50)}`);
 }
-fs.writeFileSync(new URL('./resultados.json', import.meta.url), JSON.stringify(salida, null, 1));
+fs.writeFileSync(new URL('./' + SALIDA, import.meta.url), JSON.stringify(salida, null, 1));
 console.log('Listo: servidor/ia/calidad/resultados.json (no se sube al repositorio).');
