@@ -136,6 +136,10 @@ async function esperarLista(app, etiqueta) {
   anotar(!hoy1.bienvenida, 'entrega 2B: la bienvenida está apagada (pedido de Edward, 12-oct)');
   anotar(hoy1.vista === 'hoy-view' && hoy1.texto.length > 20 && hoy1.pasos === 4, 'entrega 2B: la primera apertura del día abre «Hoy» con el versículo del día y 4 pasos', JSON.stringify({ cita: hoy1.cita, texto: hoy1.texto.slice(0, 50), pasos: hoy1.pasos }));
   anotar(hoy1.perfil && hoy1.perfil.hora === '07:00' && hoy1.pendientes === 14 && /Versículo del día/.test((hoy1.primero || {}).titulo || ''), 'entrega 2B: aviso diario del versículo elegido en Ajustes de «Hoy» (14 días)', JSON.stringify({ pendientes: hoy1.pendientes, primero: hoy1.primero }));
+  // Entrega 2C: el widget del versículo del día recibe los próximos 14 días y muestra el de hoy.
+  const widget = await app.evaluar(`const n=await window.HoyApp.actualizarWidget();return {n,hay:!!window.BibliaPlataforma.widget,hoy:window.HoyCore.delDia().cita};`, 30000);
+  let proveedores = ''; try { proveedores = adb('shell', 'dumpsys', 'appwidget'); } catch { /* sin datos */ }
+  anotar(widget.hay && widget.n === 14 && /VersiculoWidget/.test(proveedores), 'entrega 2C: widget «Versículo del día» registrado y con 14 días', JSON.stringify({ ...widget, proveedor: /VersiculoWidget/.test(proveedores) }));
   const hoy2 = await app.evaluar(`document.querySelector('[data-hoy-abrir=conexion]').click();await new Promise(r=>setTimeout(r,300));document.querySelector('[data-hoy-hecho=conexion]').click();await new Promise(r=>setTimeout(r,500));document.querySelector('[data-hoy-hecho=versiculo]').click();await new Promise(r=>setTimeout(r,800));return {progreso:document.querySelector('.hoy-progreso').textContent,semana:document.querySelectorAll('.hoy-semana li.hecho').length,total:document.querySelector('.hoy-total').textContent,abierto:document.querySelector('.hoy-paso-cuerpo:not([hidden])')?.id||'',camino:document.querySelector('.hoy-camino')?.textContent||'',logros:Object.keys(state.hoy.logros||{})};`);
   captura('1c-hoy-pasos');
   // Entrega 4 (IA integrada): «Preguntar a la Biblia» está en ☰ y en «Hoy»; pide consentimiento la primera vez y,

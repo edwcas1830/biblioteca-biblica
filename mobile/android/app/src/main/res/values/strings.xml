@@ -3,4 +3,6 @@
     <!-- app_name y title_activity_main los pone build.gradle (resValue): cambian en la edición tienda. -->
     <string name="package_name">com.edward.bibliotecabiblica</string>
     <string name="custom_url_scheme">com.edward.bibliotecabiblica</string>
+    <string name="widget_titulo">Versículo del día</string>
+    <string name="widget_descripcion">El versículo del día de «Hoy», sin abrir la app.</string>
 </resources>

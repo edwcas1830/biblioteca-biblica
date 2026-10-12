@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Se redibuja cada 3 horas para cambiar de versículo a medianoche sin abrir la app (Android no deja menos de 30 min). -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_descripcion"
+    android:initialLayout="@layout/widget_versiculo"
+    android:minWidth="250dp"
+    android:minHeight="110dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="2"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="10800000"
+    android:widgetCategory="home_screen" />

@@ -115,7 +115,16 @@ ${avisos?`<label>Aviso diario del versículo<input type="time" id="hoy-hora" val
     try{await navigator.clipboard.writeText(texto);toast('Versículo copiado.');}catch{toast(texto);}
   }
 
+  // Widget de Android: los versículos de los próximos 14 días, con el texto de la Biblia elegida.
+  async function actualizarWidget(){
+    const w=plataforma().widget;if(!w)return 0;
+    try{const lista=[];const ahora=new Date(),inicio=new Date(ahora.getFullYear(),ahora.getMonth(),ahora.getDate());
+      for(let i=0;i<14;i++){const d=new Date(inicio.getFullYear(),inicio.getMonth(),inicio.getDate()+i),v=H.delDia(d),t=await textoDe(v);lista.push({fecha:H.clave(d),cita:v.cita,texto:(t.texto||'').slice(0,400)});}
+      const r=await w.guardar(lista);return r?.guardados||0;
+    }catch(error){console.warn('Widget',error);return 0;}
+  }
   async function programarAvisos(){
+    actualizarWidget();
     const rec=plataforma().recordatorio;if(!rec)return 0;
     const hora=datos().perfil.hora;
     try{
@@ -223,5 +232,5 @@ ${avisos?`<label>Aviso diario del versículo<input type="time" id="hoy-hora" val
   // Al abrir: la primera vez de cada día, «Hoy» (si la persona no lo apagó). Devuelve si lo abrió.
   function abrirSiToca(){const e=datos(),local=leerLS(LS_DIA);if(H.abrirPrimero({...e,ultimoDia:local>e.ultimoDia?local:e.ultimoDia})){showView('hoy');return true;}return false;}
 
-  window.HoyApp={render,enlazar,marcar,programarAvisos,elegirHora,bienvenida,necesitaBienvenida,abrirSiToca,textoDe,enTelefono};
+  window.HoyApp={actualizarWidget,render,enlazar,marcar,programarAvisos,elegirHora,bienvenida,necesitaBienvenida,abrirSiToca,textoDe,enTelefono};
 })();

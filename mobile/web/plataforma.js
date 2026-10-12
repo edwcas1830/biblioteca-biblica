@@ -265,5 +265,9 @@
   }
   capacidades.recordatorio = !!recordatorio;
 
-  window.BibliaPlataforma = { capacidades, compartir, pausarMusica, elegirArchivosTraspaso, desempacarPaquete, ...(Share && Filesystem ? { compartirImagen, guardarArchivo } : {}), ...(lectura ? { lectura } : {}), ...(recordatorio ? { recordatorio } : {}) };
+  // Widget «Versículo del día»: la app le deja los próximos días; el widget cambia solo a medianoche.
+  const Widget = plugin('VersiculoWidget');
+  const widget = Widget ? { guardar: proximos => Widget.guardar({ proximos }) } : null;
+
+  window.BibliaPlataforma = { capacidades, compartir, pausarMusica, elegirArchivosTraspaso, desempacarPaquete, ...(Share && Filesystem ? { compartirImagen, guardarArchivo } : {}), ...(lectura ? { lectura } : {}), ...(recordatorio ? { recordatorio } : {}), ...(widget ? { widget } : {}) };
 })();

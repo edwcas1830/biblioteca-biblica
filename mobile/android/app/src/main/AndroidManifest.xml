@@ -27,6 +27,19 @@
 
         </activity>
 
+        <!-- Widget «Versículo del día» para la pantalla de inicio (entrega 2C). -->
+        <receiver
+            android:name=".VersiculoWidget"
+            android:exported="false"
+            android:label="@string/widget_titulo">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_versiculo_info" />
+        </receiver>
+
         <!-- Lectura en voz alta en segundo plano, con controles en la notificación y la pantalla bloqueada. -->
         <service
             android:name=".LecturaVozService"

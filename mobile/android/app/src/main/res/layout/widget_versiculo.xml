@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widget «Versículo del día»: fondo verde cubierta, texto en marfil, cita en latón. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_raiz"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="14dp"
+    android:background="@drawable/widget_fondo">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/widget_titulo"
+        android:textAllCaps="true"
+        android:letterSpacing="0.08"
+        android:textColor="#E7D9B8"
+        android:textSize="11sp" />
+
+    <TextView
+        android:id="@+id/widget_texto"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="6dp"
+        android:ellipsize="end"
+        android:fontFamily="serif"
+        android:maxLines="6"
+        android:textColor="#F6EFE2"
+        android:textSize="15sp" />
+
+    <TextView
+        android:id="@+id/widget_cita"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textColor="#D4B776"
+        android:textSize="12sp" />
+</LinearLayout>

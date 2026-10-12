@@ -12,6 +12,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(LlaveroSeguroPlugin.class);
         // Plugin propio: lectura en voz alta en segundo plano (servicio con controles en la pantalla bloqueada).
         registerPlugin(LecturaVozPlugin.class);
+        // Plugin propio: versículos de los próximos días para el widget de la pantalla de inicio.
+        registerPlugin(VersiculoWidgetPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }
