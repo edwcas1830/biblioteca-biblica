@@ -24,7 +24,7 @@ export const PRECIOS = {
   '@cf/google/gemma-3-12b-it': [0.345, 0.556],
   '@cf/mistralai/mistral-small-3.1-24b-instruct': [0.351, 0.555]
 };
-export const MODELO_PREDETERMINADO = '@cf/openai/gpt-oss-120b';
+export const MODELO_PREDETERMINADO = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 
 const LIMITES = { pregunta: 600, pasaje: 700, pasajes: 14, cita: 40 };
 
@@ -160,7 +160,12 @@ export async function preguntar(env, solicitud, dispositivo, ip, ahora = new Dat
   const modelo = env.MODELO || MODELO_PREDETERMINADO, mensajes = armarMensajes(solicitud);
   let resultado;
   try { resultado = await llamarModelo(env, modelo, mensajes, MODOS[solicitud.modo].maxTokens); }
-  catch (e) { return json({ error: 'MODELO', mensaje: 'La IA no respondió. Intenta de nuevo; no se descontó tu pregunta.' }, 502); }
+  catch (e) {
+    console.error('Workers AI', String(e && e.message || e));
+    // Sin la cuota gratis diaria de Cloudflare (plan Free) no hay IA hasta las 00:00 UTC.
+    if (/4006|daily free allocation|neurons/i.test(String(e && e.message))) return json({ error: 'LIMITE', mensaje: 'La IA ya respondió muchas preguntas hoy y descansa hasta mañana. No se descontó tu pregunta.' }, 503);
+    return json({ error: 'MODELO', mensaje: 'La IA no respondió. Intenta de nuevo; no se descontó tu pregunta.' }, 502);
+  }
   if (!resultado.texto) return json({ error: 'MODELO', mensaje: 'La IA no respondió. Intenta de nuevo; no se descontó tu pregunta.' }, 502);
   // Se cobra solo lo que salió bien.
   await sumarGasto(env, dia, costoUSD(modelo, resultado.uso, mensajes, resultado.texto));
@@ -186,7 +191,9 @@ export async function prueba(env, c, autorizacion) {
   const fallo = validarSolicitud(c); if (fallo) return error('VALIDACION', fallo);
   if (!PRECIOS[c.modelo]) return error('VALIDACION', 'Modelo no válido.');
   const mensajes = armarMensajes(c), inicio = Date.now();
-  const r = await llamarModelo(env, c.modelo, mensajes, MODOS[c.modo].maxTokens);
+  let r;
+  try { r = await llamarModelo(env, c.modelo, mensajes, MODOS[c.modo].maxTokens); }
+  catch (e) { return json({ error: 'MODELO', detalle: String(e && e.message || e).slice(0, 300) }, 502); }
   return json({ respuesta: r.texto, modelo: c.modelo, ms: Date.now() - inicio, usd: costoUSD(c.modelo, r.uso, mensajes, r.texto) });
 }
 

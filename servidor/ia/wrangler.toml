@@ -12,7 +12,7 @@ database_name = "biblia-ia"
 database_id = "bd566255-b15d-45a0-8282-44e14dd291e7"
 
 [vars]
-MODELO = "@cf/openai/gpt-oss-120b"
+MODELO = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
 TOPE_DIARIO_USD = "1"
 CUOTA_GRATIS = "3"
 CUOTA_PLUS = "10"
