@@ -91,6 +91,28 @@ const servidor = http.createServer((req, res) => {
     const estilos = await page.evaluate(() => ({ antesDeSaltar: window.__cspAntes || 'sin bienvenida', despues: (window.__csp || []).length, style: [...document.querySelectorAll('style')].map(x => (x.parentElement?.id || x.parentElement?.tagName) + ':' + x.textContent.slice(0, 50)), detalles: document.querySelectorAll('details').length }));
     console.log('Diagnóstico CSP tras «Hoy»:', JSON.stringify(estilos));
     console.log('Diagnóstico de estilos:', JSON.stringify(await page.evaluate(() => window.__estilos || [])));
+    // Bisección: se vuelve a dibujar «Hoy» pieza por pieza en un contenedor visible y se anota tras cuál salta la CSP.
+    const piezas = await page.evaluate(async () => {
+      const espera = ms => new Promise(r => setTimeout(r, ms));
+      const v = document.querySelector('#hoy-view'), partes = [...v.children].map(x => x.outerHTML);
+      const caja = document.createElement('div'); caja.id = 'bisect-hoy'; document.body.append(caja);
+      const out = [];
+      for (const html of partes) {
+        const antes = (window.__csp || []).length;
+        const t = document.createElement('template'); t.innerHTML = html; caja.append(t.content);
+        await espera(400);
+        out.push(((window.__csp || []).length > antes ? 'VIOLA ' : 'ok ') + html.slice(0, 70));
+      }
+      // Y pedazos internos de los pasos y del camino, por si la culpa está adentro.
+      for (const sel of ['.hoy-paso-cabeza', '.hoy-check', 'svg', 'input[type=checkbox]', '.hoy-semana i', 'blockquote']) {
+        const el = v.querySelector(sel); if (!el) { out.push('sin ' + sel); continue; }
+        const antes = (window.__csp || []).length;
+        caja.append(el.cloneNode(true)); await espera(300);
+        out.push(((window.__csp || []).length > antes ? 'VIOLA ' : 'ok ') + sel);
+      }
+      return out;
+    });
+    console.log('Bisección de «Hoy»:', JSON.stringify(piezas));
     exigir(errores.length === 0 && cspHoy.length === 0, 'sin errores en consola tras «Hoy»' + (errores.length ? ': ' + errores.slice(0, 2).join(' | ') : '') + (cspHoy.length ? ' · CSP: ' + cspHoy.slice(0, 4).join(' | ') : ''));
     const manifiesto = await (await page.request.get(base + 'manifest.webmanifest')).json();
     exigir(manifiesto.display === 'standalone' && manifiesto.icons.length === 2, 'manifiesto instalable');
