@@ -29,3 +29,15 @@ dialog#ia-biblia { width: min(680px, 94vw); padding: 18px 20px 20px; }
 .ia-hist { display: block; width: 100%; text-align: left; border: 0; border-top: 1px solid var(--line); background: none; color: var(--ink); padding: 10px 2px; font-size: .9rem; }
 .ia-hist b { color: var(--accent); font-weight: 600; margin-right: 4px; }
 .hoy-ia { width: 100%; min-height: 48px; margin: 8px 0 0; font-size: .95rem; }
+
+/* «Temas de la Biblia» (Explorar · búsqueda por tema). */
+dialog#temas-biblia { width: min(680px, 94vw); padding: 18px 20px 20px; }
+#temas-filtro { margin: 10px 0 12px; font-size: 1rem; }
+.temas-lista { display: flex; flex-wrap: wrap; gap: 8px; }
+.temas-tema { border: 1px solid var(--line); background: var(--paper); color: var(--ink); border-radius: 999px; padding: 8px 14px; font-size: .92rem; min-height: 40px; }
+#temas-detalle h3 { font: normal 1.3rem Georgia, serif; margin: 8px 0 10px; color: var(--ink); }
+.temas-pasajes { padding-left: 0; list-style: none; margin: 0; }
+.temas-pasajes li { border-top: 1px solid var(--line); padding: 10px 0; }
+.temas-pasajes p { margin: 4px 0 0; font: 1rem/1.6 Georgia, serif; color: var(--ink); overflow-wrap: anywhere; }
+#temas-biblia .temas-cita { border: 0; background: none; padding: 0; min-height: 0; color: var(--accent); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.temas-ia { width: 100%; min-height: 48px; margin-top: 12px; }

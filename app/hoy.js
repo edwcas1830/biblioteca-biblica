@@ -36,13 +36,16 @@
     return {texto:cap.slice(ref.verse-1,fin).join(' ').replace(/^([A-ZÁÉÍÓÚÑ]{2,})(\s)/,(m,p,s)=>p.charAt(0)+p.slice(1).toLowerCase()+s),edicion:'Reina-Valera 1909'};
   }
   const fechaLarga=d=>{const t=d.toLocaleDateString('es',{weekday:'long',day:'numeric',month:'long'});return t.charAt(0).toUpperCase()+t.slice(1);};
-  const resumen={conexion:()=>H.conexion(),versiculo:v=>v.cita,devocion:()=>'Lee · Piensa · Aplica',oracion:()=>'Una guía corta para orar'};
+  const devocionalHoy=()=>H.devocionalDelDia(datos(),window.HoyDevocionales);
+  const resumen={conexion:()=>H.conexion(),versiculo:v=>v.cita,devocion:()=>{const d=devocionalHoy();return d?d.titulo+' · '+d.cita:'Lee · Piensa · Aplica';},oracion:()=>'Una guía corta para orar'};
 
   function cuerpoDe(id,v,hecho){
     const d=H.devocion();
     const boton=`<button type="button" class="${hecho?'outline':'primary'} hoy-hecho" data-hoy-hecho="${id}" aria-pressed="${hecho}">${hecho?'Hecho ✓ · desmarcar':'Marcar como hecho'}</button>`;
     if(id==='conexion')return `<p class="hoy-pregunta">${esc(H.conexion())}</p><p class="muted">Tómate un minuto en silencio. No hace falta escribir nada.</p>${boton}`;
     if(id==='versiculo')return `<p>Lee <b>${esc(v.cita)}</b> despacio, dos veces. Si tienes tiempo, lee el capítulo completo.</p><button type="button" class="outline" data-hoy="leer">Leer ${esc(books[v.book].name)} ${v.chapter} ↗</button>${boton}`;
+    const propio=id==='devocion'&&devocionalHoy();
+    if(propio)return `<h4 class="hoy-devo-titulo">${esc(propio.titulo)}</h4><button type="button" class="hoy-devo-cita" data-hoy-cita="${esc(propio.cita)}">${esc(propio.cita)} ↗</button><p>${esc(propio.historia)}</p>${propio.desarrollo.map(x=>`<p>${esc(x)}</p>`).join('')}<h4>Para hoy</h4><p>${esc(propio.paraHoy)}</p><h4>Oración</h4><p class="hoy-oracion">${esc(propio.oracion)}</p>${boton}`;
     if(id==='devocion')return `<h4>Lee</h4><p>${esc(v.cita)}: vuelve al versículo de arriba.</p><h4>Piensa</h4><ul>${d.piensa.map(p=>`<li>${esc(p)}</li>`).join('')}</ul><h4>Aplica</h4><p>${esc(d.aplica)}</p>${boton}`;
     return `<p class="hoy-oracion">${esc(H.oracion())}</p><p class="muted">Termina con tus propias palabras.</p><button type="button" class="outline" data-hoy="oracion">Abrir mi cuaderno de oración</button>${boton}`;
   }
@@ -93,7 +96,7 @@
 ${bloqueCamino(e,hoy)}
 ${window.IaBiblia?'<button type="button" class="outline hoy-ia" data-action="ia-biblia-open" data-ia-modo="tema">✦ Pregúntale a la Biblia</button>':''}
 <button type="button" class="outline hoy-seguir" data-hoy="seguir">Continuar leyendo · ${esc(books[p.book].name)} ${p.chapter}</button>
-<nav class="hoy-mas" aria-label="Más para tu camino"><button type="button" class="quiet" data-hoy-ir="dev">Mis devocionales y series</button><button type="button" class="quiet" data-hoy-ir="plan">Mi plan de lectura</button><button type="button" class="quiet" data-hoy-ir="prayer">Oración y testimonios</button></nav>
+<nav class="hoy-mas" aria-label="Más para tu camino"><button type="button" class="quiet" data-action="temas-open">Temas de la Biblia</button><button type="button" class="quiet" data-hoy-ir="dev">Mis devocionales y series</button><button type="button" class="quiet" data-hoy-ir="plan">Mi plan de lectura</button><button type="button" class="quiet" data-hoy-ir="prayer">Oración y testimonios</button></nav>
 <div class="hoy-ajustes"><button type="button" class="quiet hoy-ajustes-abrir" data-hoy="ajustes" aria-expanded="${ajustesAbiertos}" aria-controls="hoy-ajustes-cuerpo">Ajustes de «Hoy» ${ajustesAbiertos?'▴':'▾'}</button><div id="hoy-ajustes-cuerpo" ${ajustesAbiertos?'':'hidden'}>
 <label class="checkbox-label"><input type="checkbox" id="hoy-abrir-primero" ${e.abrirEnHoy?'checked':''}> Abrir «Hoy» la primera vez de cada día</label>
 <label class="checkbox-label"><input type="checkbox" id="hoy-mostrar-camino" ${e.mostrarCamino!==false?'checked':''}> Mostrar «Mi camino»: semana de fe y logros</label>
@@ -151,6 +154,7 @@ ${avisos?`<label>Aviso diario del versículo<input type="time" id="hoy-hora" val
       if(b.dataset.hoyAbrir){abierto=abierto===b.dataset.hoyAbrir?null:b.dataset.hoyAbrir;render();return;}
       if(b.dataset.hoyHecho){marcar(b.dataset.hoyHecho);return;}
       if(b.dataset.hoyIr){showView(b.dataset.hoyIr);return;}
+      if(b.dataset.hoyCita){const r=H.parsear(b.dataset.hoyCita);if(r)go(r.book,r.chapter,r.verse,r.endVerse);return;}
       const accion=b.dataset.hoy;
       if(accion==='leer'){const v=H.delDia();go(v.book,v.chapter,v.verse,v.endVerse);}
       else if(accion==='seguir'){const p=state.position;go(p.book,p.chapter,p.verse);}

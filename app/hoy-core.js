@@ -123,6 +123,8 @@
   const conexion=(d=new Date())=>CONEXION[indiceDelAno(d)%CONEXION.length];
   const oracion=(d=new Date())=>ORACION[indiceDelAno(d)%ORACION.length];
   function devocion(d=new Date()){const i=indiceDelAno(d);return {piensa:PIENSA[i%PIENSA.length],aplica:APLICA[(i+3)%APLICA.length]};}
+  // Devocional propio del día: el n.º de días anteriores con algún paso (estable durante todo el día) dentro de los 30.
+  function devocionalDelDia(e,lista,hoy=new Date()){if(!Array.isArray(lista)||!lista.length)return null;const k=clave(hoy),antes=Object.keys(e.dias||{}).filter(f=>f<k).length;return lista[antes%lista.length];}
 
   // «Mi camino» (entrega 2C): contadores de estudio, capítulos abiertos por libro y logros ganados (con su fecha).
   const vacio=()=>({bienvenida:'',perfil:{proposito:'',meta:4,hora:'',tradicion:''},dias:{},abrirEnHoy:true,ultimoDia:'',
@@ -208,6 +210,6 @@
     for(let i=0;r.length<n&&i<n+1;i++){const d=new Date(desde.getFullYear(),desde.getMonth(),desde.getDate()+i,h,mi);if(d>desde)r.push({fecha:clave(d),cuando:d,...delDia(d)});}
     return r;
   }
-  const api={LIBROS,VERSICULOS,CONEXION,PIENSA,APLICA,ORACION,PASOS,PROPOSITOS,TRADICIONES,LOGROS,parsear,clave,fechaDe,indiceDelAno,delDia,conexion,oracion,devocion,vacio,validar,hecho,marcar,pasosHechos,totalDias,semana,abrirPrimero,proximosAvisos,semanasDeFe,semanaActual,progresoLogros,revisarLogros,contar,leerCapitulo,librosCompletos};
+  const api={LIBROS,VERSICULOS,CONEXION,PIENSA,APLICA,ORACION,PASOS,PROPOSITOS,TRADICIONES,LOGROS,parsear,clave,fechaDe,indiceDelAno,delDia,conexion,oracion,devocion,vacio,validar,hecho,marcar,pasosHechos,totalDias,semana,abrirPrimero,proximosAvisos,devocionalDelDia,semanasDeFe,semanaActual,progresoLogros,revisarLogros,contar,leerCapitulo,librosCompletos};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.HoyCore=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

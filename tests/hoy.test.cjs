@@ -105,3 +105,22 @@ test('Mi camino: semana de fe con gracia, semanas no seguidas y logros que se ce
   assert.deepEqual(v.cuenta, { strong: 0, mapas: 2, comparados: ['1:1:1'] });
   assert.equal(H.LOGROS.length, 12);
 });
+
+test('Los 30 devocionales propios: completos, con citas que existen, uno por día en orden', () => {
+  const D = require('../app/hoy-devocionales.js');
+  assert.equal(D.length, 30);
+  const vistos = new Set();
+  for (const d of D) {
+    assert.ok(d.titulo && d.historia && d.paraHoy && /Amén\.$/.test(d.oracion) && Array.isArray(d.desarrollo) && d.desarrollo.length === 2, 'incompleto ' + d.n);
+    const r = H.parsear(d.cita); assert.ok(r, 'cita ' + d.cita);
+    const cap = BIBLIA.books[r.book].chapters[r.chapter - 1]; assert.ok(cap && r.verse <= cap.length && (!r.endVerse || r.endVerse <= cap.length), 'no existe ' + d.cita);
+    assert.ok(!vistos.has(d.titulo)); vistos.add(d.titulo);
+  }
+  let e = H.vacio();
+  assert.equal(H.devocionalDelDia(e, D, new Date(2026, 9, 12)).n, 1, 'el primer día, el 1');
+  e = H.marcar(H.marcar(e, '2026-10-10', 'versiculo'), '2026-10-11', 'oracion');
+  assert.equal(H.devocionalDelDia(e, D, new Date(2026, 9, 12)).n, 3, 'tras 2 días usados, el 3');
+  e = H.marcar(e, '2026-10-12', 'conexion');
+  assert.equal(H.devocionalDelDia(e, D, new Date(2026, 9, 12)).n, 3, 'no cambia durante el mismo día');
+  assert.equal(H.devocionalDelDia(e, [], new Date()), null);
+});
