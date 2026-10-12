@@ -41,3 +41,15 @@ dialog#temas-biblia { width: min(680px, 94vw); padding: 18px 20px 20px; }
 .temas-pasajes p { margin: 4px 0 0; font: 1rem/1.6 Georgia, serif; color: var(--ink); overflow-wrap: anywhere; }
 #temas-biblia .temas-cita { border: 0; background: none; padding: 0; min-height: 0; color: var(--accent); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 .temas-ia { width: 100%; min-height: 48px; margin-top: 12px; }
+
+/* «Memorizar versículos» (repaso espaciado con pistas). */
+dialog#memorizar { width: min(620px, 94vw); padding: 18px 20px 20px; }
+.mem-lista { list-style: none; padding: 0; margin: 12px 0 0; }
+.mem-item { display: block; width: 100%; text-align: left; border: 0; border-top: 1px solid var(--line); background: none; color: var(--ink); padding: 12px 2px; }
+.mem-item b { display: block; font: normal 1.05rem Georgia, serif; }
+.mem-item small { color: var(--muted); font-size: .82rem; }
+.mem-ref { font: normal 1.35rem Georgia, serif; margin: 8px 0 2px; color: var(--ink); }
+.mem-nivel { color: var(--muted); font-size: .85rem; margin: 0 0 10px; }
+.mem-texto { font: 1.2rem/1.9 Georgia, serif; color: var(--ink); overflow-wrap: anywhere; }
+#memorizar .mem-oculta { display: inline; min-height: 0 !important; padding: 0 3px !important; margin: 0 1px; border: 0; border-bottom: 2px solid var(--gold); background: color-mix(in srgb, var(--gold) 12%, transparent); color: var(--muted); font: inherit; letter-spacing: .05em; border-radius: 3px; }
+#memorizar .mem-oculta.vista { color: var(--accent); letter-spacing: 0; }

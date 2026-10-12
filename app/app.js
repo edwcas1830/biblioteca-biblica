@@ -7,7 +7,7 @@ const planCore = window.PlanCore;
 const appearanceCore=window.AppearanceCore;
 const paneCore=window.PaneLayoutCore;
 const STORE = 'biblioteca-biblica-v1';
-const initial = () => ({ version:1, position:{book:18,chapter:23,verse:1}, notes:{}, highlights:{}, devResponses:{}, planNotes:{}, prayers:[], prayerDrafts:{}, guideResponses:{}, aiStudies:[], aiPrefs:{}, estudio:(window.EstudioCore?EstudioCore.vacio():{marcas:[],colores:{},historial:[]}), hoy:(window.HoyCore?HoyCore.vacio():{}), iaBiblia:{consentido:false,historial:[]}, privacyEnabled:false, privateLocked:false, music:{url:''}, devotionals:[], plans:[], font:20, night:false, appearance:appearanceCore.normalize() });
+const initial = () => ({ version:1, position:{book:18,chapter:23,verse:1}, notes:{}, highlights:{}, devResponses:{}, planNotes:{}, prayers:[], prayerDrafts:{}, guideResponses:{}, aiStudies:[], aiPrefs:{}, estudio:(window.EstudioCore?EstudioCore.vacio():{marcas:[],colores:{},historial:[]}), hoy:(window.HoyCore?HoyCore.vacio():{}), iaBiblia:{consentido:false,historial:[]}, memorizar:{}, privacyEnabled:false, privateLocked:false, music:{url:''}, devotionals:[], plans:[], font:20, night:false, appearance:appearanceCore.normalize() });
 let state = initial(), activeView='read', activeDev=null, activeDay=0, toastTimer, searchTimer;
 const desktop=window.libraryDesktop;
 let uiReady=false, storageReady=false, saveQueue=Promise.resolve(), selectedVersion='rv1909', catalogData=null, readingGeneration=0, searchGeneration=0, studyGeneration=0, chapterData=null, savePending=0, saveFailed=false;
@@ -63,6 +63,7 @@ function validateState(candidate) {
   // «Hoy» (entrega 2B): pasos marcados por día, perfil del cuestionario y hora del aviso.
   if(window.HoyCore)result.hoy=HoyCore.validar(candidate.hoy);
   // IA integrada (entrega 4): consentimiento y las últimas 30 preguntas, solo en este equipo y en sus copias.
+  result.memorizar=window.MemorizarCore?MemorizarCore.validar(candidate.memorizar):{};
   result.iaBiblia={consentido:candidate.iaBiblia?.consentido===true,historial:window.IaBibliaCore?IaBibliaCore.validarHistorial(candidate.iaBiblia?.historial):[]};
   result.font=Number.isInteger(candidate.font)?Math.max(16,Math.min(28,candidate.font)):20;
   result.night=candidate.night===true;
