@@ -43,7 +43,8 @@
 .hoy-mas { display: flex; flex-wrap: wrap; gap: 4px 8px; justify-content: center; }
 .hoy-mas button { font-size: .85rem; }
 .hoy-ajustes { margin-top: 16px; font-size: .9rem; }
-.hoy-ajustes summary { cursor: pointer; color: var(--muted); padding: 8px 0; }
+.hoy-ajustes-abrir { padding: 8px 0; color: var(--muted); }
+#hoy-ajustes-cuerpo { padding: 4px 0 8px; }
 .hoy-ajustes input[type="time"] { max-width: 12rem; }
 
 /* Bienvenida: 5 pantallas cortas. */

@@ -8,7 +8,8 @@
   const q=s=>document.querySelector(s);
   const plataforma=()=>window.BibliaPlataforma||{};
   const enTelefono=()=>document.documentElement.dataset.telefono==='true';
-  let abierto=null, generacion=0, animado=false;
+  // Sin <details>: en el iPhone (WebKit) su estilo interno choca con la CSP de la app al crearlo desde JS.
+  let abierto=null, generacion=0, animado=false, ajustesAbiertos=false;
   // Lo que es de ESTE aparato (no de la biblioteca): si ya vio la bienvenida y qué día abrió «Hoy» por última vez.
   // Así un traspaso desde la PC o recuperar una copia no repite la bienvenida ni vuelve a abrir «Hoy» el mismo día.
   const LS_BIENVENIDA='biblioteca-hoy-bienvenida', LS_DIA='biblioteca-hoy-ultimo-dia';
@@ -62,10 +63,10 @@
 <div class="hoy-pasos">${pasos}</div>
 <button type="button" class="outline hoy-seguir" data-hoy="seguir">Continuar leyendo · ${esc(books[p.book].name)} ${p.chapter}</button>
 <nav class="hoy-mas" aria-label="Más para tu camino"><button type="button" class="quiet" data-hoy-ir="dev">Mis devocionales y series</button><button type="button" class="quiet" data-hoy-ir="plan">Mi plan de lectura</button><button type="button" class="quiet" data-hoy-ir="prayer">Oración y testimonios</button></nav>
-<details class="hoy-ajustes"><summary>Ajustes de «Hoy»</summary>
+<div class="hoy-ajustes"><button type="button" class="quiet hoy-ajustes-abrir" data-hoy="ajustes" aria-expanded="${ajustesAbiertos}" aria-controls="hoy-ajustes-cuerpo">Ajustes de «Hoy» ${ajustesAbiertos?'▴':'▾'}</button><div id="hoy-ajustes-cuerpo" ${ajustesAbiertos?'':'hidden'}>
 <label class="checkbox-label"><input type="checkbox" id="hoy-abrir-primero" ${e.abrirEnHoy?'checked':''}> Abrir «Hoy» la primera vez de cada día</label>
 ${avisos?`<label>Aviso diario del versículo<input type="time" id="hoy-hora" value="${esc(e.perfil.hora)}"></label><button type="button" class="quiet" id="hoy-sin-aviso" ${e.perfil.hora?'':'hidden'}>Quitar el aviso diario</button><p class="fine-print" id="hoy-aviso-estado" role="status">${e.perfil.hora?'Un aviso al día a las '+esc(e.perfil.hora)+'.':'Sin aviso diario.'}</p>`:''}
-</details>`;
+</div></div>`;
     animado=true;
     const t=await textoDe(v);if(gen!==generacion)return;
     q('#hoy-vers-texto').textContent=t.texto||v.cita;q('#hoy-vers-edicion').textContent=t.edicion?'· '+t.edicion:'';
@@ -114,6 +115,7 @@ ${avisos?`<label>Aviso diario del versículo<input type="time" id="hoy-hora" val
       else if(accion==='seguir'){const p=state.position;go(p.book,p.chapter,p.verse);}
       else if(accion==='copiar')copiar();
       else if(accion==='oracion')showView('prayer');
+      else if(accion==='ajustes'){ajustesAbiertos=!ajustesAbiertos;const c=q('#hoy-ajustes-cuerpo');if(c)c.hidden=!ajustesAbiertos;b.setAttribute('aria-expanded',String(ajustesAbiertos));b.textContent='Ajustes de «Hoy» '+(ajustesAbiertos?'▴':'▾');}
       else if(b.id==='hoy-sin-aviso'){const h=q('#hoy-hora');if(h)h.value='';elegirHora('');}
     });
     vista.addEventListener('change',ev=>{
