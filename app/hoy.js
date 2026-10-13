@@ -119,6 +119,7 @@
 <p class="hoy-progreso" role="status">${hechos===4?'Completaste tu día. Que esta palabra te acompañe.':hechos+' de 4 pasos · unos 8 minutos'}</p>
 <div class="hoy-pasos">${pasos}</div>
 ${bloqueCamino(e,hoy)}
+${window.BibliaPlus?.tarjetaHoy?.()||''}
 ${window.IaBiblia?'<button type="button" class="outline hoy-ia" data-action="ia-biblia-open" data-ia-modo="tema">✦ Pregúntale a la Biblia</button>':''}
 <button type="button" class="outline hoy-seguir" data-hoy="seguir">Continuar leyendo · ${esc(books[p.book].name)} ${p.chapter}</button>
 <nav class="hoy-mas" aria-label="Más para tu camino"><button type="button" class="quiet" data-action="temas-open">Temas de la Biblia</button><button type="button" class="quiet" data-action="memorizar-open">Memorizar</button><button type="button" class="quiet" data-hoy-ir="dev">Mis devocionales y series</button><button type="button" class="quiet" data-hoy-ir="plan">Mi plan de lectura</button><button type="button" class="quiet" data-hoy-ir="prayer">Oración y testimonios</button></nav>

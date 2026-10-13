@@ -95,6 +95,13 @@
     // Google Play, la pantalla es una vista previa y no cobra nada).
     if (window.BIBLIA_EDICION === 'tienda') extras.unshift(['hand-heart', 'Apoyar el proyecto', abrirApoyo]);
     for (const [ico, texto, fn] of extras) lista.append(conI(crear('button', { type: 'button', class: 'quiet', texto, onclick: () => { cerrarMas(); fn(); } }), ico));
+    // Edición tienda: Biblioteca Plus (vista previa) y las funciones con candado (CONSENSO-HABITO #11).
+    // plus.js carga después: los botones existen ya con candado y plus.js los actualiza (BibliaPlus.refrescar).
+    if (window.BIBLIA_EDICION === 'tienda') {
+      lista.append(conI(crear('button', { type: 'button', class: 'quiet', texto: 'Biblioteca Plus', onclick: () => { cerrarMas(); window.BibliaPlus?.oferta(); } }), 'sparkles'));
+      for (const [id, texto, ico] of [['sync', 'Sincronizar tus aparatos', 'refresh-cw'], ['pareja', 'Leer en pareja o en círculo', 'users'], ['planes', 'Planes especiales', 'calendar-check']])
+        lista.append(conI(crear('button', { type: 'button', class: 'quiet plus-funcion plus-con-candado', 'data-plus-funcion': id, texto, onclick: () => { cerrarMas(); window.BibliaPlus?.pedir(id); } }), ico));
+    }
     const ICONO_MENU = [[/preguntar a la biblia/i, 'sparkles'], [/temas de la biblia/i, 'tag'], [/memorizar versículos/i, 'repeat'], [/fuentes/i, 'file-text'], [/guardar copia/i, 'download'], [/recuperar copia/i, 'upload'], [/música/i, 'music'], [/oración/i, 'heart'],
       [/círculo/i, 'users'], [/proteger/i, 'lock'], [/inteligencia/i, 'sliders-horizontal'], [/actualizaciones/i, 'refresh-cw']];
     for (const b of $$('.library-menu-items button')) {
@@ -119,6 +126,7 @@
       ['Mi estudio', 'estudio'],
       ['Mi camino', /plan de lectura|memorizar versículos|oración|círculo/i],
       ['Herramientas', /preguntar a la biblia|temas de la biblia|imagen|estudio con ia|atlas|pantalla completa|escuchar|música/i],
+      ['Plus', /biblioteca plus|sincronizar tus aparatos|en pareja o en círculo|planes especiales/i],
       ['Mi biblioteca y ajustes', /./]
     ];
     const botones = $$('button', lista);

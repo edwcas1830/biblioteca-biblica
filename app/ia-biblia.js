@@ -100,6 +100,7 @@
 <details id="ia-historial-caja" hidden><summary>Mis preguntas anteriores</summary><div id="ia-historial"></div></details>
 <p class="ia-equipo">Código de este equipo: <span id="ia-equipo"></span></p>`;
     document.body.append(dlg);
+    window.BibliaPlus?.decorarIA?.(dlg); // edición tienda: «Plus: 10 preguntas al día» con candado
     dlg.addEventListener('click',alClic);
     dlg.addEventListener('cancel',()=>{});
   }

@@ -1,0 +1,35 @@
+/* Biblioteca Plus (vista previa, edición tienda): oferta, candados y tarjeta semanal. Colores del tema. */
+dialog#plus-oferta { width: min(560px, 94vw); padding: 18px 20px 20px; }
+.plus-cabeza { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.plus-cabeza h2 { font: normal 1.5rem/1.25 Georgia, serif; margin: 0; color: var(--ink); }
+.plus-motivo { margin: 8px 0 0; padding: 8px 12px; border-radius: 8px; background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); font-weight: 600; }
+.plus-lema { color: var(--muted); margin: 8px 0 4px; }
+#plus-oferta h3 { font: 600 .78rem/1.4 'Segoe UI', sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 14px 0 6px; }
+.plus-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.plus-lista li { display: grid; gap: 1px; padding-left: 24px; position: relative; color: var(--ink); line-height: 1.4; }
+.plus-lista li span { color: var(--muted); font-size: .88rem; }
+.plus-incluye li::before { content: "✦"; position: absolute; left: 2px; color: var(--gold, var(--accent)); }
+.plus-gratis li::before { content: "✓"; position: absolute; left: 3px; color: var(--accent); font-weight: 700; }
+.plus-planes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 16px 0 8px; }
+.plus-planes button { display: grid; gap: 2px; text-align: left; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 12px; background: transparent; color: var(--ink); min-height: 72px; }
+.plus-planes button span { font-weight: 600; }
+.plus-planes button small { color: var(--muted); font-size: .8rem; }
+.plus-planes button[aria-checked="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.plus-condiciones { font-size: .82rem; color: var(--muted); line-height: 1.5; margin: 4px 0 12px; }
+.plus-acciones { display: flex; flex-wrap: wrap; gap: 8px; }
+.plus-acciones button { min-height: 46px; flex: 1 1 160px; }
+.plus-aviso { color: var(--accent); font-size: .9rem; min-height: 1.2em; margin: 8px 0 0; }
+.plus-pie { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; font-size: .9rem; }
+.plus-vista-previa { margin-top: 14px; padding: 10px 12px; border: 1px dashed var(--line); border-radius: 10px; font-size: .88rem; }
+.plus-vista-previa p { margin: 0 0 6px; color: var(--ink); line-height: 1.45; }
+/* Candado: un ícono antes del nombre; sin Plus la función abre la oferta. */
+.plus-con-candado::after { content: "🔒"; font-size: .8em; margin-left: 6px; }
+:root[data-plus="si"] .plus-funcion::after { content: "✦"; color: var(--gold, var(--accent)); margin-left: 6px; }
+.plus-ia { font-size: .85rem; color: var(--accent); min-height: 40px; }
+#imagen-dialog .plus-fondos { justify-self: start; min-height: 44px; }
+/* Tarjeta semanal en «Hoy» (máximo una vez por semana, con «Ahora no» y «No mostrar ofertas»). */
+.plus-tarjeta { margin: 16px 0; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--line); background: color-mix(in srgb, var(--accent) 6%, var(--paper)); }
+.plus-tarjeta p { margin: 0 0 8px; color: var(--ink); line-height: 1.5; }
+.plus-tarjeta div { display: flex; flex-wrap: wrap; gap: 8px; }
+.plus-tarjeta button { min-height: 44px; }
+@media (max-width: 420px) { .plus-planes { grid-template-columns: 1fr; } }

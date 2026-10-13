@@ -174,6 +174,7 @@
         </div>
       </div>`;
     document.body.append(dialogo);
+    window.BibliaPlus?.decorarImagen?.(dialogo); // edición tienda: «Fondo creado con IA» con candado
     lienzo = $('#imagen-lienzo');
     $('#imagen-guardar').textContent = window.BibliaPlataforma?.compartirImagen ? 'Compartir o guardar' : 'Guardar imagen';
     $('#imagen-cerrar').addEventListener('click', () => dialogo.close());
