@@ -525,7 +525,9 @@ html[data-edicion="tienda"] #sources-dialog > p.muted { display: none !important
 /* Barra de varios versículos: la cuenta arriba y las acciones repartidas abajo (no se desliza de lado). */
 :root[data-telefono="true"] #movil-seleccion:not([hidden]) { flex-wrap: wrap; overflow-x: visible; }
 :root[data-telefono="true"] #movil-seleccion .movil-seleccion-cuenta { flex: 1 1 100%; padding: 8px; }
-:root[data-telefono="true"] #movil-seleccion button { flex: 1 1 0; min-width: 48px; padding: 0 4px; }
+/* Cada botón mide lo que pide su nombre (antes todos iguales: con letra grande «Copiar», «Compartir» e
+   «Imagen» se encimaban). Si no caben, bajan a otra fila. */
+:root[data-telefono="true"] #movil-seleccion button { flex: 1 0 auto; min-width: 48px; padding: 0 10px; }
 
 /* Números Strong a la vista en ☰ y aviso del módulo con márgenes. */
 .movil-mas-strong { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 48px; margin: 8px 0 0; font-size: 1rem; color: inherit; }
@@ -632,3 +634,7 @@ html[data-edicion="tienda"] #sources-dialog > p.muted { display: none !important
 :root[data-telefono="true"] #movil-pestanas[data-filas="dos-alta"] button { flex-direction: column; gap: 2px; min-height: 56px; padding: 4px 2px; font-size: .625rem; }
 :root[data-telefono="true"] #library-controls[data-compacta="si"] #voice-play span { display: none; }
 :root[data-telefono="true"] #pane-biblia #comparison-controls .comparison-actions { flex-wrap: nowrap; }
+
+/* Mantener pulsado un versículo abre la selección de la app: sin el menú de texto de Android encima
+   (Traducir · Copiar), que tapaba la barra. Copiar y compartir siguen en la barra de la app. */
+:root[data-telefono="true"] #verses .verse { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }

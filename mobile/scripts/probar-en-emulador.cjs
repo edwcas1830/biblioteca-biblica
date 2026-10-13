@@ -379,9 +379,13 @@ async function esperarLista(app, etiqueta) {
   await app.evaluar(`document.querySelector('#buscador').close();return true;`);
   const hoy200 = await app.evaluar(`document.querySelector('#movil-pestanas [data-vista=hoy]').click();await new Promise(r=>setTimeout(r,1200));const fuera=[...document.querySelectorAll('#hoy-view *')].filter(e=>{const r=e.getBoundingClientRect();return r.width>0&&(r.right>innerWidth+1||r.left<-1);}).map(e=>(e.className||e.tagName)+'').slice(0,5);return {vista:document.documentElement.dataset.vistaMovil,fuera,ancho:document.documentElement.scrollWidth,innerWidth};`);
   captura('7c-hoy-letra-200');
+  // Edward (12-oct): con letra grande, la barra «1 versículo» encimaba Copiar, Compartir e Imagen.
+  const seleccion200 = await app.evaluar(`document.querySelector('#movil-pestanas [data-vista=biblia]').click();go(18,107,1);await new Promise(r=>setTimeout(r,800));const b=document.querySelector('#movil-seleccion');document.documentElement.dataset.seleccion='varios';b.hidden=false;await new Promise(r=>setTimeout(r,400));const cajas=[...b.querySelectorAll('button')].map(x=>x.getBoundingClientRect());let choques=0;for(let i=0;i<cajas.length;i++)for(let j=i+1;j<cajas.length;j++){const a=cajas[i],c=cajas[j];if(a.left<c.right-1&&a.right>c.left+1&&a.top<c.bottom-1&&a.bottom>c.top+1)choques++;}const cortados=[...b.querySelectorAll('button span')].filter(x=>x.scrollWidth>x.clientWidth+1).length;const fuera=cajas.filter(c=>c.right>innerWidth+1||c.left<-1).length;const sel=getComputedStyle(document.querySelector('#verses .verse')).userSelect;b.hidden=true;delete document.documentElement.dataset.seleccion;return {choques,cortados,fuera,sel};`);
+  captura('7d-seleccion-letra-200');
   adb('shell', 'settings', 'put', 'system', 'font_scale', '1.3');
   anotar(grande.malosBarra.length === 0 && grande.enBuscador.length === 0 && grande.enPestanas.length === 0 && grande.enHerr.length === 0 && grande.horizontal, 'paso 1 con letra al 200 %: nada se sale ni se corta', JSON.stringify(grande));
   anotar(grande.pestanas200.cortadas.length === 0, 'entrega 1 con letra al 200 %: los nombres de las pestañas se siguen viendo', JSON.stringify(grande.pestanas200));
+  anotar(seleccion200.choques === 0 && seleccion200.cortados === 0 && seleccion200.fuera === 0 && seleccion200.sel === 'none', 'letra al 200 %: la barra de versículos elegidos no se encima y no sale el menú de texto de Android', JSON.stringify(seleccion200));
   anotar(hoy200.vista === 'hoy-view' && hoy200.fuera.length === 0 && hoy200.ancho <= hoy200.innerWidth + 1, 'entrega 2B: «Hoy» con letra al 200 % sin salirse', JSON.stringify(hoy200));
   fs.writeFileSync(path.join(salida, 'consola.txt'), app.consola.join('\n'));
   app.cerrar();
