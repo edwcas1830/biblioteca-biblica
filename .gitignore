@@ -22,3 +22,4 @@ dist-v06/
 servidor/ia/calidad/resultados.json
 servidor/ia/.wrangler/
 servidor/ia/calidad/resultados-*.json
+servidor/ia/node_modules/
