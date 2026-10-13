@@ -1004,9 +1004,11 @@
 
   // «Hoy» al abrir: la bienvenida la primera vez (se puede saltar) y luego «Hoy» la primera vez de cada día.
   // Espera a que la biblioteca esté cargada y a que no haya otro diálogo abierto (p. ej. confirmar un traspaso).
+  // En el teléfono los archivos son locales y esto puede correr antes de que se cargue hoy.js: se espera a
+  // HoyApp igual que a uiReady (antes salía si aún no existía y la app abría directo en la Biblia).
   async function iniciarHoy() {
+    for (let i = 0; i < 240 && !(window.HoyApp && typeof uiReady !== 'undefined' && uiReady); i++) await new Promise(r => setTimeout(r, 250));
     if (!window.HoyApp) return;
-    for (let i = 0; i < 240 && !(typeof uiReady !== 'undefined' && uiReady); i++) await new Promise(r => setTimeout(r, 250));
     for (let i = 0; i < 240 && document.querySelector('dialog[open]'); i++) await new Promise(r => setTimeout(r, 250));
     try {
       if (window.HoyApp.necesitaBienvenida()) await window.HoyApp.bienvenida();

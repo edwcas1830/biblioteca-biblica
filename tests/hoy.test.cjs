@@ -124,3 +124,23 @@ test('Los 30 devocionales propios: completos, con citas que existen, uno por dí
   assert.equal(H.devocionalDelDia(e, D, new Date(2026, 9, 12)).n, 3, 'no cambia durante el mismo día');
   assert.equal(H.devocionalDelDia(e, [], new Date()), null);
 });
+
+// Edward (13-oct): al segundo día la app abría directo en la Biblia. En el teléfono movil.js puede correr
+// antes de que exista HoyApp (archivos locales); debe esperarlo, no rendirse. La PC lo abre al terminar start().
+test('«Hoy» se abre al arrancar en el teléfono y en la PC, aunque hoy.js cargue después', () => {
+  const fs = require('node:fs'), path = require('node:path');
+  const movil = fs.readFileSync(path.join(__dirname, '..', 'mobile', 'web', 'movil.js'), 'utf8');
+  const inicio = movil.slice(movil.indexOf('async function iniciarHoy'), movil.indexOf('async function iniciarHoy') + 400);
+  assert.match(inicio, /for \(let i = 0; i < 240 && !\(window\.HoyApp && typeof uiReady/, 'iniciarHoy espera a HoyApp');
+  assert.ok(inicio.indexOf('if (!window.HoyApp) return') > inicio.indexOf('for (let i = 0; i < 240'), 'no sale antes de esperar');
+  const app = fs.readFileSync(path.join(__dirname, '..', 'app', 'app.js'), 'utf8');
+  assert.match(app, /uiReady=true;[^\n]*window\.HoyApp\?\.abrirSiToca\(\)/, 'la PC abre «Hoy» al terminar de arrancar');
+});
+
+test('las 30 pinturas del versículo del día existen para «Imagen con versículos»', () => {
+  const fs = require('node:fs'), path = require('node:path');
+  for (let n = 1; n <= 30; n++) assert.ok(fs.existsSync(path.join(__dirname, '..', 'app', 'imagenes', 'fondos', `fondo-${String(n).padStart(2, '0')}.webp`)), 'falta la pintura ' + n);
+  const vi = fs.readFileSync(path.join(__dirname, '..', 'app', 'verse-image.js'), 'utf8');
+  assert.match(vi, /const PINTURAS = 30;/);
+  assert.match(vi, /imagenes\/fondos\/fondo-/);
+});

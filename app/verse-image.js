@@ -15,7 +15,10 @@
     noche: { nombre: 'Noche', fondo: ['#1C2333', '#10151F'], texto: '#EEF0F5', acento: '#D8B76A', marco: 'rgba(216,183,106,.3)' },
     amanecer: { nombre: 'Amanecer', fondo: ['#F6D9B8', '#C97B63'], texto: '#2A1712', acento: '#5B2A1E', marco: 'rgba(91,42,30,.25)' }
   };
-  let dialogo, lienzo, fotoFondo = null, sel = { desde: 1, hasta: 1 };
+  // Las 30 pinturas de la app (las mismas del versículo del día, ver imagenes/LICENCIAS.json) como fondos listos.
+  const PINTURAS = 30;
+  const rutaPintura = n => `imagenes/fondos/fondo-${String(n).padStart(2, '0')}.webp`;
+  let dialogo, lienzo, fotoFondo = null, pintura = 0, sel = { desde: 1, hasta: 1 };
 
   function textoDe(numero) {
     const v = document.querySelector(`#verses .verse[data-verse="${numero}"]`);
@@ -148,6 +151,8 @@
       <div class="imagen-cuerpo">
         <canvas id="imagen-lienzo" aria-label="Vista previa de la imagen"></canvas>
         <div class="imagen-opciones">
+          <div class="imagen-pinturas-bloque"><p class="imagen-ia-titulo" id="imagen-pinturas-titulo">Pinturas de la app</p>
+            <div id="imagen-pinturas" class="imagen-pinturas" role="group" aria-labelledby="imagen-pinturas-titulo">${Array.from({ length: PINTURAS }, (_, i) => `<button type="button" class="imagen-pintura" data-pintura="${i + 1}" aria-pressed="false" aria-label="Pintura ${i + 1}"><img src="${rutaPintura(i + 1)}" alt="" loading="lazy" decoding="async"></button>`).join('')}</div></div>
           <div class="imagen-fila"><label>Desde el versículo <select id="imagen-desde"></select></label><label>hasta <select id="imagen-hasta"></select></label></div>
           <label>Texto (puedes acortarlo)<textarea id="imagen-texto" rows="4"></textarea></label>
           <label>Referencia<input id="imagen-referencia" type="text" maxlength="80"></label>
@@ -180,10 +185,11 @@
       const archivo = e.target.files && e.target.files[0];
       if (!archivo) return;
       const lector = new FileReader();
-      lector.onload = () => { const img = new Image(); img.onload = () => { fotoFondo = img; $('#imagen-sin-foto').hidden = false; dibujar(); }; img.src = lector.result; };
+      lector.onload = () => { const img = new Image(); img.onload = () => { fotoFondo = img; marcarPintura(0); $('#imagen-sin-foto').hidden = false; dibujar(); }; img.src = lector.result; };
       lector.readAsDataURL(archivo);
     });
-    $('#imagen-sin-foto').addEventListener('click', () => { fotoFondo = null; $('#imagen-foto').value = ''; $('#imagen-sin-foto').hidden = true; dibujar(); });
+    $('#imagen-sin-foto').addEventListener('click', () => { fotoFondo = null; marcarPintura(0); $('#imagen-foto').value = ''; $('#imagen-sin-foto').hidden = true; dibujar(); });
+    $('#imagen-pinturas').addEventListener('click', e => { const b = e.target.closest('[data-pintura]'); if (b) usarPintura(Number(b.dataset.pintura)); });
     $('#imagen-ia-crear').addEventListener('click', crearFondoIA);
     $('#imagen-otras-ideas').addEventListener('click', () => pedirIdeas(true));
   }
@@ -282,10 +288,28 @@
     if (ok) pedirIdeas(false);
   }
 
-  function abrir() {
+  function marcarPintura(n) {
+    pintura = n;
+    for (const b of document.querySelectorAll('#imagen-pinturas [data-pintura]')) b.setAttribute('aria-pressed', String(Number(b.dataset.pintura) === n));
+  }
+  function usarPintura(n) {
+    if (!(n >= 1 && n <= PINTURAS)) return Promise.resolve();
+    marcarPintura(n);
+    return new Promise(listo => {
+      const img = new Image();
+      img.onload = () => { if (pintura === n) { fotoFondo = img; $('#imagen-foto').value = ''; $('#imagen-sin-foto').hidden = false; dibujar(); } listo(); };
+      img.onerror = () => { $('#imagen-estado').textContent = 'No se pudo abrir esa pintura.'; listo(); };
+      img.src = rutaPintura(n);
+    });
+  }
+
+  // opciones (todas opcionales): { desde, hasta, pintura }. «Hoy» la abre con el versículo y la pintura del día.
+  function abrir(opciones = {}) {
     if (!dialogo) construir();
     const actual = (typeof state !== 'undefined' && state.position && state.position.verse) || Number(document.querySelector('#verses .verse.selected')?.dataset.verse) || 1;
-    sel = { desde: actual, hasta: actual };
+    const desde = Number(opciones.desde) || actual;
+    sel = { desde, hasta: Math.max(desde, Number(opciones.hasta) || desde) };
+    if (opciones.pintura) usarPintura(Number(opciones.pintura));
     $('#imagen-estado').textContent = '';
     llenarSelectores();
     actualizarTexto();

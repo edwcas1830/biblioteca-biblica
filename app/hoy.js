@@ -90,7 +90,7 @@
     const avisos=!!plataforma().recordatorio;
     vista.innerHTML=`<header class="hoy-cabeza"><div><p class="eyebrow">HOY</p><h1>${esc(fechaLarga(hoy))}</h1></div><p class="hoy-total">${total===1?'1 día':total+' días'} en la Palabra</p></header>
 <ol class="hoy-semana" aria-label="Tu semana">${semana}</ol>
-<article class="hoy-versiculo ${animado?'':'hoy-entra'}" aria-labelledby="hoy-vers-titulo"><p class="eyebrow" id="hoy-vers-titulo">VERSÍCULO DEL DÍA</p><blockquote id="hoy-vers-texto">…</blockquote><p class="hoy-cita"><span>${esc(v.cita)}</span> <small id="hoy-vers-edicion"></small></p><div class="hoy-vers-acciones"><button type="button" class="outline" data-hoy="leer">Leer el capítulo</button><button type="button" class="quiet" data-hoy="copiar">Copiar</button></div></article>
+<article class="hoy-versiculo ${animado?'':'hoy-entra'}" aria-labelledby="hoy-vers-titulo"><p class="eyebrow" id="hoy-vers-titulo">VERSÍCULO DEL DÍA</p><blockquote id="hoy-vers-texto">…</blockquote><p class="hoy-cita"><span>${esc(v.cita)}</span> <small id="hoy-vers-edicion"></small></p><div class="hoy-vers-acciones"><button type="button" class="outline" data-hoy="leer">Leer el capítulo</button><button type="button" class="quiet" data-hoy="copiar">Copiar</button>${window.BibliaImagen?'<button type="button" class="quiet" data-hoy="imagen">Crear imagen</button>':''}</div></article>
 <p class="hoy-progreso" role="status">${hechos===4?'Completaste tu día. Que esta palabra te acompañe.':hechos+' de 4 pasos · unos 8 minutos'}</p>
 <div class="hoy-pasos">${pasos}</div>
 ${bloqueCamino(e,hoy)}
@@ -113,6 +113,12 @@ ${avisos?`<label>Aviso diario del versículo<input type="time" id="hoy-hora" val
     const siguiente=H.PASOS.find(p=>!H.hecho(state.hoy,f,p.id));abierto=H.hecho(state.hoy,f,id)?(siguiente?.id||null):id;
     await render();
     if(abierto)q(`[data-paso="${abierto}"]`)?.scrollIntoView({block:'nearest',behavior:'smooth'});
+  }
+  // «Crear imagen»: abre el capítulo en el versículo del día y el editor de imágenes con la pintura de hoy.
+  async function crearImagen(){
+    const v=H.delDia();go(v.book,v.chapter,v.verse,v.endVerse);
+    for(let i=0;i<40&&!document.querySelector(`#verses .verse[data-verse="${v.verse}"]`);i++)await new Promise(r=>setTimeout(r,100));
+    window.BibliaImagen?.abrir({desde:v.verse,hasta:v.endVerse||v.verse,pintura:v.indice%30+1});
   }
   async function copiar(){
     const v=H.delDia(),t=await textoDe(v),texto=`«${t.texto}» ${v.cita}`;
@@ -160,6 +166,7 @@ ${avisos?`<label>Aviso diario del versículo<input type="time" id="hoy-hora" val
       if(accion==='leer'){const v=H.delDia();go(v.book,v.chapter,v.verse,v.endVerse);}
       else if(accion==='seguir'){const p=state.position;go(p.book,p.chapter,p.verse);}
       else if(accion==='copiar')copiar();
+      else if(accion==='imagen')crearImagen();
       else if(accion==='oracion')showView('prayer');
       else if(accion==='camino'){caminoAbierto=!caminoAbierto;const l=q('#hoy-logros');if(l)l.hidden=!caminoAbierto;b.setAttribute('aria-expanded',String(caminoAbierto));b.textContent=b.textContent.replace(/[▴▾]$/,caminoAbierto?'▴':'▾');}
       else if(accion==='ajustes'){ajustesAbiertos=!ajustesAbiertos;const c=q('#hoy-ajustes-cuerpo');if(c)c.hidden=!ajustesAbiertos;b.setAttribute('aria-expanded',String(ajustesAbiertos));b.textContent='Ajustes de «Hoy» '+(ajustesAbiertos?'▴':'▾');}
