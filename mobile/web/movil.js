@@ -35,8 +35,11 @@
   }
   function marcarDestino() {
     const vista = vistaActiva();
+    const antes = html.dataset.vistaMovil;
     html.dataset.vistaMovil = vista;
     marcarPestana();
+    // Al volver a la Biblia (desde «Hoy» u otra vista) se reacomodan la fila de herramientas y el alto del libro.
+    if (vista === 'read-view' && antes !== 'read-view' && estado.construida) requestAnimationFrame(() => ajustarAltoLectura());
   }
 
   // ---------- Menú «Más» ----------
@@ -692,7 +695,8 @@
     ajustarPestanas();
     // Fila Strong · Escuchar…: si no cabe en un renglón, «Escuchar» queda solo con su icono (sin perder el nombre accesible).
     const fila = $('#library-controls');
-    if (fila && html.dataset.herramientas !== 'mini') { fila.dataset.compacta = 'no'; if (fila.getBoundingClientRect().height > 64) fila.dataset.compacta = 'si'; }
+    // Solo se mide con la Biblia a la vista: oculta (p. ej. al arrancar en «Hoy») mide 0 y dejaba «Escuchar» largo.
+    if (fila && html.dataset.herramientas !== 'mini' && fila.offsetParent !== null) { fila.dataset.compacta = 'no'; if (fila.getBoundingClientRect().height > 64) fila.dataset.compacta = 'si'; }
     // --nav-alto es la franja SIN la zona de los botones del sistema: --pie ya le suma --seguro-abajo
     // (antes se contaba dos veces y quedaba una franja vacía sobre las pestañas en teléfonos con gestos o botones).
     if (franja) html.style.setProperty('--nav-alto', Math.round((franja.getBoundingClientRect().height || 56) - (parseFloat(getComputedStyle(franja).paddingBottom) || 0)) + 'px');
