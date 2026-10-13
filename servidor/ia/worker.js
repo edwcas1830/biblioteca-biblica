@@ -140,6 +140,8 @@ async function sumarGasto(env, dia, usd) {
 
 export async function estado(env, dispositivo, ahora = new Date()) {
   const dia = diaUTC(ahora), plan = await planDe(env, dispositivo), limite = limiteDe(env, plan);
+  // Equipos que abrieron la pantalla (id al azar, sin datos personales): sirve para registrar probadores.
+  try { await env.DB.prepare('INSERT INTO vistos (dispositivo, primero, ultimo) VALUES (?, ?, ?) ON CONFLICT(dispositivo) DO UPDATE SET ultimo = excluded.ultimo').bind(dispositivo, ahora.toISOString(), ahora.toISOString()).run(); } catch { /* tabla aún no creada */ }
   const n = await usadas(env, 'd:' + dispositivo, dia);
   return { plan, limite, quedan: Math.max(0, limite - n) };
 }
