@@ -270,7 +270,8 @@
       if (vistaActiva() !== 'read-view') botonPorTexto('.compact-nav button', 'mi biblia')?.click();
       estado.pestana = id; html.dataset.pestana = id;
       if (id !== 'biblia') { asegurarPanelesVisibles(); ocultarBarra(); }
-      if (id === 'referencias') { const caja = $('#connections-box'); if (caja) caja.open = true; }
+      // Las referencias viven en el espacio del comentario: si quedó un mapa o línea de tiempo, se vuelve al comentario (si no, salía en blanco).
+      if (id === 'referencias') { if (typeof graphicsMode !== 'undefined' && graphicsMode !== 'comment' && typeof setGraphics === 'function') { setGraphics('comment'); const m = $('#graphics-mode'); if (m) m.value = 'comment'; } const caja = $('#connections-box'); if (caja) caja.open = true; }
       // Diccionario: busca la palabra elegida si quedó pendiente (con la RV1960 la palabra abre primero su original).
       if (id === 'diccionario' && typeof consultarPendiente === 'function') consultarPendiente();
       if (id === 'original') {

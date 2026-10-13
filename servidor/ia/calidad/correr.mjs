@@ -13,6 +13,8 @@ if (!url || !token) { console.error('Falta la dirección del Worker o TOKEN_ADMI
 const MODELOS = process.env.MODELOS ? process.env.MODELOS.split(',') : ['@cf/openai/gpt-oss-120b', '@cf/meta/llama-3.3-70b-instruct-fp8-fast', '@cf/qwen/qwen3-30b-a3b-fp8', '@cf/meta/llama-3.1-8b-instruct-fp8-fast'];
 const SALIDA = process.env.SALIDA || 'resultados.json';
 const casos = JSON.parse(fs.readFileSync(new URL('./preguntas.json', import.meta.url))).casos;
+// CASOS=18-40 corre solo ese tramo (p. ej. cuando la cuota gratis diaria cortó la ronda anterior); n conserva el número original.
+const [desde, hasta] = (process.env.CASOS || '').split('-').map(Number);
 const nombre = r => B[r.book].name + ' ' + r.chapter + ':' + r.verse + (r.endVerse ? '-' + r.endVerse : '');
 const texto = r => B[r.book].chapters[r.chapter - 1].slice(r.verse - 1, r.endVerse || r.verse).join(' ').slice(0, 700);
 function pasajes(c) {
@@ -23,6 +25,7 @@ function pasajes(c) {
 }
 const salida = [];
 for (const [i, c] of casos.entries()) {
+  if (desde && (i + 1 < desde || i + 1 > (hasta || desde))) continue;
   const pas = pasajes(c), respuestas = [];
   for (const modelo of MODELOS) {
     const r = await fetch(url + '/v1/prueba', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token }, body: JSON.stringify({ modo: c.modo, pregunta: c.pregunta, pasajes: pas, version: 'RV1909', modelo }) }).then(x => x.json()).catch(e => ({ respuesta: 'ERROR: ' + e.message }));
