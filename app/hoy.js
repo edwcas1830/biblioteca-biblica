@@ -10,6 +10,31 @@
   const enTelefono=()=>document.documentElement.dataset.telefono==='true';
   // Sin <details>: en el iPhone (WebKit) su estilo interno choca con la CSP de la app al crearlo desde JS.
   let abierto=null, generacion=0, animado=false, ajustesAbiertos=false;
+  // Entrada animada (Edward, 13-oct): CADA VEZ que la app arranca y cada día nuevo con la app abierta, el logo B1
+  // (el libro se abre y la llama se enciende) y luego «Hoy». Se apaga en Ajustes de «Hoy»; ese ajuste también se
+  // guarda en este aparato (LS_ENTRADA) porque la capa se pone antes de que cargue la biblioteca.
+  const LS_ENTRADA='biblioteca-hoy-entrada';
+  const LOGO='<svg viewBox="200 140 624 720" aria-hidden="true"><defs><linearGradient id="hoy-entrada-llama" x1="0" y1="1" x2="0.3" y2="0"><stop offset="0" stop-color="#D2A04A"/><stop offset="1" stop-color="#F3D98E"/></linearGradient></defs>'+
+    '<g class="hoy-entrada-llama"><path fill="url(#hoy-entrada-llama)" d="M512 590C468 548 396 484 393 404C390 334 446 286 496 216C512 194 507 170 503 156C542 192 566 234 561 292C557 342 521 364 492 402C471 432 470 482 493 522Z"/><path fill="url(#hoy-entrada-llama)" d="M512 590C496 562 482 522 488 472C494 422 544 382 571 334C577 322 581 308 580 298C610 332 634 372 631 422C628 482 570 532 512 590Z"/></g>'+
+    '<path class="hoy-entrada-izq" fill="#F5EEE0" d="M240 486C360 488 452 540 499 640V842C421 790 331 761 251 746C226 741 213 722 213 701V513C213 498 225 486 240 486Z"/>'+
+    '<path class="hoy-entrada-der" fill="#F5EEE0" d="M784 486C664 488 572 540 525 640V842C603 790 693 761 773 746C798 741 811 722 811 701V513C811 498 799 486 784 486Z"/></svg>';
+  const sinMovimiento=()=>{try{return matchMedia('(prefers-reduced-motion: reduce)').matches;}catch{return false;}};
+  let capaEntrada=null, entradaDesde=0;
+  function ponerEntrada(){
+    if(capaEntrada||!document.body)return;
+    entradaDesde=Date.now();
+    capaEntrada=document.createElement('div');capaEntrada.id='hoy-entrada';capaEntrada.setAttribute('aria-hidden','true');
+    capaEntrada.innerHTML=`<div class="hoy-entrada-logo">${LOGO}</div><p class="hoy-entrada-nombre">Biblioteca Bíblica</p>`;
+    document.body.append(capaEntrada);
+    // Seguro: si algo falla al arrancar, la capa no se queda tapando la app.
+    const esta=capaEntrada;setTimeout(()=>{if(capaEntrada===esta)quitarEntrada();},15000);
+  }
+  function quitarEntrada(){
+    const c=capaEntrada;capaEntrada=null;if(!c)return;
+    c.classList.add('sale');setTimeout(()=>c.remove(),500);
+  }
+  const entradaActiva=()=>{try{return localStorage.getItem(LS_ENTRADA)!=='no';}catch{return true;}};
+  if(entradaActiva())ponerEntrada();
   // Lo que es de ESTE aparato (no de la biblioteca): si ya vio la bienvenida y qué día abrió «Hoy» por última vez.
   // Así un traspaso desde la PC o recuperar una copia no repite la bienvenida ni vuelve a abrir «Hoy» el mismo día.
   const LS_BIENVENIDA='biblioteca-hoy-bienvenida', LS_DIA='biblioteca-hoy-ultimo-dia';
@@ -98,7 +123,7 @@ ${window.IaBiblia?'<button type="button" class="outline hoy-ia" data-action="ia-
 <button type="button" class="outline hoy-seguir" data-hoy="seguir">Continuar leyendo · ${esc(books[p.book].name)} ${p.chapter}</button>
 <nav class="hoy-mas" aria-label="Más para tu camino"><button type="button" class="quiet" data-action="temas-open">Temas de la Biblia</button><button type="button" class="quiet" data-action="memorizar-open">Memorizar</button><button type="button" class="quiet" data-hoy-ir="dev">Mis devocionales y series</button><button type="button" class="quiet" data-hoy-ir="plan">Mi plan de lectura</button><button type="button" class="quiet" data-hoy-ir="prayer">Oración y testimonios</button></nav>
 <div class="hoy-ajustes"><button type="button" class="quiet hoy-ajustes-abrir" data-hoy="ajustes" aria-expanded="${ajustesAbiertos}" aria-controls="hoy-ajustes-cuerpo">Ajustes de «Hoy» ${ajustesAbiertos?'▴':'▾'}</button><div id="hoy-ajustes-cuerpo" ${ajustesAbiertos?'':'hidden'}>
-<label class="checkbox-label"><input type="checkbox" id="hoy-abrir-primero" ${e.abrirEnHoy?'checked':''}> Abrir «Hoy» la primera vez de cada día</label>
+<label class="checkbox-label"><input type="checkbox" id="hoy-abrir-primero" ${e.abrirEnHoy?'checked':''}> Abrir «Hoy» con la entrada animada al iniciar la app y cada día nuevo</label>
 <label class="checkbox-label"><input type="checkbox" id="hoy-mostrar-camino" ${e.mostrarCamino!==false?'checked':''}> Mostrar «Mi camino»: semana de fe y logros</label>
 ${avisos?`<label>Aviso diario del versículo<input type="time" id="hoy-hora" value="${esc(e.perfil.hora)}"></label><button type="button" class="quiet" id="hoy-sin-aviso" ${e.perfil.hora?'':'hidden'}>Quitar el aviso diario</button><p class="fine-print" id="hoy-aviso-estado" role="status">${e.perfil.hora?'Un aviso al día a las '+esc(e.perfil.hora)+'.':'Sin aviso diario.'}</p>`:''}
 </div></div>`;
@@ -173,7 +198,7 @@ ${avisos?`<label>Aviso diario del versículo<input type="time" id="hoy-hora" val
       else if(b.id==='hoy-sin-aviso'){const h=q('#hoy-hora');if(h)h.value='';elegirHora('');}
     });
     vista.addEventListener('change',ev=>{
-      if(ev.target.id==='hoy-abrir-primero'){state.hoy={...datos(),abrirEnHoy:ev.target.checked};guardar();}
+      if(ev.target.id==='hoy-abrir-primero'){state.hoy={...datos(),abrirEnHoy:ev.target.checked};guardar();escribirLS(LS_ENTRADA,ev.target.checked?'si':'no');}
       if(ev.target.id==='hoy-mostrar-camino'){state.hoy={...datos(),mostrarCamino:ev.target.checked};guardar();render();}
       if(ev.target.id==='hoy-hora')elegirHora(ev.target.value);
     });
@@ -244,5 +269,39 @@ ${avisos?`<label>Aviso diario del versículo<input type="time" id="hoy-hora" val
   // Al abrir: la primera vez de cada día, «Hoy» (si la persona no lo apagó). Devuelve si lo abrió.
   function abrirSiToca(){const e=datos(),local=leerLS(LS_DIA);if(H.abrirPrimero({...e,ultimoDia:local>e.ultimoDia?local:e.ultimoDia})){showView('hoy');return true;}return false;}
 
-  window.HoyApp={actualizarWidget,render,enlazar,marcar,programarAvisos,elegirHora,bienvenida,necesitaBienvenida,abrirSiToca,textoDe,enTelefono};
+  // Muestra la entrada (si no está ya) y, pasado su tiempo, «Hoy» con la tarjeta del versículo entrando.
+  let diaMostrado='';
+  async function mostrarDia(){
+    diaMostrado=H.clave();animado=false;abierto=null;
+    ponerEntrada();
+    const falta=(sinMovimiento()?300:1700)-(Date.now()-entradaDesde);
+    if(falta>0)await new Promise(r=>setTimeout(r,falta));
+    if(window.BibliaMovil?.estado?.construida&&typeof window.BibliaMovil.elegirVista==='function')window.BibliaMovil.elegirVista('hoy');
+    else showView('hoy');
+    quitarEntrada();
+  }
+  // Al arrancar (PC: fin de start(); teléfono y web: movil.js). Una sola vez por arranque.
+  let inicio=null;
+  function alIniciar(){
+    if(inicio)return inicio;
+    escribirLS(LS_ENTRADA,datos().abrirEnHoy===false?'no':'si');
+    if(datos().abrirEnHoy===false){diaMostrado=H.clave();quitarEntrada();inicio=Promise.resolve(false);}
+    else inicio=mostrarDia().then(()=>true);
+    setInterval(()=>revisarDia(),30000);
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)revisarDia();});
+    window.addEventListener('focus',()=>revisarDia());
+    return inicio;
+  }
+  // Día nuevo con la app abierta (o al volver a ella otro día): entrada y «Hoy». No interrumpe si hay un diálogo
+  // abierto o la persona está escribiendo; lo intenta otra vez en el siguiente repaso (cada 30 s).
+  function revisarDia(ahora=new Date()){
+    if(!inicio||document.hidden)return false;
+    const dia=H.clave(ahora);if(dia===diaMostrado)return false;
+    if(datos().abrirEnHoy===false){diaMostrado=dia;return false;}
+    const foco=document.activeElement;
+    if(document.querySelector('dialog[open]')||(foco&&/^(INPUT|TEXTAREA|SELECT)$/.test(foco.tagName))||foco?.isContentEditable)return false;
+    mostrarDia();diaMostrado=dia;return true;
+  }
+
+  window.HoyApp={actualizarWidget,render,enlazar,marcar,programarAvisos,elegirHora,bienvenida,necesitaBienvenida,abrirSiToca,alIniciar,revisarDia,textoDe,enTelefono};
 })();

@@ -1012,12 +1012,11 @@
     for (let i = 0; i < 240 && document.querySelector('dialog[open]'); i++) await new Promise(r => setTimeout(r, 250));
     try {
       if (window.HoyApp.necesitaBienvenida()) await window.HoyApp.bienvenida();
-      else window.HoyApp.abrirSiToca();
+      else await window.HoyApp.alIniciar();
     } catch (e) { console.warn('Hoy', e); }
     marcarDestino();
   }
-  // Al volver a la app otro día (sin cerrarla), también se abre «Hoy».
-  document.addEventListener('visibilitychange', () => { if (!document.hidden && estado.construida && window.HoyApp && typeof uiReady !== 'undefined' && uiReady && !document.querySelector('dialog[open]')) { if (window.HoyApp.abrirSiToca()) marcarDestino(); } });
+  // El día nuevo con la app abierta (o al volver a ella) lo vigila hoy.js (HoyApp.revisarDia).
 
   function activar() {
     html.dataset.telefono = String(consulta.matches);

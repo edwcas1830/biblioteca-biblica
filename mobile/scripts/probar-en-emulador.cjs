@@ -83,7 +83,9 @@ async function conectar() {
 
 // Espera «lista» consultando cada 2 s. Si la página se recarga o se reemplaza (al arrancar, Android puede
 // cargarla dos veces), la sesión de depuración vieja deja de responder: se reconecta a la página actual.
-async function esperarLista(app, etiqueta) {
+// Cada arranque abre «Hoy» tras la entrada animada (Edward, 13-oct). Se espera a que la entrada termine; si
+// alLector, se vuelve a la Biblia para que los pasos siguientes prueben el lector como antes.
+async function esperarLista(app, etiqueta, alLector = true) {
   const limite = Date.now() + 150000; let reconexiones = 0, sinCambio = 0, r = null;
   while (Date.now() < limite) {
     try {
@@ -98,6 +100,9 @@ async function esperarLista(app, etiqueta) {
     }
     await espera(2000);
   }
+  if (r && r.estado === 'lista') {
+    try { await app.evaluar(`for(let i=0;i<40&&!(window.HoyApp&&typeof uiReady!=='undefined'&&uiReady&&!document.querySelector('#hoy-entrada'));i++)await new Promise(r=>setTimeout(r,250));await new Promise(r=>setTimeout(r,600));${alLector ? "if(document.documentElement.dataset.vistaMovil==='hoy-view')window.BibliaMovil?.elegirVista('biblia');await new Promise(r=>setTimeout(r,400));" : ''}return 1;`, 20000); } catch { /* sigue: el informe dirá si algo falló */ }
+  }
   captura(etiqueta);
   const estado = r ? r.estado : 'sin respuesta';
   anotar(estado === 'lista', 'arranque ' + etiqueta, (estado === 'lista' ? '' : estado + ' — ' + (r ? r.texto : '')) + (reconexiones ? ' (reconexiones: ' + reconexiones + ')' : ''));
@@ -110,7 +115,7 @@ async function esperarLista(app, etiqueta) {
   adb('install', '-r', apk);
   adb('shell', 'am', 'start', '-n', PKG + '/.MainActivity');
   let app = await conectar();
-  app = await esperarLista(app, '1-primer-arranque');
+  app = await esperarLista(app, '1-primer-arranque', false);
   const caps = await app.evaluar(`const c=await window.libraryDesktop.getCapabilities();return {storage:c.storage,plataforma:c.platform,faltan:['bootstrap','savePersonal','catalog','chapter','transferScan','transferInstall','voiceOptions','shareText','aiStatus'].filter(n=>!c.operations[n]?.available)};`);
   anotar(caps.plataforma === 'android' && caps.storage === 'sqlite', 'base nativa', JSON.stringify(caps));
   anotar(caps.faltan.length === 0, 'operaciones disponibles', caps.faltan.join(', ') || 'todas');
@@ -157,11 +162,19 @@ async function esperarLista(app, etiqueta) {
   anotar(guardado === 'ok', 'guardar nota');
   await app.enviar('Page.reload', { ignoreCache: true });
   await espera(3000);
-  app = await esperarLista(app, '2-tras-recargar');
+  app = await esperarLista(app, '2-tras-recargar', false);
   const nota = await app.evaluar(`const b=await window.libraryDesktop.bootstrap({initial:{version:1,position:{book:42,chapter:3,verse:16},notes:{},highlights:{},plans:[],devotionals:[],prayers:[],prayerDrafts:{},guideResponses:{},aiStudies:[],devResponses:{},planNotes:{},appearance:{design:'a'},font:20},legacy:null,legacyValid:true});return b.state.notes['42:3:16']||'';`);
   anotar(nota === 'Nota de prueba en el emulador', 'nota persistida tras recargar', nota);
   const hoy3 = await app.evaluar(`for(let i=0;i<60&&!(typeof uiReady!=='undefined'&&uiReady);i++)await new Promise(r=>setTimeout(r,250));await new Promise(r=>setTimeout(r,2000));return {dias:JSON.stringify(state.hoy.dias),vista:document.documentElement.dataset.vistaMovil,bienvenida:!!document.querySelector('#hoy-bienvenida')};`, 30000);
-  anotar(/":3\}/.test(hoy3.dias) && hoy3.vista !== 'hoy-view' && !hoy3.bienvenida, 'entrega 2B: lo marcado sigue tras recargar y «Hoy» no se repite el mismo día', JSON.stringify(hoy3));
+  anotar(/":3\}/.test(hoy3.dias) && hoy3.vista === 'hoy-view' && !hoy3.bienvenida, 'entrega 2B: lo marcado sigue tras recargar y cada arranque abre «Hoy»', JSON.stringify(hoy3));
+  // Día nuevo con la app abierta (Edward, 13-oct): desde la Biblia, al cambiar el día sale la entrada y «Hoy».
+  await app.evaluar(`window.BibliaMovil.elegirVista('biblia');await new Promise(r=>setTimeout(r,500));return 1;`);
+  const cambioDia = await app.evaluar(`const antes=document.documentElement.dataset.vistaMovil;const r=window.HoyApp.revisarDia(new Date(Date.now()+86400000));await new Promise(r=>setTimeout(r,700));const capa=!!document.querySelector('#hoy-entrada');return {antes,r,capa};`, 20000);
+  captura('1d-entrada-dia-nuevo');
+  const trasCambio = await app.evaluar(`for(let i=0;i<30&&document.querySelector('#hoy-entrada');i++)await new Promise(r=>setTimeout(r,200));await new Promise(r=>setTimeout(r,500));return {vista:document.documentElement.dataset.vistaMovil,pestana:document.documentElement.dataset.pestana,capa:!!document.querySelector('#hoy-entrada'),tarjeta:!!document.querySelector('.hoy-versiculo.hoy-entra')};`, 20000);
+  captura('1e-hoy-dia-nuevo');
+  anotar(cambioDia.antes === 'read-view' && cambioDia.r === true && cambioDia.capa && trasCambio.vista === 'hoy-view' && !trasCambio.capa && trasCambio.tarjeta, 'día nuevo con la app abierta: entrada animada y «Hoy»', JSON.stringify({ ...cambioDia, ...trasCambio }));
+  await app.evaluar(`window.BibliaMovil.elegirVista('biblia');await new Promise(r=>setTimeout(r,500));return 1;`);
   // 5. Traspaso sintético en UN archivo, por el mismo camino que OneDrive: una URI content:// que la app
   //    lee con su ContentResolver. El paquete se deja en la caché de la app y se entrega por su FileProvider.
   if (!paquete) throw new Error('Falta el paquete .bbt sintético');

@@ -134,7 +134,11 @@ test('«Hoy» se abre al arrancar en el teléfono y en la PC, aunque hoy.js carg
   assert.match(inicio, /for \(let i = 0; i < 240 && !\(window\.HoyApp && typeof uiReady/, 'iniciarHoy espera a HoyApp');
   assert.ok(inicio.indexOf('if (!window.HoyApp) return') > inicio.indexOf('for (let i = 0; i < 240'), 'no sale antes de esperar');
   const app = fs.readFileSync(path.join(__dirname, '..', 'app', 'app.js'), 'utf8');
-  assert.match(app, /uiReady=true;[^\n]*window\.HoyApp\?\.abrirSiToca\(\)/, 'la PC abre «Hoy» al terminar de arrancar');
+  assert.match(app, /uiReady=true;[^\n]*window\.HoyApp\?\.alIniciar\(\)/, 'la PC abre «Hoy» al terminar de arrancar');
+  assert.match(movil, /await window\.HoyApp\.alIniciar\(\)/, 'el teléfono también usa la entrada');
+  const hoy = fs.readFileSync(path.join(__dirname, '..', 'app', 'hoy.js'), 'utf8');
+  assert.match(hoy, /function revisarDia\(ahora=new Date\(\)\)/, 'vigila el día nuevo con la app abierta');
+  assert.match(hoy, /setInterval\(\(\)=>revisarDia\(\),30000\)/);
 });
 
 test('las 30 pinturas del versículo del día existen para «Imagen con versículos»', () => {
