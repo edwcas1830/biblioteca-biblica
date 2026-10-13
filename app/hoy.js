@@ -271,8 +271,8 @@ ${avisos?`<label>Aviso diario del versículo<input type="time" id="hoy-hora" val
 
   // Muestra la entrada (si no está ya) y, pasado su tiempo, «Hoy» con la tarjeta del versículo entrando.
   let diaMostrado='';
-  async function mostrarDia(){
-    diaMostrado=H.clave();animado=false;abierto=null;
+  async function mostrarDia(dia=H.clave()){
+    diaMostrado=dia;animado=false;abierto=null;
     ponerEntrada();
     const falta=(sinMovimiento()?300:1700)-(Date.now()-entradaDesde);
     if(falta>0)await new Promise(r=>setTimeout(r,falta));
@@ -296,11 +296,11 @@ ${avisos?`<label>Aviso diario del versículo<input type="time" id="hoy-hora" val
   // abierto o la persona está escribiendo; lo intenta otra vez en el siguiente repaso (cada 30 s).
   function revisarDia(ahora=new Date()){
     if(!inicio||document.hidden)return false;
-    const dia=H.clave(ahora);if(dia===diaMostrado)return false;
+    const dia=H.clave(ahora);if(dia<=diaMostrado)return false; // solo hacia adelante (un reloj que se atrasa no la dispara)
     if(datos().abrirEnHoy===false){diaMostrado=dia;return false;}
     const foco=document.activeElement;
     if(document.querySelector('dialog[open]')||(foco&&/^(INPUT|TEXTAREA|SELECT)$/.test(foco.tagName))||foco?.isContentEditable)return false;
-    mostrarDia();diaMostrado=dia;return true;
+    mostrarDia(dia);return true;
   }
 
   window.HoyApp={actualizarWidget,render,enlazar,marcar,programarAvisos,elegirHora,bienvenida,necesitaBienvenida,abrirSiToca,alIniciar,revisarDia,textoDe,enTelefono};
