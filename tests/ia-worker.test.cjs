@@ -114,3 +114,20 @@ test('Rutas: falta el dispositivo, reportar guarda el texto, prueba exige el tok
   const est = await W2.fetch(new Request('https://ia.ejemplo/v1/estado', { headers: { 'x-dispositivo': DISP } }), env);
   assert.deepEqual(await est.json(), { plan: 'gratis', limite: 3, quedan: 3 });
 });
+
+test('Limpieza diaria: borra contadores de más de 7 días, equipos sin visitas en 90 días y reportes de más de 12 meses', async () => {
+  const { limpiar } = await W;
+  const env = { DB: d1() }, s = env.DB.sql, ahora = new Date('2026-10-13T12:00:00Z');
+  s.prepare('INSERT INTO uso (clave, dia, n) VALUES (?, ?, 1)').run('d:viejo', '2026-10-01');
+  s.prepare('INSERT INTO uso (clave, dia, n) VALUES (?, ?, 1)').run('d:nuevo', '2026-10-12');
+  s.prepare('INSERT INTO idem (dispositivo, idem, dia) VALUES (?, ?, ?)').run('x', 'viejo', '2026-09-01');
+  s.prepare('INSERT INTO vistos (dispositivo, primero, ultimo) VALUES (?, ?, ?)').run('viejo', '2026-01-01T00:00:00Z', '2026-06-01T00:00:00Z');
+  s.prepare('INSERT INTO vistos (dispositivo, primero, ultimo) VALUES (?, ?, ?)').run('nuevo', '2026-01-01T00:00:00Z', '2026-10-10T00:00:00Z');
+  s.prepare('INSERT INTO reportes (dispositivo, creado, modo, pregunta, respuesta, motivo) VALUES (?, ?, ?, ?, ?, ?)').run('x', '2025-09-01T00:00:00Z', 'tema', 'p', 'r', 'm');
+  s.prepare('INSERT INTO reportes (dispositivo, creado, modo, pregunta, respuesta, motivo) VALUES (?, ?, ?, ?, ?, ?)').run('x', '2026-10-01T00:00:00Z', 'tema', 'p', 'r', 'm');
+  s.prepare('INSERT INTO gasto (dia, usd, llamadas) VALUES (?, ?, ?)').run('2025-01-01', 0.1, 1);
+  await limpiar(env, ahora);
+  const n = t => s.prepare('SELECT COUNT(*) AS n FROM ' + t).get().n;
+  assert.deepEqual([n('uso'), n('idem'), n('vistos'), n('reportes'), n('gasto')], [1, 0, 1, 1, 1]);
+  assert.equal(s.prepare('SELECT clave FROM uso').get().clave, 'd:nuevo');
+});

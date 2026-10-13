@@ -6,6 +6,10 @@ compatibility_date = "2026-09-01"
 [ai]
 binding = "AI"
 
+# Limpieza diaria de lo viejo (plazos en worker.js › limpiar y en la política de privacidad).
+[triggers]
+crons = ["17 4 * * *"]
+
 [[d1_databases]]
 binding = "DB"
 database_name = "biblia-ia"

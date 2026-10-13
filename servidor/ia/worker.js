@@ -199,7 +199,21 @@ export async function prueba(env, c, autorizacion) {
   return json({ respuesta: r.texto, modelo: c.modelo, ms: Date.now() - inicio, usd: costoUSD(c.modelo, r.uso, mensajes, r.texto) });
 }
 
+// Plazos de conservación (los publica la política de privacidad): contadores y reintentos, 7 días; equipos que
+// abrieron la IA, 90 días desde su última visita; reportes que la persona envía, 12 meses. «gasto» es un total diario
+// sin datos de nadie y «planes» se borra a mano al dar de baja a un probador.
+export async function limpiar(env, ahora = new Date()) {
+  const dia = d => new Date(ahora.getTime() - d * 86400000).toISOString();
+  const r = {};
+  r.uso = (await env.DB.prepare('DELETE FROM uso WHERE dia < ?').bind(dia(7).slice(0, 10)).run()).meta?.changes ?? null;
+  r.idem = (await env.DB.prepare('DELETE FROM idem WHERE dia < ?').bind(dia(7).slice(0, 10)).run()).meta?.changes ?? null;
+  r.vistos = (await env.DB.prepare('DELETE FROM vistos WHERE ultimo < ?').bind(dia(90)).run()).meta?.changes ?? null;
+  r.reportes = (await env.DB.prepare('DELETE FROM reportes WHERE creado < ?').bind(dia(365)).run()).meta?.changes ?? null;
+  return r;
+}
+
 export default {
+  async scheduled(evento, env, ctx) { ctx.waitUntil(limpiar(env)); },
   async fetch(request, env) {
     if (request.method === 'OPTIONS') return json({});
     const url = new URL(request.url), dispositivo = request.headers.get('x-dispositivo') || '';
