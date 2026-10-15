@@ -222,6 +222,17 @@ jobs:
           grep -q "^OK  entrega 2: la lectura sigue en segundo plano con controles y termina el capítulo" prueba-emulador/informe.txt
           grep -q "^OK  entrega 1 con letra al 200 %: los nombres de las pestañas se siguen viendo" prueba-emulador/informe.txt
 
+      # Diagnóstico si el emulador se cae (15-oct): registro del sistema del anfitrión y datos del choque del emulador.
+      - name: Diagnóstico del emulador
+        if: failure()
+        run: |
+          mkdir -p prueba-emulador/diagnostico
+          sudo dmesg | tail -200 > prueba-emulador/diagnostico/dmesg.txt || true
+          free -m > prueba-emulador/diagnostico/memoria.txt; df -h / >> prueba-emulador/diagnostico/memoria.txt
+          cp -r /tmp/android-runner prueba-emulador/diagnostico/ 2>/dev/null || true
+          find "$HOME/.android" -name "*.log" -exec cp {} prueba-emulador/diagnostico/ \; 2>/dev/null || true
+          grep -iE "oom|killed|qemu|emulator|segfault|kvm" prueba-emulador/diagnostico/dmesg.txt | tail -40 || true
+
       - name: Resultados de la prueba en el emulador
         if: always()
         uses: actions/upload-artifact@v4
