@@ -30,6 +30,15 @@ jobs:
     env:
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
     steps:
+      # Desde el 15-oct el emulador se caía a mitad de la prueba («device not found»), también con el código que pasó
+      # el 13-oct: la imagen nueva trae menos disco libre (mismo síntoma en pybind11#5914). Se libera lo que no usamos.
+      - name: Liberar disco
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/local/share/boost /opt/hostedtoolcache/CodeQL /usr/local/lib/android/sdk/ndk /usr/share/swift /usr/local/share/powershell /usr/local/share/chromium || true
+          sudo docker system prune -a -f > /dev/null 2>&1 || true
+          df -h /
+
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.rama || github.ref }}
