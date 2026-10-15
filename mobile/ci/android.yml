@@ -42,6 +42,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+          cache: gradle  # evita bajar todo de Maven Central en cada vuelta (429 Too Many Requests)
 
       - name: Dependencias de la app común
         run: npm ci
@@ -125,11 +126,15 @@ jobs:
             export ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/biblioteca-biblica.p12"
           fi
           export BIBLIOTECA_VERSION_NAME="$(node -p "require('./package.json').version")-tienda"
-          (cd android && BIBLIOTECA_APP_ID=com.castillodigital.bibliotecabiblica BIBLIOTECA_APP_NAME="Biblioteca Play" ./gradlew --no-daemon assembleDebug assembleRelease)
+          (cd android && BIBLIOTECA_APP_ID=com.castillodigital.bibliotecabiblica BIBLIOTECA_APP_NAME="Biblioteca Play" ./gradlew --no-daemon assembleDebug assembleRelease bundleRelease)
           rm -f "$RUNNER_TEMP/biblioteca-biblica.p12"
           mkdir -p "$GITHUB_WORKSPACE/apk-tienda"
           cp "$SALIDA/release/app-release.apk" "$GITHUB_WORKSPACE/apk-tienda/biblioteca-tienda.apk"
           cp "$SALIDA/debug/app-debug.apk" "$GITHUB_WORKSPACE/apk-tienda/biblioteca-tienda-depuracion.apk"
+          # AAB para Google Play (prueba del formato; la subida final irá firmada con la clave de subida nueva).
+          cp android/app/build/outputs/bundle/release/app-release.aab "$GITHUB_WORKSPACE/apk-tienda/biblioteca-tienda.aab"
+          unzip -l "$GITHUB_WORKSPACE/apk-tienda/biblioteca-tienda.aab" | grep -q "base/manifest/AndroidManifest.xml"
+          ls -la "$GITHUB_WORKSPACE/apk-tienda/"
           TOOLS="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
           "$TOOLS/aapt2" dump badging "$GITHUB_WORKSPACE/apk-tienda/biblioteca-tienda.apk" | grep -E "^package: name='com.castillodigital.bibliotecabiblica'"
           if "$TOOLS/aapt2" dump badging "$GITHUB_WORKSPACE/apk-tienda/biblioteca-tienda.apk" | grep -q 'application-debuggable'; then echo "La tienda salió depurable"; exit 1; fi
@@ -176,6 +181,8 @@ jobs:
           grep -q "^OK  versión final no depurable" prueba-emulador/informe.txt
           grep -q "^OK  versión final no registra llamadas a plugins" prueba-emulador/informe.txt
           grep -q "^OK  tienda: sin IA, música, traspaso, círculo ni importar módulos" prueba-emulador/informe.txt
+          grep -q "^OK  tienda: diccionarios griego y hebreo en español (Sociedades Bíblicas)" prueba-emulador/informe.txt
+          grep -q "^OK  tienda: Plus (vista previa)" prueba-emulador/informe.txt
           grep -q "^OK  paso 1: barra superior de una fila" prueba-emulador/informe.txt
           grep -q "^OK  Strong y escuchar a la vista, se minimiza y vuelve" prueba-emulador/informe.txt
           grep -q "^OK  paso 1: «rey» sugiere 1 Reyes y 2 Reyes" prueba-emulador/informe.txt
@@ -185,6 +192,14 @@ jobs:
           grep -q "^OK  la palabra elegida sigue al cambiar de diccionario" prueba-emulador/informe.txt
           grep -q "^OK  palabra con original (RV1960): el diccionario la recibe y no la pierde" prueba-emulador/informe.txt
           grep -q "^OK  paso 4: Mi estudio guarda marcadores, etiquetas, memoria, colores e historial" prueba-emulador/informe.txt
+          grep -q "^OK  entrega 1: las 6 pestañas fijas con icono, sin deslizar ni cortarse" prueba-emulador/informe.txt
+          grep -q "^OK  entrega 1: el pie dice adónde vas y no tapa el texto" prueba-emulador/informe.txt
+          grep -q "^OK  entrega 1: ningún emoji en la barra, el menú ni las pestañas" prueba-emulador/informe.txt
+          grep -q "^OK  entrega 1: voz y velocidad en el menú y Detener a la vista" prueba-emulador/informe.txt
+          grep -q "^OK  entrega 1: Comentario con fichas, un solo selector y nunca vacío" prueba-emulador/informe.txt
+          grep -q "^OK  entrega 1: guardar copia en el teléfono y recuperarla (vuelve la nota borrada)" prueba-emulador/informe.txt
+          grep -q "^OK  entrega 2: la lectura sigue en segundo plano con controles y termina el capítulo" prueba-emulador/informe.txt
+          grep -q "^OK  entrega 1 con letra al 200 %: los nombres de las pestañas se siguen viendo" prueba-emulador/informe.txt
 
       - name: Resultados de la prueba en el emulador
         if: always()
@@ -200,6 +215,93 @@ jobs:
           path: |
             mobile/android/app/build/outputs/apk/release/app-release.apk
             apk-tienda/biblioteca-tienda.apk
+            apk-tienda/biblioteca-tienda.aab
             apk.sha256
             mobile/www-auditoria.json
           retention-days: 14
+
+  # Edición web para iPhone en WebKit (motor de Safari): arranque, CSP y cifrado cruzado con Node.
+  web-webkit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.rama || github.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Dependencias y Biblia
+        run: |
+          npm ci
+          npm run bible
+          npm run prepare:assets
+
+      - name: Armar la edición web
+        working-directory: mobile
+        env:
+          BIBLIA_EDICION: web
+        run: |
+          npm ci
+          node scripts/build-www.cjs
+
+      - name: WebKit
+        working-directory: mobile
+        run: |
+          npm i --no-save playwright@1.49.1
+          npx playwright install --with-deps webkit
+          node scripts/probar-web-webkit.cjs
+
+      - name: Captura si WebKit falla
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prueba-webkit
+          path: mobile/prueba-webkit/
+          retention-days: 7
+
+  # Migraciones del chat (_bb) en un Postgres desechable que imita lo mínimo de Supabase.
+  # Nunca toca el proyecto real: cada prueba termina con un error a propósito y todo se deshace.
+  servidor-sql:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: prueba
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: prueba
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.rama || github.ref }}
+
+      - name: Pruebas de 001 y 003
+        working-directory: servidor/supabase
+        run: |
+          probar() { # base, archivos…
+            local base=$1; shift
+            createdb "$base"
+            psql -q -d "$base" -v ON_ERROR_STOP=1 -f ci/supabase_minimo.sql
+            local args=(); for f in "$@"; do args+=(-f "$f"); done
+            psql -q -d "$base" -1 "${args[@]}" > "salida-$base.txt" 2>&1 || true
+            sed -n '/INFORME/,$p' "salida-$base.txt"
+            grep -q "INFORME" "salida-$base.txt" || { cat "salida-$base.txt"; return 1; }
+            ! grep -q "FALLA" "salida-$base.txt"
+          }
+          probar uno 001_foro_bb.sql 002_proyecto_compartido.sql prueba_001_foro_bb.sql
+          probar dos 001_foro_bb.sql 002_proyecto_compartido.sql 003_foro_bb.sql prueba_003_foro_bb.sql
+          # 003 se aplica limpio sobre 001+002 (como se aplicaría en el proyecto real).
+          createdb tres
+          psql -q -d tres -v ON_ERROR_STOP=1 -f ci/supabase_minimo.sql -f 001_foro_bb.sql -f 002_proyecto_compartido.sql -1 -f 003_foro_bb.sql
+          echo "003 aplica limpio"

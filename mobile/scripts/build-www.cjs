@@ -93,11 +93,14 @@ html = html.replace(/<meta name="viewport"[^>]*>/, '');
 html = html.replace('<head>', '<head>\n  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">');
 // IA integrada: el origen del Worker (app/ia-config.js, lo escribe scripts/configurar-ia.cjs) entra en connect-src.
 const urlIA = (fs.readFileSync(path.join(repo, 'app', 'ia-config.js'), 'utf8').match(/window\.BIBLIA_IA_URL = '([^']*)'/) || [])[1] || '';
+// Tienda (Google Play): solo el servidor de la IA integrada. Sin IA personal (OpenRouter/Gemini) ni YouTube, que no
+// van en esa edición: así lo declarado en «Seguridad de datos» queda garantizado por la propia app.
+const TIENDA = EDICION === 'tienda';
 html = html.replace(/<meta http-equiv="Content-Security-Policy" content="[^"]*">/,
   '<meta http-equiv="Content-Security-Policy" content="default-src \'self\'; script-src \'self\'; style-src \'self\'; ' +
-  'img-src \'self\' data: blob: https://i.ytimg.com; media-src \'self\' blob:; worker-src \'self\' blob:; ' +
-  'connect-src \'self\' https://openrouter.ai https://generativelanguage.googleapis.com https://www.googleapis.com' + (urlIA ? ' ' + urlIA : '') + '; ' +
-  'frame-src https://www.youtube-nocookie.com; object-src \'none\'; base-uri \'none\'; form-action \'none\'">');
+  'img-src \'self\' data: blob:' + (TIENDA ? '' : ' https://i.ytimg.com') + '; media-src \'self\' blob:; worker-src \'self\' blob:; ' +
+  'connect-src \'self\'' + (TIENDA ? '' : ' https://openrouter.ai https://generativelanguage.googleapis.com https://www.googleapis.com') + (urlIA ? ' ' + urlIA : '') + '; ' +
+  'frame-src ' + (TIENDA ? '\'none\'' : 'https://www.youtube-nocookie.com') + '; object-src \'none\'; base-uri \'none\'; form-action \'none\'">');
 html = html.replace('<html', '<html data-plataforma="movil"');
 // Comprobación de arranque: capacitor.js antes que plataforma.js y arranque.js (o el APK no ve los plugins).
 {

@@ -126,11 +126,15 @@ jobs:
             export ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/biblioteca-biblica.p12"
           fi
           export BIBLIOTECA_VERSION_NAME="$(node -p "require('./package.json').version")-tienda"
-          (cd android && BIBLIOTECA_APP_ID=com.castillodigital.bibliotecabiblica BIBLIOTECA_APP_NAME="Biblioteca Play" ./gradlew --no-daemon assembleDebug assembleRelease)
+          (cd android && BIBLIOTECA_APP_ID=com.castillodigital.bibliotecabiblica BIBLIOTECA_APP_NAME="Biblioteca Play" ./gradlew --no-daemon assembleDebug assembleRelease bundleRelease)
           rm -f "$RUNNER_TEMP/biblioteca-biblica.p12"
           mkdir -p "$GITHUB_WORKSPACE/apk-tienda"
           cp "$SALIDA/release/app-release.apk" "$GITHUB_WORKSPACE/apk-tienda/biblioteca-tienda.apk"
           cp "$SALIDA/debug/app-debug.apk" "$GITHUB_WORKSPACE/apk-tienda/biblioteca-tienda-depuracion.apk"
+          # AAB para Google Play (prueba del formato; la subida final irá firmada con la clave de subida nueva).
+          cp android/app/build/outputs/bundle/release/app-release.aab "$GITHUB_WORKSPACE/apk-tienda/biblioteca-tienda.aab"
+          unzip -l "$GITHUB_WORKSPACE/apk-tienda/biblioteca-tienda.aab" | grep -q "base/manifest/AndroidManifest.xml"
+          ls -la "$GITHUB_WORKSPACE/apk-tienda/"
           TOOLS="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
           "$TOOLS/aapt2" dump badging "$GITHUB_WORKSPACE/apk-tienda/biblioteca-tienda.apk" | grep -E "^package: name='com.castillodigital.bibliotecabiblica'"
           if "$TOOLS/aapt2" dump badging "$GITHUB_WORKSPACE/apk-tienda/biblioteca-tienda.apk" | grep -q 'application-debuggable'; then echo "La tienda salió depurable"; exit 1; fi
@@ -178,6 +182,7 @@ jobs:
           grep -q "^OK  versión final no registra llamadas a plugins" prueba-emulador/informe.txt
           grep -q "^OK  tienda: sin IA, música, traspaso, círculo ni importar módulos" prueba-emulador/informe.txt
           grep -q "^OK  tienda: diccionarios griego y hebreo en español (Sociedades Bíblicas)" prueba-emulador/informe.txt
+          grep -q "^OK  tienda: Plus (vista previa)" prueba-emulador/informe.txt
           grep -q "^OK  paso 1: barra superior de una fila" prueba-emulador/informe.txt
           grep -q "^OK  Strong y escuchar a la vista, se minimiza y vuelve" prueba-emulador/informe.txt
           grep -q "^OK  paso 1: «rey» sugiere 1 Reyes y 2 Reyes" prueba-emulador/informe.txt
@@ -210,6 +215,7 @@ jobs:
           path: |
             mobile/android/app/build/outputs/apk/release/app-release.apk
             apk-tienda/biblioteca-tienda.apk
+            apk-tienda/biblioteca-tienda.aab
             apk.sha256
             mobile/www-auditoria.json
           retention-days: 14
