@@ -37,8 +37,9 @@ Reglas:
 2. Si los pasajes no alcanzan para responder, dilo con sencillez y sugiere qué leer.
 3. No sustituyes el acompañamiento pastoral ni profesional. Si notas dolor fuerte, anima a hablar con alguien de confianza.
 4. Sin política partidista, sin atacar otras iglesias, sin profecías ni promesas de resultados.
-5. Responde solo a temas bíblicos, de fe, de oración y de vida cristiana. Si piden otra cosa, explica amablemente que aquí solo estudias la Biblia.
-6. Sé breve: unas 200 a 300 palabras, con párrafos cortos. Sin títulos en mayúsculas ni listas largas.`;
+5. Responde solo a temas bíblicos, de fe, de oración y de vida cristiana. Si la pregunta es de otra cosa (deportes, farándula, política, tareas, etc.), NO uses los pasajes ni fuerces versículos: en 2 o 3 frases di con amabilidad que aquí solo estudias la Biblia y sugiere una pregunta bíblica relacionada. Esta regla manda sobre el formato pedido.
+6. Sé breve: unas 200 a 300 palabras, con párrafos cortos. Sin títulos en mayúsculas ni listas largas.
+7. No supongas si la persona es hombre o mujer: usa formas que sirvan para cualquiera (por ejemplo «dame un corazón compasivo» en vez de «hazme compasiva»).`;
 
 const FORMATO = {
   explicar: 'Explica el pasaje en este orden: 1) contexto histórico breve (quién escribe, a quién, en qué situación); 2) el capítulo inmediato (qué viene antes y después y cómo encaja el pasaje); 3) lo que revela el pasaje, preciso y profundo; 4) un dato relevante que la persona quizá no sabía; 5) una aplicación concreta para hoy.',
@@ -74,9 +75,14 @@ export function validarSolicitud(c) {
   return '';
 }
 
+// Al final del pedido (el modelo lo respeta más ahí que en la instrucción del sistema): tema fuera de la Biblia,
+// trato de «tú» y oraciones que sirvan para hombre o mujer (prueba de calidad del 14-oct).
+export const RECORDATORIO = 'Antes de responder: si la pregunta NO trata de la Biblia, la fe o la vida cristiana, responde solo en 2 o 3 frases que aquí estudias la Biblia y sugiere una pregunta bíblica relacionada, sin usar los pasajes. Trata a la persona de «tú» (nunca «vos»). No uses adjetivos que supongan si la persona es hombre o mujer.';
 export function armarMensajes(c) {
   const pasajes = c.pasajes.map(p => `(${texto(p.cita, LIMITES.cita)}) ${texto(p.texto, LIMITES.pasaje)}`).join('\n');
-  const usuario = `Modo: ${MODOS[c.modo].titulo}. ${FORMATO[c.modo]}\n\nPregunta de la persona: ${texto(c.pregunta, LIMITES.pregunta)}\n\nPasajes de la Biblia de la persona${c.version ? ' (' + texto(c.version, 40) + ')' : ''}:\n${pasajes || '(no se encontraron pasajes)'}`;
+  const usuario = `Modo: ${MODOS[c.modo].titulo}. ${FORMATO[c.modo]}\n\nPregunta de la persona: ${texto(c.pregunta, LIMITES.pregunta)}\n\nPasajes de la Biblia de la persona${c.version ? ' (' + texto(c.version, 40) + ')' : ''}:\n${pasajes || '(no se encontraron pasajes)'}
+
+${RECORDATORIO}`;
   return [{ role: 'system', content: INSTRUCCION }, { role: 'user', content: usuario }];
 }
 
