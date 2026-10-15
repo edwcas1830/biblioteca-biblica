@@ -25,9 +25,7 @@ permissions:
 
 jobs:
   apk:
-    # ubuntu-22.04: en la imagen 24.04 del 12-oct (20261012) el emulador se cae a mitad de la prueba, incluso con
-    # el código que pasó el 13-oct (comprobado el 15-oct). Volver a 24.04 cuando GitHub lo arregle.
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
@@ -167,11 +165,13 @@ jobs:
           pkill -f GradleWorkerMain || true
           free -m
 
-      - name: Probar la app en Android 14 (emulador)
+      # Android 15: desde el 15-oct la imagen de Android 14 hace caer el emulador a mitad de la prueba (también con el
+      # código que pasó el 13-oct, en ubuntu 24.04 y 22.04).
+      - name: Probar la app en Android 15 (emulador)
         timeout-minutes: 20
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 34
+          api-level: 35
           target: google_apis
           arch: x86_64
           ram-size: 4096M
