@@ -25,7 +25,9 @@ permissions:
 
 jobs:
   apk:
-    runs-on: ubuntu-24.04
+    # ubuntu-22.04: en la imagen 24.04 del 12-oct (20261012) el emulador se cae a mitad de la prueba, incluso con
+    # el código que pasó el 13-oct (comprobado el 15-oct). Volver a 24.04 cuando GitHub lo arregle.
+    runs-on: ubuntu-22.04
     timeout-minutes: 60
     env:
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
