@@ -164,6 +164,7 @@ jobs:
           pkill -f GradleDaemon || true
           pkill -f GradleWorkerMain || true
           free -m
+          df -h /
 
       # Android 15: desde el 15-oct la imagen de Android 14 hace caer el emulador a mitad de la prueba (también con el
       # código que pasó el 13-oct, en ubuntu 24.04 y 22.04).
