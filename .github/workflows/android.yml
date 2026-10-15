@@ -157,6 +157,14 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      # Los compiladores de Gradle y Kotlin quedan vivos tras el AAB y le quitan memoria al emulador (se caía, 15-oct).
+      - name: Liberar memoria antes del emulador
+        run: |
+          pkill -f KotlinCompileDaemon || true
+          pkill -f GradleDaemon || true
+          pkill -f GradleWorkerMain || true
+          free -m
+
       - name: Probar la app en Android 14 (emulador)
         timeout-minutes: 20
         uses: reactivecircus/android-emulator-runner@v2
@@ -164,6 +172,7 @@ jobs:
           api-level: 34
           target: google_apis
           arch: x86_64
+          ram-size: 4096M
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
